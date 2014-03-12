@@ -1,11 +1,11 @@
 === LeadIn ===
 Contributors: andygcook, nelsonjoyce
 Tags:  lead tracking, visitor tracking, analytics, crm, marketing automation, inbound marketing, subscription, marketing, lead generation
-Requires at least: 3.3
+Requires at least: 3.7
 Tested up to: 3.8
-Stable tag: 0.6.0
+Stable tag: 0.6.1
 
-LeadIn - WordPress CRM
+LeadIn is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
 
 == Description ==
 
@@ -50,9 +50,11 @@ LeadIn collects usage information about this plugin so that we can better serve 
 
 LeadIn automatically integrates with your contact and comment forms that contain an email address field on your web site. There's no setup required.
 
-= When does LeadIn create a contact in my CRM? =
+= Where are my contact submission stored? =
 
-LeadIn creates a new contact in your CRM whenever an email address is detected in your visitor's form submission.
+LeadIn creates a new contact in your Contacts Tabke whenever an email address is detected in your visitor's form submission.
+
+There is no limit to the number of contacts you can store in your Contacts Table.
 
 = Which contact form building plugins are supported? =
 
@@ -86,8 +88,13 @@ To ensure quality we've tested the most popular WordPress form builder plugins.
 
 == Changelog ==
 
-Current version: 0.6.0
-Current version release: 2014-03-07
+Current version: 0.6.1
+Current version release: 2014-03-12
+
+= 0.6.1 (2014.03.12) =
+- Bug fixes
+- Updated read me.txt file
+- Updated screenshots
 
 = 0.6.0 (2014.03.07) =
 - Bug fixes
