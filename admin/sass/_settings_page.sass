@@ -1,0 +1,95 @@
+#icon-leadin
+    background: url('../../images/leadin-icon-32x32.png') top center no-repeat
+
+.help-notification
+    background: #d9edf7
+    border: 1px solid #bce8f1
+    padding: 10px
+    -webkit-border-radius: 3px
+    -moz-border-radius: 3px
+    border-radius: 3px
+
+.toplevel_page_leadin_contacts .wp-menu-image img
+    width: 16px
+    height: 16px
+
+.leadin-contact-avatar
+    margin-right: 10px
+
+.steps
+    margin: $base-vertical-unit*8 auto 0
+    text-align: center
+    max-width: 600px
+
+    h3, p
+        margin: 0
+    
+    .step-names
+        margin: 0
+        +pie-clearfix
+
+        .step-name
+            color: #ccc
+            display: list-item
+            float: left
+            width: 33%
+            margin: 0
+            padding-bottom: $base-vertical-unit*3
+            font-size: 16px
+            list-style: decimal inside none
+
+            &.active
+                color: $teal-dark
+                background-image: url(../../images/triangle.png)
+                background-position: bottom center
+                background-repeat: no-repeat
+            
+            &.completed
+                list-style-image:  url(../../images/checkmark.png)
+
+    .step-content
+        margin: 0
+
+        .description
+            margin: 10px 0 20px
+            display: block
+
+    .step
+        display: none
+        padding: $base-vertical-unit*3
+        background-color: $teal-background
+        border: 2px solid $teal
+        +border-radius(5px)
+        color: $teal-dark
+
+        h2
+            color: $teal-dark
+            margin:
+                top: 0
+                bottom: $base-vertical-unit*3
+
+        ol
+            text-align: left
+            margin-bottom: $base-vertical-unit*3
+
+        label
+            text-align: right
+
+        &.active
+            display: block
+
+        .form-table
+            th
+                display: none
+
+            td
+                text-align: center
+                width: auto
+                display: block
+                
+            input 
+                width: 100%
+                font-size: 16px
+                line-height: 1.5
+                padding: 7px 10px
+                display: block
