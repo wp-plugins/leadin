@@ -3,7 +3,7 @@
 Plugin Name: LeadIn
 Plugin URI: http://leadin.com
 Description: LeadIn is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
-Version: 0.6.1
+Version: 0.6.2
 Author: Andy Cook, Nelson Joyce
 Author URI: http://leadin.com
 License: GPL2
@@ -23,10 +23,10 @@ if ( !defined('LEADIN_PLUGIN_SLUG') )
 	define('LEADIN_PLUGIN_SLUG', basename(dirname(__FILE__)));
 
 if ( !defined('LEADIN_DB_VERSION') )
-	define('LEADIN_DB_VERSION', '0.4.3');
+	define('LEADIN_DB_VERSION', '0.6.2');
 
 if ( !defined('LEADIN_PLUGIN_VERSION') )
-	define('LEADIN_PLUGIN_VERSION', '0.6.1');
+	define('LEADIN_PLUGIN_VERSION', '0.6.2');
 
 if ( !defined('MIXPANEL_PROJECT_TOKEN') )
     define('MIXPANEL_PROJECT_TOKEN', 'a9615503ec58a6bce2c646a58390eac1');
@@ -143,40 +143,43 @@ class WPLeadIn {
 		require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
 		
 		$sql = "
-			CREATE TABLE li_pageviews (
-			  pageview_id int(11) unsigned NOT NULL AUTO_INCREMENT,
-			  pageview_date timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			  lead_hashkey varchar(16) NOT NULL,
-			  pageview_title varchar(255) NOT NULL,
-			  pageview_url text NOT NULL,
-			  pageview_source text NOT NULL,
-			  pageview_session_start int(1) NOT NULL,
-			  PRIMARY KEY  (pageview_id)
-			) CHARACTER SET utf8 COLLATE utf8_general_ci;
+			CREATE TABLE `li_leads` (
+			  `lead_id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+			  `lead_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			  `hashkey` varchar(16) DEFAULT NULL,
+			  `lead_ip` varchar(40) DEFAULT NULL,
+			  `lead_source` text,
+			  `lead_email` varchar(255) DEFAULT NULL,
+			  `lead_status` set('lead','comment','subscribe') NOT NULL DEFAULT 'lead',
+			  `merged_hashkeys` text,
+			  PRIMARY KEY (`lead_id`),
+			  KEY `hashkey` (`hashkey`)
+			) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=21 ;
 
-			CREATE TABLE li_leads (
-			  lead_id int(11) unsigned NOT NULL AUTO_INCREMENT,
-			  lead_date timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			  hashkey varchar(16) NOT NULL,
-			  lead_ip varchar(40) NOT NULL,
-			  lead_source text NOT NULL,
-			  lead_email varchar(255) NOT NULL,
-			  lead_status SET( 'lead', 'comment', 'subscribe' ) NOT NULL DEFAULT 'lead',
-			  merged_hashkeys text NOT NULL,
-			  PRIMARY KEY  (lead_id)
-			) CHARACTER SET utf8 COLLATE utf8_general_ci;
+			CREATE TABLE `li_pageviews` (
+			  `pageview_id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+			  `pageview_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			  `lead_hashkey` varchar(16) NOT NULL,
+			  `pageview_title` varchar(255) NOT NULL,
+			  `pageview_url` text NOT NULL,
+			  `pageview_source` text NOT NULL,
+			  `pageview_session_start` int(1) NOT NULL,
+			  PRIMARY KEY (`pageview_id`),
+			  KEY `lead_hashkey` (`lead_hashkey`)
+			) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=692 ;
 
-			CREATE TABLE li_submissions (
-			  form_id int(11) unsigned NOT NULL AUTO_INCREMENT,
-			  form_date timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			  form_hashkey varchar(16) NOT NULL,
-			  lead_hashkey varchar(16) NOT NULL,
-			  form_page_title varchar(255) NOT NULL,
-			  form_page_url text NOT NULL,
-			  form_fields text NOT NULL,
-			  form_type SET( 'lead', 'comment', 'subscribe' ) NOT NULL DEFAULT 'lead',
-			  PRIMARY KEY  (form_id)
-			) CHARACTER SET utf8 COLLATE utf8_general_ci;";
+			CREATE TABLE `li_submissions` (
+			  `form_id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+			  `form_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			  `lead_hashkey` varchar(16) NOT NULL,
+			  `form_page_title` varchar(255) NOT NULL,
+			  `form_page_url` text NOT NULL,
+			  `form_fields` text NOT NULL,
+			  `form_type` set('lead','comment','subscribe') NOT NULL DEFAULT 'lead',
+			  `form_hashkey` varchar(16) NOT NULL,
+			  PRIMARY KEY (`form_id`),
+			  KEY `lead_hashkey` (`lead_hashkey`)
+			) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=85 ;";
 
 		dbDelta($sql);
 
@@ -202,6 +205,7 @@ class WPLeadIn {
             delete_option('leadin_plugin_options');
         }
 
+        // 0.5.1 upgrade - Create active power-ups option if it doesn't exist
         $leadin_active_power_ups = get_option('leadin_active_power_ups');
 
 		if ( !$leadin_active_power_ups )
@@ -213,20 +217,25 @@ class WPLeadIn {
 			update_option('leadin_active_power_ups', serialize($auto_activate));
 		}
 
-	    if ( isset($li_options['li_db_version'])  )
+		// Set the database version if it doesn't exist
+	    if ( isset($li_options['li_db_version']) )
 	    {
 	    	if ( $li_options['li_db_version'] != LEADIN_DB_VERSION ) {
 	        	$this->leadin_db_install();
+
+	        	// 0.4.2 upgrade - After the DB installation converts the set structure from contact to lead, update all the blank contacts = leads
+		    	$q = $wpdb->prepare("UPDATE li_leads SET lead_status = 'lead' WHERE lead_status = 'contact' OR lead_status = ''", "");
+		    	$wpdb->query($q);
+
+		    	// 0.4.2 upgrade - After the DB installation converts the set structure from contact to lead, update all the blank form_type = leads
+		    	$q = $wpdb->prepare("UPDATE li_submissions SET form_type = 'lead' WHERE form_type = 'contact' OR form_type = ''", "");
+		    	$wpdb->query($q);
 	    	}
 	    }
-
-	    // 0.4.2 upgrade - After the DB installation converts the set structure from contact to lead, update all the blank contacts = leads
-    	$q = $wpdb->prepare("UPDATE li_leads SET lead_status = 'lead' WHERE lead_status = 'contact' OR lead_status = ''", "");
-    	$wpdb->query($q);
-
-    	// 0.4.2 upgrade - After the DB installation converts the set structure from contact to lead, update all the blank form_type = leads
-    	$q = $wpdb->prepare("UPDATE li_submissions SET form_type = 'lead' WHERE form_type = 'contact' OR form_type = ''", "");
-    	$wpdb->query($q);
+	    else
+	    {
+	    	$this->leadin_db_install();
+	    }
 	}
 
 	//=============================================

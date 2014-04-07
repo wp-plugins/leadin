@@ -120,9 +120,16 @@ class LI_Emailer {
 		}
 		else
 		{	
-			$subject = "New lead from " . get_bloginfo('name'); 
-			leadin_track_plugin_activity("New lead");
-			$subject .= " - Say hello to " . $history->lead->lead_email;
+			if ( $history->new_contact )
+			{
+				$subject = "New lead from " . get_bloginfo('name') . " - Say hello to " . $history->lead->lead_email;
+				leadin_track_plugin_activity("New lead");
+			}
+			else
+			{
+				$subject = "Lead from " . get_bloginfo('name') . " - Say hello again to " . $history->lead->lead_email;
+				leadin_track_plugin_activity("Returning lead");
+			}
 		}
 
 		$email_sent = wp_mail($to, $subject, $body, $headers);
@@ -167,15 +174,16 @@ class LI_Emailer {
 			$count++;
 		}
 
-		$q = $wpdb->prepare("SELECT form_date AS form_datetime, DATE_FORMAT(form_date, %s) AS form_date, form_page_title, form_page_url, form_fields, form_type FROM li_submissions WHERE lead_hashkey = '%s' ORDER BY form_datetime DESC LIMIT 1", '%b %e %l:%i%p', $hashkey);
-		$submission = $wpdb->get_row($q);
+		$q = $wpdb->prepare("SELECT form_date AS form_datetime, DATE_FORMAT(form_date, %s) AS form_date, form_page_title, form_page_url, form_fields, form_type FROM li_submissions WHERE lead_hashkey = '%s' ORDER BY form_datetime DESC", '%b %e %l:%i%p', $hashkey);
+		$submissions = $wpdb->get_results($q);
 
-		$q = $wpdb->prepare("SELECT lead_id, lead_date, lead_ip, lead_source, lead_email, lead_status FROM li_leads WHERE hashkey LIKE %s", $hashkey);
+		$q = $wpdb->prepare("SELECT lead_id, lead_date, lead_ip, lead_source, lead_email, lead_status FROM li_leads WHERE hashkey LIKE %s AND lead_email != ''", $hashkey);
 		$lead = $wpdb->get_row($q);
 
 		$history = (object)NULL;
 		$history->pageviews_by_session = $pageviews_by_session;
-		$history->submission = $submission;
+		$history->submission = $submissions[0];
+		$history->new_contact = ( count($submissions) == 1 ? true : false );
 		$history->lead = $lead;
 
 		return $history;

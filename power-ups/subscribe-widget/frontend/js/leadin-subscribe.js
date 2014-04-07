@@ -56,7 +56,7 @@ function bind_leadin_subscribe_widget ()
                     '<input id="leadin-subscribe-email" name="email" type="email" placeholder="Email address" required />' +
                     '<input id="leadin-subscribe-first-name" name="firstName" type="text" placeholder="First name" required/>' +
                     '<input id="leadin-subscribe-last-name" name="lastName" type="text" placeholder="Last name" required/>',
-                buttons: [$.extend({}, vex.dialog.buttons.YES, { text: 'Subscribe' })],
+                buttons: [$.extend({}, vex.dialog.buttons.YES, { text: ( $('#leadin-subscribe-btn-label').val() ? $('#leadin-subscribe-btn-label').val() : 'SUBSCRIBE' ) })],
                 callback: function(data) {
                     if (data === false) {
                         $.cookie("li_subscribe", 'ignore', {path: "/", domain: ""});
@@ -68,7 +68,9 @@ function bind_leadin_subscribe_widget ()
                 }
             });
 
-            $('.leadin-subscribe form.vex-dialog-form').append('<a href="http://leadin.com/pop-subscribe-form-plugin-wordpress/?source=widget&referrer=' + document.URL + '" id="leadin-subscribe-powered-by" class="leadin-subscribe-powered-by">Powered by LeadIn</a>');
+            leadin_subscribe_show();
+
+            $('.leadin-subscribe form.vex-dialog-form').append('<a href="http://leadin.com/pop-subscribe-form-plugin-wordpress/?utm_campaign=subscribe_widget&utm_medium=widget&utm_source=' + document.URL + '" id="leadin-subscribe-powered-by" class="leadin-subscribe-powered-by">Powered by LeadIn</a>');
         };
 
         subscribe._open = function() {
@@ -96,4 +98,20 @@ function leadin_subscribe_check_mobile( $ )
         is_mobile = true;
 
     return is_mobile;
+}
+
+function leadin_subscribe_show ()
+{
+    jQuery.ajax({
+        type: 'POST',
+        url: li_ajax.ajax_url,
+        data: {
+            "action": "leadin_subscribe_show"
+        },
+        success: function(data){
+        },
+        error: function ( error_data ) {
+            //alert(error_data);
+        }
+    });
 }
