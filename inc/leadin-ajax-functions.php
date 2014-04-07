@@ -281,9 +281,9 @@ add_action('wp_ajax_nopriv_leadin_check_visitor_status', 'leadin_check_visitor_s
  * Grabs the heading for the subscribe widget from the options
  *
  */
-function get_leadin_subscribe_heading ()
+function leadin_subscribe_show ()
 {
-	echo json_encode('Subscribe because it worked!');
+	leadin_track_plugin_activity('widget shown');
 	die();
 
 	/*global $wpdb;
@@ -307,6 +307,6 @@ function get_leadin_subscribe_heading ()
 
 }
 
-add_action('wp_ajax_get_leadin_subscribe_heading', 'get_leadin_subscribe_heading'); // Call when user logged in
-add_action('wp_ajax_nopriv_get_leadin_subscribe_heading', 'get_leadin_subscribe_heading'); // Call when user is not logged in
+add_action('wp_ajax_leadin_subscribe_show', 'leadin_subscribe_show'); // Call when user logged in
+add_action('wp_ajax_nopriv_leadin_subscribe_show', 'leadin_subscribe_show'); // Call when user is not logged in
 ?>

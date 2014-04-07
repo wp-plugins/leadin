@@ -191,8 +191,6 @@ class WPLeadInAdmin {
     {
         global  $wp_version;
         
-        leadin_track_plugin_activity("Loaded Settings Page");
-
         if ( !current_user_can( 'manage_categories' ) )
         {
             wp_die(__('You do not have sufficient permissions to access this page.'));
@@ -259,6 +257,8 @@ class WPLeadInAdmin {
      */
     function leadin_plugin_settings ()
     {
+        leadin_track_plugin_activity("Loaded Settings Page");
+        
         ?>
             <form method="post" action="options.php">
                 <?php 

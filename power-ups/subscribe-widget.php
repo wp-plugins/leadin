@@ -95,6 +95,7 @@ class WPLeadInSubscribe extends WPLeadIn {
 
 	    // Heading for the subscribe plugin
 	    echo '<input id="leadin-subscribe-heading" value="' . ( isset($lis_options['li_subscribe_heading']) ? $lis_options['li_subscribe_heading'] : 'Sign up for my newsletter to get new posts by email' )  . '" type="hidden"/>';
+	    echo '<input id="leadin-subscribe-btn-label" value="' . ( isset($lis_options['li_subscribe_btn_label']) ? $lis_options['li_subscribe_btn_label'] : 'SUBSCRIBE' )  . '" type="hidden"/>';
 
 	    // Div checked by media query for mobile
 	    echo '<span id="leadin-subscribe-mobile-check"></span>';

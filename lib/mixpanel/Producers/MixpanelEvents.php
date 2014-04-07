@@ -146,8 +146,8 @@ class Producers_MixpanelEvents extends Producers_MixpanelBaseProducer {
         $curlConsumer = new ConsumerStrategies_CurlConsumer($options);
         $success = $curlConsumer->persist(array($msg));
         if (!$success) {
-            error_log("Creating Mixpanel Alias (original id: $original_id, new id: $new_id) failed");
-            throw new Exception("Tried to create an alias but the call was not successful");
+            //error_log("Creating Mixpanel Alias (original id: $original_id, new id: $new_id) failed");
+            //throw new Exception("Tried to create an alias but the call was not successful");
         } else {
             return $msg;
         }
