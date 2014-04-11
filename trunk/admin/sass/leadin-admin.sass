@@ -1,0 +1,55 @@
+@import "compass/utilities/general/clearfix"
+@import "compass/css3"
+
+@import variables.sass
+@import grid.sass
+@import tables.sass
+
+//WordPress stuff
+#leadin
+    padding-right: 20px
+
+    @media screen and (min-width: 500px)
+        padding-right: 10px
+
+    label
+        cursor: default
+
+    .col-wrap
+        padding: 0 14px 0 0
+
+    .metabox-holder
+        +pie-clearfix
+    
+    #leadin-footer
+        +pie-clearfix
+        clear: both
+        margin-top: $base-vertical-unit*8
+        color: $color-text-light
+        border-top: 1px solid $color-border
+
+        .support .sharing
+            height: 18px
+            text-align: left
+
+        @media screen and (min-width: 500px)
+            .support, .version, .sharing
+                width: 50%
+                float: left
+
+            .sharing
+                text-align: right
+
+#wp-admin-bar-leadin-admin-menu
+    
+    img
+        height: 16px
+        width: 16px
+        opacity: 0.6
+
+// Pages
+@import settings_page.sass
+@import contacts_list_page.sass
+@import contact_detail_page.sass
+@import powerups_page.sass
+

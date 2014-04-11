@@ -1,0 +1,25 @@
+@import "susyone"
+
+// Settings
+
+$break: 782px 12
+
+$total-columns: 12
+$column-width: 80px
+$gutter-width: 20px
+$grid-padding: 20px
+
+#leadin
+    @include container($total-columns, $break)
+    margin: 0
+    padding: 0
+
+    *
+        box-sizing: border-box
+
+    @include at-breakpoint($break)
+        margin: 0
+
+// Layout
+
+@include at-breakpoint($break)
