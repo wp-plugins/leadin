@@ -236,6 +236,18 @@ function leadin_insert_form_submission ()
 		$q = $wpdb->prepare("UPDATE li_leads SET lead_email = %s, lead_status = %s, merged_hashkeys = %s WHERE hashkey = %s", $email, $contact_status, $existing_contact_hashkeys, $hashkey);
 		$rows_updated = $wpdb->query($q);
 
+		// Hit ESP APIs if power-up activated
+		if ( $contact_status == 'subscribe' )
+		{
+			$active_power_ups = array_unique(unserialize(get_option('leadin_active_power_ups')));
+
+			if ( in_array('mailchimp_list_sync', $active_power_ups) )
+			{
+				global $leadin_mailchimp_list_sync_wp;
+				$leadin_mailchimp_list_sync_wp->push_mailchimp_subscriber_to_list($email);
+			}
+		}
+
 		// Send the contact email
 		$li_emailer = new LI_Emailer();
 		$li_emailer->send_new_lead_email($hashkey);
