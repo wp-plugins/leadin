@@ -3,7 +3,7 @@ Contributors: andygcook, nelsonjoyce
 Tags:  lead tracking, visitor tracking, analytics, crm, marketing automation, inbound marketing, subscription, marketing, lead generation, mailchimp
 Requires at least: 3.7
 Tested up to: 3.8.2
-Stable tag: 0.7.0
+Stable tag: 0.7.1
 
 LeadIn is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
 
@@ -88,14 +88,18 @@ To ensure quality we've tested the most popular WordPress form builder plugins.
 
 == Changelog ==
 
-Current version: 0.7.0
-Current version release: 2014-04-10
+Current version: 0.7.1
+Current version release: 2014-04-11
+
+= 0.7.1 (2014.04.11) =
+-Bug fixes
+- SVN bug fix that did not add the MailChimp List sync power-up
 
 = 0.7.0 (2014.04.10) =
 
 = Enhancements =
 - MailChimp List Sync power-up
-- Added new themes (bottom right, bottom left, top and pop-up) to the WordPerss Subscribe Widget power-up
+- Added new themes (bottom right, bottom left, top and pop-up) to the WordPress Subscribe Widget power-up
 
 = 0.6.2 (2014.04.07) =
 - Bug fixes
