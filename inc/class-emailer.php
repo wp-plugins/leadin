@@ -113,8 +113,7 @@ class LI_Emailer {
 		}
 		else if ( $history->submission->form_type == "subscribe" )
 		{
-			$first_name = leadin_get_value_by_key('First name', $fields);
-			$subject = $first_name . " loved " . $history->submission->form_page_title . " and subscribed to your mailing list";
+			$subject = "New subscriber from " . $history->submission->form_page_title;
 			leadin_track_plugin_activity("New subscriber");
 			$this->send_subscriber_confirmation_email($history);
 		}
@@ -290,7 +289,7 @@ class LI_Emailer {
 		// If source isn't set, set it to direct
 		if ( $session_source )
 		{
-			$session_source_text .= "<a href='" . $session_source . "' style='color: #2ba6cb; text-decoration: none !important;'>" . $session_source . "</a>";
+			$session_source_text = "<a href='" . $session_source . "' style='color: #2ba6cb; text-decoration: none !important;'>" . $session_source . "</a>";
 		}
 		else
 		{
@@ -410,7 +409,7 @@ class LI_Emailer {
 		
 		// Build Powered by LeadIn row
 		$body .= "<table class='row section' style='border-spacing: 0;border-collapse: collapse;vertical-align: top;text-align: left;width: 100%;position: relative;display: block;margin-top: 20px;padding: 0px;'><tr style='vertical-align: top;text-align: left;padding: 0;' align='left'><td class='wrapper last' style='word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse !important;vertical-align: top;text-align: left;position: relative;padding: 0 0px 0 0;' align='left' valign='top'><table class='twelve columns' style='border-spacing: 0;border-collapse: collapse;vertical-align: top;text-align: left;width: 580px;margin: 0 auto;padding: 0;'><tr style='vertical-align: top;text-align: left;padding: 0;' align='left'><td style='padding: 10px 20px;' align='left' valign='top'><table style='border-spacing: 0;border-collapse: collapse;vertical-align: top;text-align: left;width: 100%;overflow: hidden;padding: 0;'><tr style='vertical-align: top;text-align: left;padding: 0;' align='left'><td style='word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse !important;vertical-align: top;text-align: center;display: block;width: auto !important;font-size: 16px;padding: 10px 20px;' align='center' valign='top'>";
-			$body .="<div style='font-size: 11px; color: #888; padding: 0 0 5px 0;'>Powered by</div><a href='http://leadin.com/pop-subscribe-form-plugin-wordpress/'><img alt='LeadIn' height='20px' width='99px' src='http://leadin.com/wp-content/themes/LeadIn-WP-Theme/library/images/logos/Leadin_logo@2x.png' alt='leadin.com'/></a>";
+			$body .="<div style='font-size: 11px; color: #888; padding: 0 0 5px 0;'>Powered by</div><a href='http://leadin.com/wordpress-subscribe-widget/?utm_campaign=subscribe_widget&utm_medium=email&utm_source=" . $site_url . "'><img alt='LeadIn' height='20px' width='99px' src='http://leadin.com/wp-content/themes/LeadIn-WP-Theme/library/images/logos/Leadin_logo@2x.png' alt='leadin.com'/></a>";
 		$body .= "</td></tr></table></td><td class='expander' style='word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse !important;vertical-align: top;text-align: left;visibility: hidden;width: 0px;padding: 0;border: 0;' align='left' valign='top'></td></tr></table></td></tr></table>";
 
 		// @EMAIL - end form section
