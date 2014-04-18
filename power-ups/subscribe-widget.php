@@ -128,8 +128,10 @@ class WPLeadInSubscribe extends WPLeadIn {
 			wp_enqueue_script('vex-dialog');
 
 			wp_register_style('leadin-subscribe-vex-css', LEADIN_SUBSCRIBE_WIDGET_PATH . '/frontend/css/vex.css');
-			
 			wp_enqueue_style('leadin-subscribe-vex-css');
+
+			wp_register_style('leadin-subscribe', LEADIN_SUBSCRIBE_WIDGET_PATH . '/frontend/css/leadin-subscribe.css');
+			wp_enqueue_style('leadin-subscribe');
 
 			//wp_localize_script('leadin', 'li_ajax', array('ajax_url' => admin_url('admin-ajax.php')));
 		}

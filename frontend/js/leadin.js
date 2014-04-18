@@ -12,10 +12,19 @@ jQuery(document).ready( function ( $ ) {
 	if ( li_submission_cookie )
 	{
 		var submission_data = JSON.parse(li_submission_cookie);
-		leadin_insert_form_submission(submission_data.submission_hash, submission_data.hashkey, submission_data.page_title, submission_data.page_url, submission_data.json_form_fields, submission_data.lead_email, submission_data.form_submission_type, function ( data ) {
-			// Form was submitted successfully before page reload. Delete cookie for this submission
-			$.removeCookie('li_submission', {path: "/", domain: ""});
-		});
+		leadin_insert_form_submission(
+			submission_data.submission_hash, 
+			submission_data.hashkey, 
+			submission_data.page_title, 
+			submission_data.page_url, 
+			submission_data.json_form_fields, 
+			submission_data.lead_email, 
+			submission_data.form_submission_type, 
+			function ( data ) {
+				// Form was submitted successfully before page reload. Delete cookie for this submission
+				$.removeCookie('li_submission', {path: "/", domain: ""});
+			}
+		);
 	}
 
 	if ( !hashkey )
@@ -257,10 +266,19 @@ function leadin_submit_form ( $form, $, form_type )
 
 		$.cookie("li_submission", JSON.stringify(form_submission), {path: "/", domain: ""});
 
-		leadin_insert_form_submission(submission_hash, hashkey, page_title, page_url, json_form_fields, lead_email, form_submission_type, function ( data ) {
-			// Form was executed 100% successfully before page reload. Delete cookie for this submission
-			$.removeCookie('li_submission', {path: "/", domain: ""});
-		});
+		leadin_insert_form_submission(
+			submission_hash, 
+			hashkey, 
+			page_title, 
+			page_url, 
+			json_form_fields, 
+			lead_email, 
+			form_submission_type, 
+			function ( data ) {
+				// Form was executed 100% successfully before page reload. Delete cookie for this submission
+				$.removeCookie('li_submission', {path: "/", domain: ""});
+			}
+		);
 	}
 	else // No lead - submit form as usual
 	{
