@@ -1,9 +1,9 @@
 === LeadIn ===
 Contributors: andygcook, nelsonjoyce
-Tags:  lead tracking, visitor tracking, analytics, crm, marketing automation, inbound marketing, subscription, marketing, lead generation
+Tags:  lead tracking, visitor tracking, analytics, crm, marketing automation, inbound marketing, subscription, marketing, lead generation, mailchimp
 Requires at least: 3.7
-Tested up to: 3.8.1
-Stable tag: 0.6.2
+Tested up to: 3.8.2
+Stable tag: 0.7.2
 
 LeadIn is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
 
@@ -88,8 +88,25 @@ To ensure quality we've tested the most popular WordPress form builder plugins.
 
 == Changelog ==
 
-Current version: 0.6.2
-Current version release: 2014-04-07
+Current version: 0.7.2
+Current version release: 2014-04-18
+
+= 0.7.2 (2014.04.18) =
+-Bug fixes
+- Fix contact deletion bug
+- Implement data recovery fix for contacts
+- Bug fixes to contact merging
+
+
+= 0.7.1 (2014.04.11) =
+-Bug fixes
+- SVN bug fix that did not add the MailChimp List sync power-up
+
+= 0.7.0 (2014.04.10) =
+
+= Enhancements =
+- MailChimp List Sync power-up
+- Added new themes (bottom right, bottom left, top and pop-up) to the WordPress Subscribe Widget power-up
 
 = 0.6.2 (2014.04.07) =
 - Bug fixes
@@ -97,6 +114,7 @@ Current version release: 2014-04-07
 - MySQL query optimizations
 - Fixed bug with MySQL V5.0+ by adding default NULL values for insert statements on contacts table
 - Changed title for returning lead email notifications
+- Setting to change button label on 
 
 = Enhancements =
 - Added ability to change button label on subscribe widget
@@ -114,18 +132,18 @@ Current version release: 2014-04-07
 - Number of contacts does not equal leads + commenters + subscribers
 - Modals aren't bound to forms after page load
 - Fix bug with activating + reactivating the plugin overwriting the saved settings
-- Override button styles for Subscription Pop-in widget
+- Override button styles for Subscribe Pop-up widget
 
 = Enhancements =
 - Improved readability on new lead notification emails
-- Confirmation email added for new subscribers to the LeadIn Subscribe Pop-in
+- Confirmation email added for new subscribers to the LeadIn Subscribe Pop-up
 - Updated screenshots
 - Improved onboarding flow
 - Deleted unused and deprecated files
 
 = 0.5.1 (2014.03.03) =
 - Bug fixes
-- Fixed Subscribe Pop-in automatically enabling itself
+- Fixed Subscribe Pop-up automatically enabling itself
 
 = 0.5.0 (2014.02.25) =
 - Bug fixes

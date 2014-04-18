@@ -11,21 +11,21 @@
 class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
     
     var $power_up_settings_section = 'leadin_subscribe_options_section';
+    var $power_up_icon;
 
     /**
      * Class constructor
      */
-    function __construct ()
+    function __construct (  $power_up_icon )
     {
         //=============================================
         // Hooks & Filters
         //=============================================
-
+        
         if ( is_admin() )
         {
+            $this->power_up_icon = '<span class="dashicons dashicons-email-alt"></span>';
             add_action('admin_init', array($this, 'leadin_subscribe_build_settings_page'));
-            add_action('admin_print_scripts', array($this, 'add_leadin_subscribe_admin_scripts'));
-            add_action('admin_print_styles', array($this, 'add_leadin_subscribe_admin_styles'));
         }
     }
 
@@ -39,9 +39,11 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
     function leadin_subscribe_build_settings_page ()
     {
         register_setting('leadin_settings_options', 'leadin_subscribe_options', array($this, 'sanitize'));
-        add_settings_section($this->power_up_settings_section, 'Subscribe Pop-in', '', LEADIN_ADMIN_PATH);
-        add_settings_field('li_subscribe_heading', 'Call-to-action text', array($this, 'li_subscribe_heading_callback'), LEADIN_ADMIN_PATH, $this->power_up_settings_section);
-        add_settings_field('li_subscribe_btn_label', 'Button label', array($this, 'li_subscribe_btn_label_callback'), LEADIN_ADMIN_PATH, $this->power_up_settings_section);
+
+        add_settings_section($this->power_up_settings_section, $this->power_up_icon . 'Subscribe Pop-up', '', LEADIN_ADMIN_PATH);
+        add_settings_field('li_subscribe_vex_class', 'Pop-up Location', array($this, 'li_subscribe_vex_class_callback'), LEADIN_ADMIN_PATH, $this->power_up_settings_section);
+        add_settings_field('li_subscribe_heading', 'Pop-up header text', array($this, 'li_subscribe_heading_callback'), LEADIN_ADMIN_PATH, $this->power_up_settings_section);
+        add_settings_field('li_subscribe_btn_label', 'Button text', array($this, 'li_subscribe_btn_label_callback'), LEADIN_ADMIN_PATH, $this->power_up_settings_section);
     }
 
     /**
@@ -53,6 +55,9 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
     {
         $new_input = array();
 
+        if( isset( $input['li_subscribe_vex_class'] ) )
+            $new_input['li_subscribe_vex_class'] = sanitize_text_field( $input['li_subscribe_vex_class'] );
+
         if( isset( $input['li_subscribe_heading'] ) )
             $new_input['li_subscribe_heading'] = sanitize_text_field( $input['li_subscribe_heading'] );
 
@@ -63,7 +68,23 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
     }
 
     /**
-     * Prints email input for settings page
+     * Prints subscribe location input for settings page
+     */
+    function li_subscribe_vex_class_callback ()
+    {
+        $options = get_option('leadin_subscribe_options');
+        $li_subscribe_vex_class = ( $options['li_subscribe_vex_class'] ? $options['li_subscribe_vex_class'] : 'vex-theme-bottom-right-corner' ); // Get class from options, or show default
+
+        echo '<select id="li_subscribe_vex_class" name="leadin_subscribe_options[li_subscribe_vex_class]">';
+            echo '<option value="vex-theme-bottom-right-corner"' . ( $li_subscribe_vex_class == 'vex-theme-bottom-right-corner' ? ' selected' : '' ) . '>Bottom right</option>';
+            echo '<option value="vex-theme-bottom-left-corner"' . ( $li_subscribe_vex_class == 'vex-theme-bottom-left-corner' ? ' selected' : '' ) . '>Bottom Left</option>';
+            echo '<option value="vex-theme-top"' . ( $li_subscribe_vex_class == 'vex-theme-top' ? ' selected' : '' ) . '>Top</option>';
+            echo '<option value="vex-theme-default"' . ( $li_subscribe_vex_class == 'vex-theme-default' ? ' selected' : '' ) . '>Pop-over content</option>';
+        echo '</select>';
+    }
+
+    /**
+     * Prints subscribe heading input for settings page
      */
     function li_subscribe_heading_callback ()
     {
@@ -77,50 +98,18 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
     }
 
     /**
-     * Prints email input for settings page
+     * Prints subscribe heading text input for settings page
      */
     function li_subscribe_btn_label_callback ()
     {
         $options = get_option('leadin_subscribe_options');
-        $li_subscribe_btn_label = ( $options['li_subscribe_btn_label'] ? $options['li_subscribe_btn_label'] : 'SUBSCRIBE' ); // Get header from options, or show default
+        $li_subscribe_btn_label = ( $options['li_subscribe_btn_label'] ? $options['li_subscribe_btn_label'] : 'SUBSCRIBE' ); // Get button text from options, or show default
         
         printf(
             '<input id="li_subscribe_btn_label" type="text" id="title" name="leadin_subscribe_options[li_subscribe_btn_label]" value="%s" size="50"/>',
             $li_subscribe_btn_label
         );
 
-    }
-
-    //=============================================
-    // Admin Styles & Scripts
-    //=============================================
-
-    /**
-     * Adds admin javascript
-     */
-    function add_leadin_subscribe_admin_scripts ()
-    {
-        global $pagenow;
-
-        if ( $pagenow == 'admin.php' && isset($_GET['page']) && strstr($_GET['page'], "leadin_settings") ) 
-        {
-            wp_register_script('leadin-subscribe-admin-js', LEADIN_SUBSCRIBE_WIDGET_PATH . '/admin/js/leadin-subscribe-admin.js', array ( 'jquery' ), FALSE, TRUE);
-            wp_enqueue_script('leadin-subscribe-admin-js');
-       }
-    }
-
-    /**
-     * Adds admin javascript
-     */
-    function add_leadin_subscribe_admin_styles ()
-    {
-        global $pagenow;
-
-        if ( $pagenow == 'admin.php' && isset($_GET['page']) && strstr($_GET['page'], "leadin_settings") ) 
-        {
-            wp_register_style('leadin-subscribe-admin-css', LEADIN_SUBSCRIBE_WIDGET_PATH . '/admin/css/leadin-subscribe-admin.css');
-            wp_enqueue_style('leadin-subscribe-admin-css');
-        }
     }
 }
 

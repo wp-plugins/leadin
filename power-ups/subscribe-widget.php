@@ -8,6 +8,7 @@
 	* Power-up URI: http://leadin.com/pop-subscribe-form-plugin-wordpress
 	* Power-up Description: Convert more email subscribers with our pop-up.
 	* Power-up Icon: powerup-icon-subscribe
+	* Power-up Icon Small: powerup-icon-subscribe
 	* First Introduced: 0.4.7
 	* Power-up Tags: Lead Generation
 	* Auto Activate: Yes
@@ -52,13 +53,13 @@ class WPLeadInSubscribe extends WPLeadIn {
 
 		add_filter('init', array($this, 'add_leadin_subscribe_frontend_scripts_and_styles'));
 
-		add_action('get_footer', array(&$this, 'append_leadin_subscribe_heading'));
+		add_action('get_footer', array(&$this, 'append_leadin_subscribe_settings'));
 	}
 
 	public function admin_init ( )
 	{
 		$admin_class = get_class($this) . 'Admin';
-		$this->admin = new $admin_class();
+		$this->admin = new $admin_class($this->icon);
 	}
 
 	function power_up_setup_callback ( )
@@ -77,7 +78,10 @@ class WPLeadInSubscribe extends WPLeadIn {
 		{
 			$opt = array(
 				'li_susbscibe_installed' => '1',
-				'li_subscribe_heading' => 'Sign up for my newsletter to get new posts by email'
+				'li_subscribe_vex_class' => 'vex-theme-bottom-right-corner',
+				'li_subscribe_heading' => 'Sign up for my newsletter to get new posts by email',
+				'li_subscribe_btn_label' => 'SUBSCRIBE'
+
 			);
 
 			update_option('leadin_subscribe_options', $opt);
@@ -85,15 +89,16 @@ class WPLeadInSubscribe extends WPLeadIn {
 	}
 
 	/**
-	 * Adds a hidden input at the end of the content containing the ouput of the heading options
+	 * Adds a hidden input at the end of the content containing the ouput of the location, heading, and button text options
 	 *
 	 * @return 
 	 */
-	function append_leadin_subscribe_heading ()
+	function append_leadin_subscribe_settings ()
 	{
 		$lis_options = get_option('leadin_subscribe_options');
 
 	    // Heading for the subscribe plugin
+	    echo '<input id="leadin-subscribe-vex-class" value="' . ( isset($lis_options['li_subscribe_vex_class']) ? $lis_options['li_subscribe_vex_class'] : 'vex-theme-bottom-right-corner' )  . '" type="hidden"/>';
 	    echo '<input id="leadin-subscribe-heading" value="' . ( isset($lis_options['li_subscribe_heading']) ? $lis_options['li_subscribe_heading'] : 'Sign up for my newsletter to get new posts by email' )  . '" type="hidden"/>';
 	    echo '<input id="leadin-subscribe-btn-label" value="' . ( isset($lis_options['li_subscribe_btn_label']) ? $lis_options['li_subscribe_btn_label'] : 'SUBSCRIBE' )  . '" type="hidden"/>';
 
@@ -122,53 +127,13 @@ class WPLeadInSubscribe extends WPLeadIn {
 			wp_enqueue_script('vex');
 			wp_enqueue_script('vex-dialog');
 
-			wp_register_style('leadin-subscribe-css', LEADIN_SUBSCRIBE_WIDGET_PATH . '/frontend/css/leadin-subscribe.css');
 			wp_register_style('leadin-subscribe-vex-css', LEADIN_SUBSCRIBE_WIDGET_PATH . '/frontend/css/vex.css');
-			
 			wp_enqueue_style('leadin-subscribe-vex-css');
-			wp_enqueue_style('leadin-subscribe-css');
 
+			wp_register_style('leadin-subscribe', LEADIN_SUBSCRIBE_WIDGET_PATH . '/frontend/css/leadin-subscribe.css');
+			wp_enqueue_style('leadin-subscribe');
 
 			//wp_localize_script('leadin', 'li_ajax', array('ajax_url' => admin_url('admin-ajax.php')));
-		}
-	}
-
-	function notify_new_post($post_id) {
-		if( ( $_POST['post_status'] == 'publish' ) && ( $_POST['original_post_status'] != 'publish' ) ) {
-		    $headers = "From: LeadIn <team@leadin.com>\r\n";
-		    $headers.= "Reply-To: LeadIn <team@leadin.com>\r\n";
-		    $headers.= "X-Mailer: PHP/" . phpversion()."\r\n";
-		    $headers.= "MIME-Version: 1.0\r\n";
-		    $headers.= "Content-type: text/html; charset=utf-8\r\n";
-		    
-		    $post = get_post($post_id);
-		    $author = get_userdata($post->post_author);
-		    $author_email = $author->user_email;
-		    $email_subject = "Your post has been published.";
-
-		    ob_start(); ?>
-
-		    <html>
-		        <head>
-		            <title>New post at <?php bloginfo( 'name' ) ?></title>
-		        </head>
-		        <body>
-		            <p>
-		                Hi <?php echo $author->user_firstname ?>,
-		            </p>
-		            <p>
-		                Your post <a href="<?php echo get_permalink($post->ID) ?>"><?php the_title_attribute() ?></a> has been published.
-		            </p>
-		        </body>
-		    </html>
-
-		    <?php
-
-		    $message = ob_get_contents();
-
-		    ob_end_clean();
-
-		    wp_mail( 'andy@leadin.com', $email_subject, $message );
 		}
 	}
 }
@@ -178,6 +143,5 @@ class WPLeadInSubscribe extends WPLeadIn {
 //=============================================
 
 global $leadin_subscribe_wp;
-//$leadin_subscribe_wp = new WPLeadInSubscribe();
 
 ?>

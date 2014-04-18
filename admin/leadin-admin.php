@@ -475,8 +475,13 @@ class WPLeadInAdmin {
     {
         ?>
         <div id="leadin-footer">
-            <p class="support"><a href="http://leadin.com">LeadIn</a> <?php echo LEADIN_PLUGIN_VERSION?> | Need help? <a href="#" onclick="return SnapEngage.startLink();">Contact us</a>.</p>
+            <p class="support">
+                <a href="http://leadin.com">LeadIn</a> <?php echo LEADIN_PLUGIN_VERSION?> 
+                <span style="padding: 0px 5px;">|</span> Need help? <a href="#" onclick="return SnapEngage.startLink();">Contact us</a>
+                <span style="padding: 0px 5px;">|</span> Love Leadin? <a href="http://wordpress.org/support/view/plugin-reviews/leadin?rate=5#postform">Review us</a>
+            </p>
             <p class="sharing"><a href="https://twitter.com/leadinapp" class="twitter-follow-button" data-show-count="false">Follow @leadinapp</a>
+
             <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script></p>
         </div>
         <!-- begin SnapEngage code -->
