@@ -113,7 +113,7 @@ function leadin_get_current_user ()
 function leadin_register_user ()
 {
     $leadin_user = leadin_get_current_user();
-    $mp = Mixpanel::getInstance(MIXPANEL_PROJECT_TOKEN);
+    $mp = LeadIn\LI_Mixpanel::getInstance(MIXPANEL_PROJECT_TOKEN);
     
     // @push mixpanel event for updated email
     $mp->identify($leadin_user['user_id']);
@@ -193,7 +193,7 @@ function leadin_track_plugin_activity ( $activity_desc )
     get_currentuserinfo();
     $user_id = md5(get_bloginfo('wpurl'));
 
-    $mp = Mixpanel::getInstance(MIXPANEL_PROJECT_TOKEN);
+    $mp = LeadIn\LI_Mixpanel::getInstance(MIXPANEL_PROJECT_TOKEN);
     $mp->track($activity_desc, array("distinct_id" => $user_id, '$wp-url' => get_bloginfo('wpurl'), '$wp-version' => $wp_version, '$li-version' => LEADIN_PLUGIN_VERSION));
 
     return true;
@@ -246,5 +246,71 @@ function leadin_get_value_by_key ( $key_value, $array )
     }
 
     return null;
+}
+
+/** 
+ * Data recovery algorithm for 0.7.2 upgrade
+ *
+ */
+function leadin_recover_contact_data ()
+{
+    global $wpdb;
+
+    $q = $wpdb->prepare("SELECT * FROM li_submissions WHERE form_fields LIKE '%%%s%%' AND form_fields LIKE '%%%s%%'", '@', '.');
+    $submissions = $wpdb->get_results($q);
+
+    if ( count($submissions) )
+    {
+        foreach ( $submissions as $submission )
+        {
+            $json = json_decode(stripslashes($submission->form_fields), TRUE);
+
+            foreach ( $json as $object )
+            {
+                if ( strstr($object['value'], '@') && strstr($object['value'], '@') && strlen($object['value']) <= 254 )
+                {
+                    // check to see if the contact exists and if it does, skip the data recovery
+                    $q = $wpdb->prepare("SELECT lead_email FROM li_leads WHERE lead_email = %s", $object['value']);
+                    $exists = $wpdb->get_var($q);
+
+                    if ( $exists )
+                        continue;
+
+                    // get the original data
+                    $q = $wpdb->prepare("SELECT pageview_date, pageview_source FROM li_pageviews WHERE lead_hashkey = %s ORDER BY pageview_date ASC LIMIT 1", $submission->lead_hashkey);
+                    $first_pageview = $wpdb->get_row($q);
+
+                    // recreate the contact
+                    $q = $wpdb->prepare("INSERT INTO li_leads ( lead_date, hashkey, lead_source, lead_email, lead_status ) VALUES ( %s, %s, %s, %s, %s )",
+                        ( $first_pageview->pageview_date ? $first_pageview->pageview_date : $submission->form_date), 
+                        $submission->lead_hashkey,
+                        ( $first_pageview->pageview_source ? $first_pageview->pageview_source : ''),
+                        $object['value'], 
+                        $submission->form_type
+                    );
+
+                    $wpdb->query($q);
+                }
+            }
+        }
+    }
+
+    leadin_update_option('leadin_options', 'data_recovered', 1);
+}
+
+function sort_power_ups ( $power_ups, $ordered_power_ups ) 
+{ 
+    $ordered = array();
+    $i = 0;
+    foreach ( $ordered_power_ups as $key )
+    {
+        if ( in_array($key, $power_ups) )
+        {
+            array_push($ordered, $key);
+            $i++;
+        }
+    }
+
+    return $ordered;
 }
 ?>
