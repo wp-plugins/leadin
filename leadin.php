@@ -3,7 +3,7 @@
 Plugin Name: LeadIn
 Plugin URI: http://leadin.com
 Description: LeadIn is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
-Version: 0.6.2
+Version: 0.8.0
 Author: Andy Cook, Nelson Joyce
 Author URI: http://leadin.com
 License: GPL2
@@ -26,7 +26,7 @@ if ( !defined('LEADIN_DB_VERSION') )
 	define('LEADIN_DB_VERSION', '0.6.2');
 
 if ( !defined('LEADIN_PLUGIN_VERSION') )
-	define('LEADIN_PLUGIN_VERSION', '0.6.2');
+	define('LEADIN_PLUGIN_VERSION', '0.8.0');
 
 if ( !defined('MIXPANEL_PROJECT_TOKEN') )
     define('MIXPANEL_PROJECT_TOKEN', 'a9615503ec58a6bce2c646a58390eac1');
@@ -42,7 +42,9 @@ require_once(LEADIN_PLUGIN_DIR . '/inc/leadin-ajax-functions.php');
 require_once(LEADIN_PLUGIN_DIR . '/inc/leadin-functions.php');
 require_once(LEADIN_PLUGIN_DIR . '/power-ups/subscribe-widget.php');
 require_once(LEADIN_PLUGIN_DIR . '/power-ups/contacts.php');
-require_once(LEADIN_PLUGIN_DIR . '/lib/mixpanel/Mixpanel.php');
+require_once(LEADIN_PLUGIN_DIR . '/power-ups/mailchimp-list-sync.php');
+require_once(LEADIN_PLUGIN_DIR . '/power-ups/constant-contact-list-sync.php');
+require_once(LEADIN_PLUGIN_DIR . '/lib/mixpanel/LI_Mixpanel.php');
 
 //=============================================
 // WPLeadIn Class
@@ -87,11 +89,12 @@ class WPLeadIn {
 		if ( ($li_options['li_installed'] != 1) || (!is_array($li_options)) )
 		{
 			$opt = array(
-				'li_installed'	=> 1,
-				'li_db_version'	=> LEADIN_DB_VERSION,
-				'li_email' 		=> get_bloginfo('admin_email'),
-				'onboarding_complete'	=> 0,
-				'ignore_settings_popup'	=> 0
+				'li_installed'				=> 1,
+				'li_db_version'				=> LEADIN_DB_VERSION,
+				'li_email' 					=> get_bloginfo('admin_email'),
+				'onboarding_complete'		=> 0,
+				'ignore_settings_popup'		=> 0,
+				'data_recovered'			=> 1
 			);
 			
 			update_option('leadin_options', $opt);
@@ -217,6 +220,12 @@ class WPLeadIn {
 			update_option('leadin_active_power_ups', serialize($auto_activate));
 		}
 
+		// 0.7.2 bug fix - data recovery algorithm for deleted contacts
+		if ( ! isset($li_options['data_recovered']) )
+		{
+			leadin_recover_contact_data();
+		}
+
 		// Set the database version if it doesn't exist
 	    if ( isset($li_options['li_db_version']) )
 	    {
@@ -272,8 +281,7 @@ class WPLeadIn {
 	}
 
 	/**
-     * List available Jetpack modules. Simply lists .php files in /modules/.
-     * Make sure to tuck away module "library" files in a sub-directory.
+     * List available power-ups
      */
     public static function get_available_power_ups( $min_version = false, $max_version = false ) {
         static $power_ups = null;
@@ -297,6 +305,7 @@ class WPLeadIn {
 				$power_up->link_uri 		= $headers['uri'];
 				$power_up->description 		= $headers['description'];
 				$power_up->icon 			= $headers['icon'];
+				$power_up->icon_small 		= $headers['icon_small'];
 				$power_up->permanent 		= $headers['permanent'];
 				$power_up->auto_activate 	= $headers['auto_activate'];
 				$power_up->activated 		= $headers['activated'];
@@ -341,6 +350,7 @@ class WPLeadIn {
 			'uri'				=> 'Power-up URI',
 			'description'		=> 'Power-up Description',
 			'icon'				=> 'Power-up Icon',
+			'icon_small'		=> 'Power-up Icon Small',
 			'introduced'		=> 'First Introduced',
 			'auto_activate'		=> 'Auto Activate',
 			'permanent'			=> 'Permanently Enabled',
@@ -389,6 +399,10 @@ class WPLeadIn {
             $files[] = $file;
         }
 
+        $files = sort_power_ups($files, array(
+        	LEADIN_PLUGIN_DIR . '/power-ups/contacts' . '.php', LEADIN_PLUGIN_DIR . '/power-ups/subscribe-widget' . '.php', LEADIN_PLUGIN_DIR . '/power-ups/mailchimp-list-sync' . '.php', LEADIN_PLUGIN_DIR . '/power-ups/constant-contact-list-sync' . '.php'
+        ));
+
         closedir( $dir );
 
         return $files;
@@ -397,7 +411,7 @@ class WPLeadIn {
     /**
 	 * Check whether or not a LeadIn power-up is active.
 	 *
-	 * @param string $power_up The slug of a Jetpack module.
+	 * @param string $power_up The slug of a power-up
 	 * @return bool
 	 *
 	 * @static

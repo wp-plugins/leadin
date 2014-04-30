@@ -12,10 +12,22 @@ jQuery(document).ready( function ( $ ) {
 	if ( li_submission_cookie )
 	{
 		var submission_data = JSON.parse(li_submission_cookie);
-		leadin_insert_form_submission(submission_data.submission_hash, submission_data.hashkey, submission_data.page_title, submission_data.page_url, submission_data.json_form_fields, submission_data.lead_email, submission_data.form_submission_type, function ( data ) {
-			// Form was submitted successfully before page reload. Delete cookie for this submission
-			$.removeCookie('li_submission', {path: "/", domain: ""});
-		});
+		leadin_insert_form_submission(
+			submission_data.submission_hash, 
+			submission_data.hashkey, 
+			submission_data.page_title, 
+			submission_data.page_url, 
+			submission_data.json_form_fields, 
+			submission_data.lead_email, 
+			submission_data.lead_first_name, 
+			submission_data.lead_last_name, 
+			submission_data.lead_phone, 
+			submission_data.form_submission_type, 
+			function ( data ) {
+				// Form was submitted successfully before page reload. Delete cookie for this submission
+				$.removeCookie('li_submission', {path: "/", domain: ""});
+			}
+		);
 	}
 
 	if ( !hashkey )
@@ -63,8 +75,11 @@ function leadin_submit_form ( $form, $, form_type )
 {
 	var $this = $form;
 
-	var form_fields = [];
-	var lead_email = '';
+	var form_fields 	= [];
+	var lead_email 		= '';
+	var lead_first_name = '';
+	var lead_last_name 	= '';
+	var lead_phone 		= '';
 	var form_submission_type = ( form_type ? form_type : 'lead' );
 
 	// Excludes hidden input fields + submit inputs
@@ -163,6 +178,15 @@ function leadin_submit_form ( $form, $, form_type )
 
 		if ( $value.indexOf('@') != -1 && $value.indexOf('.') != -1 && !lead_email )
 			lead_email = $value;
+
+		if ( $element.attr('id') == 'leadin-subscribe-fname')
+			lead_first_name = $value;
+
+		if ( $element.attr('id') == 'leadin-subscribe-lname')
+			lead_last_name = $value;
+
+		if ( $element.attr('id') == 'leadin-subscribe-phone')
+			lead_phone = $value;
 	});
 
 	var radio_groups = [];
@@ -249,6 +273,9 @@ function leadin_submit_form ( $form, $, form_type )
 			"submission_hash": submission_hash,
 			"hashkey": hashkey,
 			"lead_email": lead_email,
+			"lead_first_name": lead_first_name,
+			"lead_last_name": lead_last_name,
+			"lead_phone": lead_phone,
 			"page_title": page_title,
 			"page_url": page_url,
 			"json_form_fields": json_form_fields,
@@ -257,10 +284,22 @@ function leadin_submit_form ( $form, $, form_type )
 
 		$.cookie("li_submission", JSON.stringify(form_submission), {path: "/", domain: ""});
 
-		leadin_insert_form_submission(submission_hash, hashkey, page_title, page_url, json_form_fields, lead_email, form_submission_type, function ( data ) {
-			// Form was executed 100% successfully before page reload. Delete cookie for this submission
-			$.removeCookie('li_submission', {path: "/", domain: ""});
-		});
+		leadin_insert_form_submission(
+			submission_hash, 
+			hashkey, 
+			page_title, 
+			page_url, 
+			json_form_fields, 
+			lead_email, 
+			lead_first_name, 
+			lead_last_name, 
+			lead_phone, 
+			form_submission_type, 
+			function ( data ) {
+				// Form was executed 100% successfully before page reload. Delete cookie for this submission
+				$.removeCookie('li_submission', {path: "/", domain: ""});
+			}
+		);
 	}
 	else // No lead - submit form as usual
 	{
@@ -349,7 +388,7 @@ function leadin_insert_lead ( hashkey, page_referrer ) {
 	});
 }
 
-function leadin_insert_form_submission ( submission_haskey, hashkey, page_title, page_url, json_fields, lead_email, form_submission_type, Callback )
+function leadin_insert_form_submission ( submission_haskey, hashkey, page_title, page_url, json_fields, lead_email, lead_first_name, lead_last_name, lead_phone, form_submission_type, Callback )
 {
 	jQuery.ajax({
 		type: 'POST',
@@ -362,6 +401,9 @@ function leadin_insert_form_submission ( submission_haskey, hashkey, page_title,
 			"li_url": page_url,
 			"li_fields": json_fields,
 			"li_email": lead_email,
+			"li_first_name": lead_first_name,
+			"li_last_name": lead_last_name,
+			"li_phone": lead_phone,
 			"li_submission_type": form_submission_type
 		},
 		success: function(data){
