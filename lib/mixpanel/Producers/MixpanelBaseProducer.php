@@ -1,4 +1,6 @@
 <?php
+namespace LeadIn;
+
 require_once(dirname(__FILE__) . "/../Base/MixpanelBase.php");
 require_once(dirname(__FILE__) . "/../ConsumerStrategies/FileConsumer.php");
 require_once(dirname(__FILE__) . "/../ConsumerStrategies/CurlConsumer.php");
@@ -36,9 +38,9 @@ abstract class Producers_MixpanelBaseProducer extends Base_MixpanelBase {
      * @var array The list of available consumers
      */
     private $_consumers = array(
-        "file"      =>  "ConsumerStrategies_FileConsumer",
-        "curl"      =>  "ConsumerStrategies_CurlConsumer",
-        "socket"    =>  "ConsumerStrategies_SocketConsumer"
+        "file"      =>  "LeadIn\ConsumerStrategies_FileConsumer",
+        "curl"      =>  "LeadIn\ConsumerStrategies_CurlConsumer",
+        "socket"    =>  "LeadIn\ConsumerStrategies_SocketConsumer"
     );
 
 
