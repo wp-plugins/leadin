@@ -95,9 +95,10 @@ class LI_Emailer {
 		// Each line in an email can only be 998 characters long, so lines need to be broken with a wordwrap
 		$body = wordwrap($body, 900, "\r\n");
 
+		$from = $history->lead->lead_email;
 		$headers = "From: LeadIn <team@leadin.com>\r\n";
-		$headers.= "Reply-To: LeadIn <team@leadin.com>\r\n";
-		$headers.= "X-Mailer: PHP/" . phpversion()."\r\n";
+		$headers.= "Reply-To: LeadIn <" . $from . ">\r\n";
+		$headers.= "X-Mailer: PHP/" . phpversion() . "\r\n";
 		$headers.= "MIME-Version: 1.0\r\n";
 		$headers.= "Content-type: text/html; charset=utf-8\r\n";
 
@@ -108,27 +109,19 @@ class LI_Emailer {
 		if ( $history->submission->form_type == "comment" )
 		{	
 			$subject = "New comment posted on " . $history->submission->form_page_title;
-			leadin_track_plugin_activity("New comment");
 			$subject .= " by " . $history->lead->lead_email;
 		}
 		else if ( $history->submission->form_type == "subscribe" )
 		{
 			$subject = "New subscriber from " . $history->submission->form_page_title;
-			leadin_track_plugin_activity("New subscriber");
 			$this->send_subscriber_confirmation_email($history);
 		}
 		else
 		{	
 			if ( $history->new_contact )
-			{
 				$subject = "New lead from " . get_bloginfo('name') . " - Say hello to " . $history->lead->lead_email;
-				leadin_track_plugin_activity("New lead");
-			}
 			else
-			{
 				$subject = "Lead from " . get_bloginfo('name') . " - Say hello again to " . $history->lead->lead_email;
-				leadin_track_plugin_activity("Returning lead");
-			}
 		}
 
 		$email_sent = wp_mail($to, $subject, $body, $headers);
@@ -416,13 +409,14 @@ class LI_Emailer {
 
 		// Email Base close
 		$body .= '</center></td></tr></table></body></html>';
+		$from = apply_filters( 'li_subscribe_from', $leadin_email );
 
 		// Each line in an email can only be 998 characters long, so lines need to be broken with a wordwrap
 		$body = wordwrap($body, 900, "\r\n");
 
-		$headers = "From: LeadIn <team@leadin.com>\r\n";
-		$headers.= "Reply-To: LeadIn <team@leadin.com>\r\n";
-		$headers.= "X-Mailer: PHP/" . phpversion()."\r\n";
+		$headers = "From: LeadIn <" . $from . ">\r\n";
+		$headers.= "Reply-To: LeadIn <" . $from . ">\r\n";
+		$headers.= "X-Mailer: PHP/" . phpversion() . "\r\n";
 		$headers.= "MIME-Version: 1.0\r\n";
 		$headers.= "Content-type: text/html; charset=utf-8\r\n";
 

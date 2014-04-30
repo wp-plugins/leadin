@@ -38,7 +38,7 @@ function bind_leadin_subscribe_widget ()
                 if ($(window).scrollTop() + $(window).height() > $(document).height() / 2) {
                     subscribe.open();
                 } else {
-                    subscribe.close();
+                    //subscribe.close();
                 }
             });
         };
@@ -52,15 +52,16 @@ function bind_leadin_subscribe_widget ()
                 showCloseButton: true,
                 className: 'leadin-subscribe ' + $('#leadin-subscribe-vex-class').val(),
                 message: $('#leadin-subscribe-heading').val(),
-                input: '' +
-                    '<input id="leadin-subscribe-email" name="email" type="email" placeholder="Email address" required />',
+                input: '<input id="leadin-subscribe-email" name="email" type="email" placeholder="Email address" required />' +
+                    (($('#leadin-subscribe-name-fields').val()==0) ? '' : '<input id="leadin-subscribe-fname" name="fname" type="text" placeholder="First Name" required /><input id="leadin-subscribe-lname" name="lname" type="text" placeholder="Last Name" required />') +
+                    (($('#leadin-subscribe-phone-field').val()==0) ? '' : '<input id="leadin-subscribe-phone" name="phone" type="tel" placeholder="Phone" required />'),
                 buttons: [$.extend({}, vex.dialog.buttons.YES, { text: ( $('#leadin-subscribe-btn-label').val() ? $('#leadin-subscribe-btn-label').val() : 'SUBSCRIBE' ) })],
                 onSubmit: function ( data )
                 {
                     $('.vex-dialog-form').fadeOut(300, function ( e ) {
                         $('.vex-dialog-form').html(
                             '<div class="vex-close"></div>' + 
-                            '<h3>Thanks for Subscribing</h3>You should receive a confirmation email in your inbox shortly.' + 
+                            '<h3>Thanks!<br>You should receive a confirmation email in your inbox shortly.</h3>' + 
                             '<div>' +
                                 '<span class="powered-by">Powered by LeadIn</span>' + 
                                 '<a href="http://leadin.com/wordpress-subscribe-widget/?utm_campaign=subscribe_widget&utm_medium=email&utm_source=' + window.location.host + '"><img alt="LeadIn" height="20px" width="99px" src="http://leadin.com/wp-content/themes/LeadIn-WP-Theme/library/images/logos/Leadin_logo@2x.png" alt="leadin.com"/></a>' +

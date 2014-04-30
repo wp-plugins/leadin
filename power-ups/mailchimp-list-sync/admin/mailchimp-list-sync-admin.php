@@ -82,25 +82,26 @@ class WPMailChimpListSyncAdmin extends WPLeadInAdmin {
     function li_mls_subscribers_to_list_callback ()
     {
         $options = get_option('leadin_mls_options');
-        $li_mls_subscribers_to_list = ( isset($options['li_mls_subscribers_to_list']) ? $options['li_mls_subscribers_to_list'] : '' ); // Get header from options, or show default
-        
+        $li_mls_subscribers_to_list = ( isset($options['li_mls_subscribers_to_list']) ? $options['li_mls_subscribers_to_list'] : '' );
+
         $lists = $this->li_mls_get_mailchimp_lists($options['li_mls_api_key']);
 
         echo '<select id="li_mls_subscribers_to_list" name="leadin_mls_options[li_mls_subscribers_to_list]" ' . ( ! count($lists['data']) ? 'disabled' : '' ) . '>';
 
             if ( count($lists['data']) )
             {
+                $list_set = FALSE;
+
                 foreach ( $lists['data'] as $list )
                 {
-                    $list_set = FALSE;
                     if ( $list['id'] == $li_mls_subscribers_to_list && !$list_set )
                         $list_set = TRUE;
 
                     echo '<option ' . ( $list['id'] == $li_mls_subscribers_to_list ? 'selected' : '' ) . ' value="' . $list['id'] . '">' . $list['name'] . '</option>';
-
-                    if ( !$list_set )
-                        echo '<option selected value="">No list set...</option>';
                 }
+
+                if ( !$list_set )
+                    echo '<option selected value="">No list set...</option>';
             }
             else
             {
@@ -114,7 +115,7 @@ class WPMailChimpListSyncAdmin extends WPLeadInAdmin {
 
     function li_mls_get_mailchimp_lists ( $api_key )
     {
-        $MailChimp = new MailChimp($api_key);
+        $MailChimp = new LI_MailChimp($api_key);
 
         $lists = $MailChimp->call("lists/list", array(
             "start" => 0, // optional, control paging of lists, start results at this list #, defaults to 1st page of data (page 0)

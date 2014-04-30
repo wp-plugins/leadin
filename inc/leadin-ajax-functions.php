@@ -136,9 +136,12 @@ function leadin_insert_form_submission ()
 	$page_url 			= $_POST['li_url'];
 	$form_json 			= $_POST['li_fields'];
 	$email 				= $_POST['li_email'];
+	$first_name 		= $_POST['li_first_name'];
+	$last_name 			= $_POST['li_last_name'];
+	$phone 				= $_POST['li_phone'];
 	$submission_type 	= $_POST['li_submission_type'];
 	$options 			= get_option('leadin_options');
-	$li_admin_email 	= ( $options['li_email'] ) ? $options['li_email'] : get_bloginfo('admin_email');
+	$li_admin_email 	= ( isset($options['li_email']) ) ? $options['li_email'] : '';
 
 	// Check to see if the form_hashkey exists, and if it does, don't run the insert or send the email
 	$q = $wpdb->prepare("SELECT form_hashkey FROM li_submissions WHERE form_hashkey = %s", $submission_hash);
@@ -257,13 +260,35 @@ function leadin_insert_form_submission ()
 			if ( in_array('mailchimp_list_sync', $active_power_ups) )
 			{
 				global $leadin_mailchimp_list_sync_wp;
-				$leadin_mailchimp_list_sync_wp->push_mailchimp_subscriber_to_list($email);
+				$leadin_mailchimp_list_sync_wp->push_mailchimp_subscriber_to_list($email, $first_name, $last_name, $phone);
+			}
+
+			if ( in_array('constant_contact_list_sync', $active_power_ups) )
+			{
+				global $leadin_constant_contact_list_sync_wp;
+				$leadin_constant_contact_list_sync_wp->push_constant_contact_subscriber_to_list($email, $first_name, $last_name, $phone);
 			}
 		}
 
-		// Send the contact email
-		$li_emailer = new LI_Emailer();
-		$li_emailer->send_new_lead_email($hashkey);
+		if ( $contact_status == "comment" )
+			leadin_track_plugin_activity("New comment");
+		else if ( $contact_status == "subscribe" )
+			leadin_track_plugin_activity("New subscriber");
+		else
+		{	
+			$history = $this->get_lead_history($hashkey);
+			if ( $history->new_contact )
+				leadin_track_plugin_activity("New lead");
+			else
+				leadin_track_plugin_activity("Returning lead");
+		}
+
+		if ( $li_admin_email )
+		{
+			// Send the contact email
+			$li_emailer = new LI_Emailer();
+			$li_emailer->send_new_lead_email($hashkey);
+		}
 
 		return $rows_updated;
 	}

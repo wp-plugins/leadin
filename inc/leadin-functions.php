@@ -113,7 +113,7 @@ function leadin_get_current_user ()
 function leadin_register_user ()
 {
     $leadin_user = leadin_get_current_user();
-    $mp = Mixpanel::getInstance(MIXPANEL_PROJECT_TOKEN);
+    $mp = LI_Mixpanel::getInstance(MIXPANEL_PROJECT_TOKEN);
     
     // @push mixpanel event for updated email
     $mp->identify($leadin_user['user_id']);
@@ -193,7 +193,7 @@ function leadin_track_plugin_activity ( $activity_desc )
     get_currentuserinfo();
     $user_id = md5(get_bloginfo('wpurl'));
 
-    $mp = Mixpanel::getInstance(MIXPANEL_PROJECT_TOKEN);
+    $mp = LI_Mixpanel::getInstance(MIXPANEL_PROJECT_TOKEN);
     $mp->track($activity_desc, array("distinct_id" => $user_id, '$wp-url' => get_bloginfo('wpurl'), '$wp-version' => $wp_version, '$li-version' => LEADIN_PLUGIN_VERSION));
 
     return true;
@@ -296,5 +296,21 @@ function leadin_recover_contact_data ()
     }
 
     leadin_update_option('leadin_options', 'data_recovered', 1);
+}
+
+function sort_power_ups ( $power_ups, $ordered_power_ups ) 
+{ 
+    $ordered = array();
+    $i = 0;
+    foreach ( $ordered_power_ups as $key )
+    {
+        if ( in_array($key, $power_ups) )
+        {
+            array_push($ordered, $key);
+            $i++;
+        }
+    }
+
+    return $ordered;
 }
 ?>

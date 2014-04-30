@@ -92,7 +92,7 @@ class WPMailChimpListSync extends WPLeadIn {
 
 		if ( isset($options['li_mls_api_key']) && $options['li_mls_api_key']  && isset($options['li_mls_subscribers_to_list']) && $options['li_mls_subscribers_to_list'] )
 		{
-	        $MailChimp = new MailChimp($options['li_mls_api_key']);
+	        $MailChimp = new LI_MailChimp($options['li_mls_api_key']);
 
 	        $subscribe = $MailChimp->call("lists/subscribe", array(
 				"id" => $options['li_mls_subscribers_to_list'],

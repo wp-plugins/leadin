@@ -3,7 +3,7 @@
 Plugin Name: LeadIn
 Plugin URI: http://leadin.com
 Description: LeadIn is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
-Version: 0.7.2
+Version: 0.8.0
 Author: Andy Cook, Nelson Joyce
 Author URI: http://leadin.com
 License: GPL2
@@ -26,7 +26,7 @@ if ( !defined('LEADIN_DB_VERSION') )
 	define('LEADIN_DB_VERSION', '0.6.2');
 
 if ( !defined('LEADIN_PLUGIN_VERSION') )
-	define('LEADIN_PLUGIN_VERSION', '0.7.2');
+	define('LEADIN_PLUGIN_VERSION', '0.8.0');
 
 if ( !defined('MIXPANEL_PROJECT_TOKEN') )
     define('MIXPANEL_PROJECT_TOKEN', 'a9615503ec58a6bce2c646a58390eac1');
@@ -43,7 +43,8 @@ require_once(LEADIN_PLUGIN_DIR . '/inc/leadin-functions.php');
 require_once(LEADIN_PLUGIN_DIR . '/power-ups/subscribe-widget.php');
 require_once(LEADIN_PLUGIN_DIR . '/power-ups/contacts.php');
 require_once(LEADIN_PLUGIN_DIR . '/power-ups/mailchimp-list-sync.php');
-require_once(LEADIN_PLUGIN_DIR . '/lib/mixpanel/Mixpanel.php');
+require_once(LEADIN_PLUGIN_DIR . '/power-ups/constant-contact-list-sync.php');
+require_once(LEADIN_PLUGIN_DIR . '/lib/mixpanel/LI_Mixpanel.php');
 
 //=============================================
 // WPLeadIn Class
@@ -88,12 +89,12 @@ class WPLeadIn {
 		if ( ($li_options['li_installed'] != 1) || (!is_array($li_options)) )
 		{
 			$opt = array(
-				'li_installed'			=> 1,
-				'li_db_version'			=> LEADIN_DB_VERSION,
-				'li_email' 				=> get_bloginfo('admin_email'),
-				'onboarding_complete'	=> 0,
-				'ignore_settings_popup'	=> 0,
-				'data_recovered'		=> 1
+				'li_installed'				=> 1,
+				'li_db_version'				=> LEADIN_DB_VERSION,
+				'li_email' 					=> get_bloginfo('admin_email'),
+				'onboarding_complete'		=> 0,
+				'ignore_settings_popup'		=> 0,
+				'data_recovered'			=> 1
 			);
 			
 			update_option('leadin_options', $opt);
@@ -397,6 +398,10 @@ class WPLeadIn {
 
             $files[] = $file;
         }
+
+        $files = sort_power_ups($files, array(
+        	LEADIN_PLUGIN_DIR . '/power-ups/contacts' . '.php', LEADIN_PLUGIN_DIR . '/power-ups/subscribe-widget' . '.php', LEADIN_PLUGIN_DIR . '/power-ups/mailchimp-list-sync' . '.php', LEADIN_PLUGIN_DIR . '/power-ups/constant-contact-list-sync' . '.php'
+        ));
 
         closedir( $dir );
 

@@ -138,11 +138,8 @@ class WPLeadInAdmin {
     function leadin_options_section_heading ( )
     {
         ?>
-        <div id="message" class="updated below-h2">
-            <p>Visitor tracking is  <span style='color: #090; font-weight: bold;'>installed and tracking visitors</span>.</p>
-            <p>The next time a visitor fills out a form on your WordPress site with an email address, LeadIn will send you an email with the contact's referral source and page view history.</p>
-            <p>All of your visitor's form submissions are stored in your <a href='<?php echo get_bloginfo('wpurl');?>/wp-admin/admin.php?page=leadin_contacts'>LeadIn Contacts</a>.</p>
-        </div>
+        <p style='color: #090; font-weight: bold;'>Visitor tracking is installed and tracking visitors.</p>
+        <p>The next time a visitor fills out a form on your WordPress site with an email address, LeadIn will send you an email with the contact's referral source and page view history.</p>
         <?php
 
        $this->print_hidden_settings_fields();        
@@ -156,6 +153,7 @@ class WPLeadInAdmin {
         $li_db_version = ( $options['li_db_version'] ? $options['li_db_version'] : LEADIN_DB_VERSION );
         $ignore_settings_popup = ( $options['ignore_settings_popup'] ? $options['ignore_settings_popup'] : 0 );
         $onboarding_complete = ( $options['onboarding_complete'] ? $options['onboarding_complete'] : 0 );
+        $data_recovered = ( $options['data_recovered'] ? $options['data_recovered'] : 0 );
 
         printf(
             '<input id="li_installed" type="hidden" name="leadin_options[li_installed]" value="%d"/>',
@@ -175,6 +173,11 @@ class WPLeadInAdmin {
         printf(
             '<input id="onboarding_complete" type="hidden" name="leadin_options[onboarding_complete]" value="%d"/>',
             $onboarding_complete
+        );
+
+        printf(
+            '<input id="data_recovered" type="hidden" name="leadin_options[data_recovered]" value="%d"/>',
+            $data_recovered
         );
     }
 
@@ -303,12 +306,12 @@ class WPLeadInAdmin {
     function li_email_callback ()
     {
         $options = get_option('leadin_options');
-        $li_email = ( $options['li_email'] ? $options['li_email'] : get_bloginfo('admin_email') ); // Get email from plugin settings, if none set, use admin email
-
+        $li_email = ( isset($options['li_email']) && $options['li_email'] ? $options['li_email'] : '' ); // Get email from plugin settings, if none set, use admin email
+       
         printf(
-            '<input id="li_email" type="text" id="title" name="leadin_options[li_email]" value="%s" size="50"/><br/><span class="description">Separate multiple emails with commas</span>',
+            '<input id="li_email" type="text" id="title" name="leadin_options[li_email]" value="%s" size="50"/><br/><span class="description">Separate multiple emails with commas. Leave blank to disable email notifications.</span>',
             $li_email
-        );
+        );    
     }
 
     /**

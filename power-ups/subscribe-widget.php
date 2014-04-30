@@ -80,7 +80,9 @@ class WPLeadInSubscribe extends WPLeadIn {
 				'li_susbscibe_installed' => '1',
 				'li_subscribe_vex_class' => 'vex-theme-bottom-right-corner',
 				'li_subscribe_heading' => 'Sign up for my newsletter to get new posts by email',
-				'li_subscribe_btn_label' => 'SUBSCRIBE'
+				'li_subscribe_btn_label' => 'SUBSCRIBE',
+				'li_subscribe_name_fields' => '0',
+				'li_subscribe_phone_field' => '0'
 
 			);
 
@@ -101,6 +103,8 @@ class WPLeadInSubscribe extends WPLeadIn {
 	    echo '<input id="leadin-subscribe-vex-class" value="' . ( isset($lis_options['li_subscribe_vex_class']) ? $lis_options['li_subscribe_vex_class'] : 'vex-theme-bottom-right-corner' )  . '" type="hidden"/>';
 	    echo '<input id="leadin-subscribe-heading" value="' . ( isset($lis_options['li_subscribe_heading']) ? $lis_options['li_subscribe_heading'] : 'Sign up for my newsletter to get new posts by email' )  . '" type="hidden"/>';
 	    echo '<input id="leadin-subscribe-btn-label" value="' . ( isset($lis_options['li_subscribe_btn_label']) ? $lis_options['li_subscribe_btn_label'] : 'SUBSCRIBE' )  . '" type="hidden"/>';
+	    echo '<input id="leadin-subscribe-name-fields" value="' . ( isset($lis_options['li_subscribe_name_fields']) ? $lis_options['li_subscribe_name_fields'] : '0' )  . '" type="hidden"/>';
+	    echo '<input id="leadin-subscribe-phone-field" value="' . ( isset($lis_options['li_subscribe_phone_field']) ? $lis_options['li_subscribe_phone_field'] : '0' )  . '" type="hidden"/>';
 
 	    // Div checked by media query for mobile
 	    echo '<span id="leadin-subscribe-mobile-check"></span>';
