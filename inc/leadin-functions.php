@@ -113,7 +113,7 @@ function leadin_get_current_user ()
 function leadin_register_user ()
 {
     $leadin_user = leadin_get_current_user();
-    $mp = LeadIn\LI_Mixpanel::getInstance(MIXPANEL_PROJECT_TOKEN);
+    $mp = LI_Mixpanel::getInstance(MIXPANEL_PROJECT_TOKEN);
     
     // @push mixpanel event for updated email
     $mp->identify($leadin_user['user_id']);
@@ -193,7 +193,7 @@ function leadin_track_plugin_activity ( $activity_desc )
     get_currentuserinfo();
     $user_id = md5(get_bloginfo('wpurl'));
 
-    $mp = LeadIn\LI_Mixpanel::getInstance(MIXPANEL_PROJECT_TOKEN);
+    $mp = LI_Mixpanel::getInstance(MIXPANEL_PROJECT_TOKEN);
     $mp->track($activity_desc, array("distinct_id" => $user_id, '$wp-url' => get_bloginfo('wpurl'), '$wp-version' => $wp_version, '$li-version' => LEADIN_PLUGIN_VERSION));
 
     return true;
