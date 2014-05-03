@@ -144,7 +144,7 @@ class LI_Producers_MixpanelEvents extends LI_Producers_MixpanelBaseProducer {
         );
 
         $options = array_merge($this->_options, array("endpoint" => $this->_getEndpoint(), "fork" => false));
-        $LI_CurlConsumer = new ConsumerStrategies_LI_CurlConsumer($options);
+        $LI_CurlConsumer = new LI_ConsumerStrategies_CurlConsumer($options);
         $success = $LI_CurlConsumer->persist(array($msg));
         if (!$success) {
             //error_log("Creating Mixpanel Alias (original id: $original_id, new id: $new_id) failed");
