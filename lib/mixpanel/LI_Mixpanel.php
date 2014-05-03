@@ -1,10 +1,8 @@
 <?php
 
-namespace LeadIn;
-
-require_once(dirname(__FILE__) . "/Base/MixpanelBase.php");
-require_once(dirname(__FILE__) . "/Producers/MixpanelPeople.php");
-require_once(dirname(__FILE__) . "/Producers/MixpanelEvents.php");
+require_once(dirname(__FILE__) . "/Base/LI_MixpanelBase.php");
+require_once(dirname(__FILE__) . "/Producers/LI_MixpanelPeople.php");
+require_once(dirname(__FILE__) . "/Producers/LI_MixpanelEvents.php");
 
 /**
  * This is the main class for the Mixpanel PHP Library which provides all of the methods you need to track events and
@@ -16,7 +14,7 @@ require_once(dirname(__FILE__) . "/Producers/MixpanelEvents.php");
  * This library is built such that all messages are buffered in an in-memory "queue"
  * The queue will be automatically flushed at the end of every request. Alternatively, you can call "flush()" manually
  * at any time. Flushed messages will be passed to a Consumer's "persist" method. The library comes with a handful of
- * Consumers. The "CurlConsumer" is used by default which will send the messages to Mixpanel using forked cURL processes.
+ * Consumers. The "LI_CurlConsumer" is used by default which will send the messages to Mixpanel using forked cURL processes.
  * You can implement your own custom Consumer to customize how a message is sent to Mixpanel. This can be useful when
  * you want to put messages onto a distributed queue (such as ActiveMQ or Kestrel) instead of writing to Mixpanel in
  * the user thread.
@@ -77,12 +75,12 @@ require_once(dirname(__FILE__) . "/Producers/MixpanelEvents.php");
  *  </tr>
  *  <tr>
  *      <td>connect_timeout</td>
- *      <td>In both the SocketConsumer and CurlConsumer, this is used for the connection timeout (i.e. How long it has take to actually make a connection).
+ *      <td>In both the SocketConsumer and LI_CurlConsumer, this is used for the connection timeout (i.e. How long it has take to actually make a connection).
  *      <td>5</td>
  *  </tr>
  *  <tr>
  *      <td>timeout</td>
- *      <td>In the CurlConsumer (non-forked), it is used to determine how long the cURL call has to execute.
+ *      <td>In the LI_CurlConsumer (non-forked), it is used to determine how long the cURL call has to execute.
  *      <td>30</td>
  *  </tr>
  * </table>
@@ -108,7 +106,7 @@ require_once(dirname(__FILE__) . "/Producers/MixpanelEvents.php");
  * ));
  *
  */
-class LI_Mixpanel extends Base_MixpanelBase {
+class LI_Mixpanel extends LI_Base_MixpanelBase {
 
 
     /**
@@ -139,8 +137,8 @@ class LI_Mixpanel extends Base_MixpanelBase {
      */
     public function __construct($token, $options = array()) {
         parent::__construct($options);
-        $this->people = new Producers_MixpanelPeople($token, $options);
-        $this->_events = new Producers_MixpanelEvents($token, $options);
+        $this->people = new LI_Producers_MixpanelPeople($token, $options);
+        $this->_events = new LI_Producers_MixpanelEvents($token, $options);
     }
 
 
