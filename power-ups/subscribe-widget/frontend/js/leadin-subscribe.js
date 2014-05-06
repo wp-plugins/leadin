@@ -82,7 +82,7 @@ function bind_leadin_subscribe_widget ()
                 }
             });
 
-            leadin_subscribe_show();
+            //leadin_subscribe_show();
 
             $('.leadin-subscribe form.vex-dialog-form').append('<a href="http://leadin.com/pop-subscribe-form-plugin-wordpress/?utm_campaign=subscribe_widget&utm_medium=widget&utm_source=' + document.URL + '" id="leadin-subscribe-powered-by" class="leadin-subscribe-powered-by">Powered by LeadIn</a>');
         };

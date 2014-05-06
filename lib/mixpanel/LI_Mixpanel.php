@@ -127,7 +127,7 @@ class LI_Mixpanel extends LI_Base_MixpanelBase {
      * An instance of the Mixpanel class (for singleton use)
      * @var Mixpanel
      */
-    private static $_instance;
+    public $instance;
     
 
     /**
@@ -149,10 +149,13 @@ class LI_Mixpanel extends LI_Base_MixpanelBase {
      * @return Mixpanel
      */
     public static function getInstance($token, $options = array()) {
-        if(!isset(self::$_instance)) {
-            self::$_instance = new LI_Mixpanel($token, $options);
-        }
-        return self::$_instance;
+        
+
+
+
+        $this->instance = new LI_Mixpanel($token, $options);
+
+
     }
 
 

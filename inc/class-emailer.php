@@ -147,6 +147,7 @@ class LI_Emailer {
 			FROM 
 				li_pageviews 
 			WHERE 
+				pageview_deleted = 0 AND
 				lead_hashkey LIKE %s ORDER BY pageview_date ASC", '%b %e', '%b %e %l:%i%p', $hashkey);
 		
 		$pageviews = $wpdb->get_results($q);
@@ -166,10 +167,10 @@ class LI_Emailer {
 			$count++;
 		}
 
-		$q = $wpdb->prepare("SELECT form_date AS form_datetime, DATE_FORMAT(form_date, %s) AS form_date, form_page_title, form_page_url, form_fields, form_type FROM li_submissions WHERE lead_hashkey = '%s' ORDER BY form_datetime DESC", '%b %e %l:%i%p', $hashkey);
+		$q = $wpdb->prepare("SELECT form_date AS form_datetime, DATE_FORMAT(form_date, %s) AS form_date, form_page_title, form_page_url, form_fields, form_type FROM li_submissions WHERE lead_hashkey = '%s' AND form_deleted = 0 ORDER BY form_datetime DESC", '%b %e %l:%i%p', $hashkey);
 		$submissions = $wpdb->get_results($q);
 
-		$q = $wpdb->prepare("SELECT lead_id, lead_date, lead_ip, lead_source, lead_email, lead_status FROM li_leads WHERE hashkey LIKE %s AND lead_email != ''", $hashkey);
+		$q = $wpdb->prepare("SELECT lead_id, lead_date, lead_ip, lead_source, lead_email, lead_status FROM li_leads WHERE hashkey LIKE %s AND lead_email != '' AND lead_deleted = 0", $hashkey);
 		$lead = $wpdb->get_row($q);
 
 		$history = (object)NULL;

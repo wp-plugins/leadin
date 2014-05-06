@@ -276,13 +276,13 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
         $q = $wpdb->prepare("SELECT hashkey FROM li_leads WHERE lead_id = %d", $lead_id);
         $lead_hash = $wpdb->get_var($q);
 
-        $q = $wpdb->prepare("DELETE FROM li_pageviews WHERE lead_hashkey = %s", $lead_hash);
+        $q = $wpdb->prepare("UPDATE li_pageviews SET pageview_deleted = 1 WHERE lead_hashkey = %s AND pageview_deleted = 0", $lead_hash);
         $delete_pageviews = $wpdb->query($q);
 
-        $q = $wpdb->prepare("DELETE FROM li_submissions WHERE lead_hashkey = %s", $lead_hash);
+        $q = $wpdb->prepare("UPDATE li_submissions SET form_deleted = 1  WHERE lead_hashkey = %s AND form_deleted = 0", $lead_hash);
         $delete_submissions = $wpdb->query($q);
 
-        $q = $wpdb->prepare("DELETE FROM li_leads WHERE lead_id = %d", $lead_id);
+        $q = $wpdb->prepare("UPDATE li_leads SET lead_deleted = 1 WHERE lead_id = %d AND lead_deleted = 0", $lead_id);
         $delete_lead = $wpdb->query($q);
 
         return $delete_lead;

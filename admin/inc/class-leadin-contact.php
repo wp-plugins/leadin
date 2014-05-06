@@ -65,6 +65,7 @@ class LI_Contact {
 			FROM 
 				li_pageviews 
 			WHERE 
+				pageview_deleted = 0 AND
 				lead_hashkey LIKE %s ORDER BY event_date DESC", '%b %D', '%b %D %l:%i%p', $this->hashkey);
 
 		$pageviews = $wpdb->get_results($q, ARRAY_A);
@@ -81,6 +82,7 @@ class LI_Contact {
 			FROM 
 				li_submissions 
 			WHERE 
+				form_deleted = 0 AND 
 				lead_hashkey = '%s' ORDER BY event_date DESC", '%b %D %l:%i%p', $this->hashkey);
 		
 		$submissions = $wpdb->get_results($q, ARRAY_A);

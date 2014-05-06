@@ -154,6 +154,9 @@ class WPLeadInAdmin {
         $ignore_settings_popup = ( $options['ignore_settings_popup'] ? $options['ignore_settings_popup'] : 0 );
         $onboarding_complete = ( $options['onboarding_complete'] ? $options['onboarding_complete'] : 0 );
         $data_recovered = ( $options['data_recovered'] ? $options['data_recovered'] : 0 );
+        $delete_flags_fixed = ( $options['delete_flags_fixed'] ? $options['delete_flags_fixed'] : 0 );
+
+        
 
         printf(
             '<input id="li_installed" type="hidden" name="leadin_options[li_installed]" value="%d"/>',
@@ -178,6 +181,11 @@ class WPLeadInAdmin {
         printf(
             '<input id="data_recovered" type="hidden" name="leadin_options[data_recovered]" value="%d"/>',
             $data_recovered
+        );
+
+        printf(
+            '<input id="delete_flags_fixed" type="hidden" name="leadin_options[delete_flags_fixed]" value="%d"/>',
+            $delete_flags_fixed
         );
     }
 

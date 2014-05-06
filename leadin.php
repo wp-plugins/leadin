@@ -3,7 +3,7 @@
 Plugin Name: LeadIn
 Plugin URI: http://leadin.com
 Description: LeadIn is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
-Version: 0.8.2
+Version: 0.8.3
 Author: Andy Cook, Nelson Joyce
 Author URI: http://leadin.com
 License: GPL2
@@ -23,10 +23,10 @@ if ( !defined('LEADIN_PLUGIN_SLUG') )
 	define('LEADIN_PLUGIN_SLUG', basename(dirname(__FILE__)));
 
 if ( !defined('LEADIN_DB_VERSION') )
-	define('LEADIN_DB_VERSION', '0.6.2');
+	define('LEADIN_DB_VERSION', '0.8.3');
 
 if ( !defined('LEADIN_PLUGIN_VERSION') )
-	define('LEADIN_PLUGIN_VERSION', '0.8.2');
+	define('LEADIN_PLUGIN_VERSION', '0.8.3');
 
 if ( !defined('MIXPANEL_PROJECT_TOKEN') )
     define('MIXPANEL_PROJECT_TOKEN', 'a9615503ec58a6bce2c646a58390eac1');
@@ -94,7 +94,8 @@ class WPLeadIn {
 				'li_email' 					=> get_bloginfo('admin_email'),
 				'onboarding_complete'		=> 0,
 				'ignore_settings_popup'		=> 0,
-				'data_recovered'			=> 1
+				'data_recovered'			=> 1,
+				'delete_flags_fixed'		=> 1
 			);
 			
 			update_option('leadin_options', $opt);
@@ -155,9 +156,10 @@ class WPLeadIn {
 			  `lead_email` varchar(255) DEFAULT NULL,
 			  `lead_status` set('lead','comment','subscribe') NOT NULL DEFAULT 'lead',
 			  `merged_hashkeys` text,
+			  `lead_deleted` int(1) NOT NULL DEFAULT '0',
 			  PRIMARY KEY (`lead_id`),
 			  KEY `hashkey` (`hashkey`)
-			) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=21 ;
+			) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=1;
 
 			CREATE TABLE `li_pageviews` (
 			  `pageview_id` int(11) unsigned NOT NULL AUTO_INCREMENT,
@@ -167,9 +169,10 @@ class WPLeadIn {
 			  `pageview_url` text NOT NULL,
 			  `pageview_source` text NOT NULL,
 			  `pageview_session_start` int(1) NOT NULL,
+			  `pageview_deleted` int(1) NOT NULL DEFAULT '0',
 			  PRIMARY KEY (`pageview_id`),
 			  KEY `lead_hashkey` (`lead_hashkey`)
-			) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=692 ;
+			) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=1;
 
 			CREATE TABLE `li_submissions` (
 			  `form_id` int(11) unsigned NOT NULL AUTO_INCREMENT,
@@ -180,9 +183,10 @@ class WPLeadIn {
 			  `form_fields` text NOT NULL,
 			  `form_type` set('lead','comment','subscribe') NOT NULL DEFAULT 'lead',
 			  `form_hashkey` varchar(16) NOT NULL,
+			  `form_deleted` int(1) NOT NULL DEFAULT '0',
 			  PRIMARY KEY (`form_id`),
 			  KEY `lead_hashkey` (`lead_hashkey`)
-			) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=85 ;";
+			) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=1;";
 
 		dbDelta($sql);
 
@@ -245,6 +249,12 @@ class WPLeadIn {
 	    {
 	    	$this->leadin_db_install();
 	    }
+
+	    // 0.8.3 bug fix - bug fix for duplicated contacts that should be merged
+		if ( ! isset($li_options['delete_flags_fixed']) )
+		{
+			leadin_delete_flag_fix();
+		}
 	}
 
 	//=============================================
