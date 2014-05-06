@@ -95,9 +95,10 @@ class LI_Emailer {
 		// Each line in an email can only be 998 characters long, so lines need to be broken with a wordwrap
 		$body = wordwrap($body, 900, "\r\n");
 
+		$from = $history->lead->lead_email;
 		$headers = "From: LeadIn <team@leadin.com>\r\n";
-		$headers.= "Reply-To: LeadIn <team@leadin.com>\r\n";
-		$headers.= "X-Mailer: PHP/" . phpversion()."\r\n";
+		$headers.= "Reply-To: LeadIn <" . $from . ">\r\n";
+		$headers.= "X-Mailer: PHP/" . phpversion() . "\r\n";
 		$headers.= "MIME-Version: 1.0\r\n";
 		$headers.= "Content-type: text/html; charset=utf-8\r\n";
 
@@ -108,28 +109,19 @@ class LI_Emailer {
 		if ( $history->submission->form_type == "comment" )
 		{	
 			$subject = "New comment posted on " . $history->submission->form_page_title;
-			leadin_track_plugin_activity("New comment");
 			$subject .= " by " . $history->lead->lead_email;
 		}
 		else if ( $history->submission->form_type == "subscribe" )
 		{
-			$first_name = leadin_get_value_by_key('First name', $fields);
-			$subject = $first_name . " loved " . $history->submission->form_page_title . " and subscribed to your mailing list";
-			leadin_track_plugin_activity("New subscriber");
+			$subject = "New subscriber from " . $history->submission->form_page_title;
 			$this->send_subscriber_confirmation_email($history);
 		}
 		else
 		{	
 			if ( $history->new_contact )
-			{
 				$subject = "New lead from " . get_bloginfo('name') . " - Say hello to " . $history->lead->lead_email;
-				leadin_track_plugin_activity("New lead");
-			}
 			else
-			{
 				$subject = "Lead from " . get_bloginfo('name') . " - Say hello again to " . $history->lead->lead_email;
-				leadin_track_plugin_activity("Returning lead");
-			}
 		}
 
 		$email_sent = wp_mail($to, $subject, $body, $headers);
@@ -155,6 +147,7 @@ class LI_Emailer {
 			FROM 
 				li_pageviews 
 			WHERE 
+				pageview_deleted = 0 AND
 				lead_hashkey LIKE %s ORDER BY pageview_date ASC", '%b %e', '%b %e %l:%i%p', $hashkey);
 		
 		$pageviews = $wpdb->get_results($q);
@@ -174,10 +167,10 @@ class LI_Emailer {
 			$count++;
 		}
 
-		$q = $wpdb->prepare("SELECT form_date AS form_datetime, DATE_FORMAT(form_date, %s) AS form_date, form_page_title, form_page_url, form_fields, form_type FROM li_submissions WHERE lead_hashkey = '%s' ORDER BY form_datetime DESC", '%b %e %l:%i%p', $hashkey);
+		$q = $wpdb->prepare("SELECT form_date AS form_datetime, DATE_FORMAT(form_date, %s) AS form_date, form_page_title, form_page_url, form_fields, form_type FROM li_submissions WHERE lead_hashkey = '%s' AND form_deleted = 0 ORDER BY form_datetime DESC", '%b %e %l:%i%p', $hashkey);
 		$submissions = $wpdb->get_results($q);
 
-		$q = $wpdb->prepare("SELECT lead_id, lead_date, lead_ip, lead_source, lead_email, lead_status FROM li_leads WHERE hashkey LIKE %s AND lead_email != ''", $hashkey);
+		$q = $wpdb->prepare("SELECT lead_id, lead_date, lead_ip, lead_source, lead_email, lead_status FROM li_leads WHERE hashkey LIKE %s AND lead_email != '' AND lead_deleted = 0", $hashkey);
 		$lead = $wpdb->get_row($q);
 
 		$history = (object)NULL;
@@ -290,7 +283,7 @@ class LI_Emailer {
 		// If source isn't set, set it to direct
 		if ( $session_source )
 		{
-			$session_source_text .= "<a href='" . $session_source . "' style='color: #2ba6cb; text-decoration: none !important;'>" . $session_source . "</a>";
+			$session_source_text = "<a href='" . $session_source . "' style='color: #2ba6cb; text-decoration: none !important;'>" . $session_source . "</a>";
 		}
 		else
 		{
@@ -410,20 +403,21 @@ class LI_Emailer {
 		
 		// Build Powered by LeadIn row
 		$body .= "<table class='row section' style='border-spacing: 0;border-collapse: collapse;vertical-align: top;text-align: left;width: 100%;position: relative;display: block;margin-top: 20px;padding: 0px;'><tr style='vertical-align: top;text-align: left;padding: 0;' align='left'><td class='wrapper last' style='word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse !important;vertical-align: top;text-align: left;position: relative;padding: 0 0px 0 0;' align='left' valign='top'><table class='twelve columns' style='border-spacing: 0;border-collapse: collapse;vertical-align: top;text-align: left;width: 580px;margin: 0 auto;padding: 0;'><tr style='vertical-align: top;text-align: left;padding: 0;' align='left'><td style='padding: 10px 20px;' align='left' valign='top'><table style='border-spacing: 0;border-collapse: collapse;vertical-align: top;text-align: left;width: 100%;overflow: hidden;padding: 0;'><tr style='vertical-align: top;text-align: left;padding: 0;' align='left'><td style='word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse !important;vertical-align: top;text-align: center;display: block;width: auto !important;font-size: 16px;padding: 10px 20px;' align='center' valign='top'>";
-			$body .="<div style='font-size: 11px; color: #888; padding: 0 0 5px 0;'>Powered by</div><a href='http://leadin.com/pop-subscribe-form-plugin-wordpress/'><img alt='LeadIn' height='20px' width='99px' src='http://leadin.com/wp-content/themes/LeadIn-WP-Theme/library/images/logos/Leadin_logo@2x.png' alt='leadin.com'/></a>";
+			$body .="<div style='font-size: 11px; color: #888; padding: 0 0 5px 0;'>Powered by</div><a href='http://leadin.com/wordpress-subscribe-widget/?utm_campaign=subscribe_widget&utm_medium=email&utm_source=" . $site_url . "'><img alt='LeadIn' height='20px' width='99px' src='http://leadin.com/wp-content/themes/LeadIn-WP-Theme/library/images/logos/Leadin_logo@2x.png' alt='leadin.com'/></a>";
 		$body .= "</td></tr></table></td><td class='expander' style='word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse !important;vertical-align: top;text-align: left;visibility: hidden;width: 0px;padding: 0;border: 0;' align='left' valign='top'></td></tr></table></td></tr></table>";
 
 		// @EMAIL - end form section
 
 		// Email Base close
 		$body .= '</center></td></tr></table></body></html>';
+		$from = apply_filters( 'li_subscribe_from', $leadin_email );
 
 		// Each line in an email can only be 998 characters long, so lines need to be broken with a wordwrap
 		$body = wordwrap($body, 900, "\r\n");
 
-		$headers = "From: LeadIn <team@leadin.com>\r\n";
-		$headers.= "Reply-To: LeadIn <team@leadin.com>\r\n";
-		$headers.= "X-Mailer: PHP/" . phpversion()."\r\n";
+		$headers = "From: LeadIn <" . $from . ">\r\n";
+		$headers.= "Reply-To: LeadIn <" . $from . ">\r\n";
+		$headers.= "X-Mailer: PHP/" . phpversion() . "\r\n";
 		$headers.= "MIME-Version: 1.0\r\n";
 		$headers.= "Content-type: text/html; charset=utf-8\r\n";
 

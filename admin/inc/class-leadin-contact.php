@@ -65,6 +65,7 @@ class LI_Contact {
 			FROM 
 				li_pageviews 
 			WHERE 
+				pageview_deleted = 0 AND
 				lead_hashkey LIKE %s ORDER BY event_date DESC", '%b %D', '%b %D %l:%i%p', $this->hashkey);
 
 		$pageviews = $wpdb->get_results($q, ARRAY_A);
@@ -81,6 +82,7 @@ class LI_Contact {
 			FROM 
 				li_submissions 
 			WHERE 
+				form_deleted = 0 AND 
 				lead_hashkey = '%s' ORDER BY event_date DESC", '%b %D %l:%i%p', $this->hashkey);
 		
 		$submissions = $wpdb->get_results($q, ARRAY_A);
@@ -118,7 +120,7 @@ class LI_Contact {
 				$sessions['session_' . $cur_array]['events']['event_' . $cur_event]['event_date'] = $event['event_date'];
 				
 				// Set the first submission if it's not set and then leave it alone
-				if ( !$lead->first_visit )
+				if ( ! isset($lead->first_visit) )
 					$lead->first_visit = $event['event_date'];
 
 				// Always overwrite the last_submission date which will end as last submission date
@@ -147,7 +149,7 @@ class LI_Contact {
 				$sessions['session_' . $cur_array]['events']['event_' . $cur_event]['activities'][] = $event;
 
 				// Set the first submission if it's not set and then leave it alone
-				if ( !$lead->first_submission )
+				if ( ! isset($lead->first_submission) )
 					$lead->first_submission = $event['event_date'];
 
 				// Always overwrite the last_submission date which will end as last submission date

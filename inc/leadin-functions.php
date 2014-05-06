@@ -113,8 +113,11 @@ function leadin_get_current_user ()
 function leadin_register_user ()
 {
     $leadin_user = leadin_get_current_user();
-    $mp = Mixpanel::getInstance(MIXPANEL_PROJECT_TOKEN);
+    return false;
+
+    $mp = new LI_Mixpanel(MIXPANEL_PROJECT_TOKEN);
     
+
     // @push mixpanel event for updated email
     $mp->identify($leadin_user['user_id']);
     $mp->createAlias( $leadin_user['user_id'],  $leadin_user['alias']);
@@ -193,7 +196,7 @@ function leadin_track_plugin_activity ( $activity_desc )
     get_currentuserinfo();
     $user_id = md5(get_bloginfo('wpurl'));
 
-    $mp = Mixpanel::getInstance(MIXPANEL_PROJECT_TOKEN);
+    $mp = new LI_Mixpanel(MIXPANEL_PROJECT_TOKEN);
     $mp->track($activity_desc, array("distinct_id" => $user_id, '$wp-url' => get_bloginfo('wpurl'), '$wp-version' => $wp_version, '$li-version' => LEADIN_PLUGIN_VERSION));
 
     return true;
@@ -246,5 +249,154 @@ function leadin_get_value_by_key ( $key_value, $array )
     }
 
     return null;
+}
+
+/** 
+ * Data recovery algorithm for 0.7.2 upgrade
+ *
+ */
+function leadin_recover_contact_data ()
+{
+    global $wpdb;
+
+    $q = $wpdb->prepare("SELECT * FROM li_submissions WHERE form_fields LIKE '%%%s%%' AND form_fields LIKE '%%%s%%' AND form_deleted = 0", '@', '.');
+    $submissions = $wpdb->get_results($q);
+
+    if ( count($submissions) )
+    {
+        foreach ( $submissions as $submission )
+        {
+            $json = json_decode(stripslashes($submission->form_fields), TRUE);
+
+            foreach ( $json as $object )
+            {
+                if ( strstr($object['value'], '@') && strstr($object['value'], '@') && strlen($object['value']) <= 254 )
+                {
+                    // check to see if the contact exists and if it does, skip the data recovery
+                    $q = $wpdb->prepare("SELECT lead_email FROM li_leads WHERE lead_email = %s AND lead_deleted = 0", $object['value']);
+                    $exists = $wpdb->get_var($q);
+
+                    if ( $exists )
+                        continue;
+
+                    // get the original data
+                    $q = $wpdb->prepare("SELECT pageview_date, pageview_source FROM li_pageviews WHERE lead_hashkey = %s AND pageview_deleted = 0 ORDER BY pageview_date ASC LIMIT 1", $submission->lead_hashkey);
+                    $first_pageview = $wpdb->get_row($q);
+
+                    // recreate the contact
+                    $q = $wpdb->prepare("INSERT INTO li_leads ( lead_date, hashkey, lead_source, lead_email, lead_status ) VALUES ( %s, %s, %s, %s, %s )",
+                        ( $first_pageview->pageview_date ? $first_pageview->pageview_date : $submission->form_date), 
+                        $submission->lead_hashkey,
+                        ( $first_pageview->pageview_source ? $first_pageview->pageview_source : ''),
+                        $object['value'], 
+                        $submission->form_type
+                    );
+
+                    $wpdb->query($q);
+                }
+            }
+        }
+    }
+
+    leadin_update_option('leadin_options', 'data_recovered', 1);
+}
+
+/** 
+ * Algorithm to set deleted contacts flag for 0.8.3 upgrade
+ *
+ */
+function leadin_delete_flag_fix ()
+{
+    global $wpdb;
+
+    $q = $wpdb->prepare("SELECT lead_email, COUNT(hashkey) c FROM li_leads WHERE lead_email != '' GROUP BY lead_email HAVING c > 1", '');
+    $duplicates = $wpdb->get_results($q);
+
+    if ( count($duplicates) )
+    {
+        foreach ( $duplicates as $duplicate )
+        {
+            $existing_contact_status = 'lead';
+
+            $q = $wpdb->prepare("SELECT lead_email, hashkey, merged_hashkeys, lead_status FROM li_leads WHERE lead_email = %s AND lead_deleted = 0 ORDER BY lead_date DESC", $duplicate->lead_email);
+            $existing_contacts = $wpdb->get_results($q);
+
+            $newest = $existing_contacts[0];
+ 
+            // Setup the string for the existing hashkeys
+            $existing_contact_hashkeys = $newest->merged_hashkeys;
+            if ( $newest->merged_hashkeys && count($existing_contacts) )
+                $existing_contact_hashkeys .= ',';
+
+            // Do some merging if the email exists already in the contact table
+            if ( count($existing_contacts) )
+            {
+                for ( $i = 0; $i < count($existing_contacts); $i++ )
+                {
+                    // Start with the existing contact's hashkeys and create a string containg comma-deliminated hashes
+                    $existing_contact_hashkeys .= "'" . $existing_contacts[$i]->hashkey . "'";
+
+                    // Add any of those existing contact row's merged hashkeys
+                    if ( $existing_contacts[$i]->merged_hashkeys )
+                        $existing_contact_hashkeys .= "," . $existing_contacts[$i]->merged_hashkeys;
+
+                    // Add a comma delimiter 
+                    if ( $i != count($existing_contacts)-1 )
+                        $existing_contact_hashkeys .= ",";
+
+                    // Check on each existing lead if the lead_status is comment. If it is, save the status to override the new lead's status
+                    if ( $existing_contacts[$i]->lead_status == 'comment' && $existing_contact_status == 'lead' )
+                        $existing_contact_status = 'comment';
+
+                    // Check on each existing lead if the lead_status is subscribe. If it is, save the status to override the new lead's status
+                    if ( $existing_contacts[$i]->lead_status == 'subscribe' && ($existing_contact_status == 'lead' || $existing_contact_status == 'comment') )
+                        $existing_contact_status = 'subscribe';
+                }
+            }
+
+            // Remove duplicates from the array and original hashkey just in case
+            $existing_contact_hashkeys = leadin_array_delete(array_unique(explode(',', $existing_contact_hashkeys)), "'" . $newest->hashkey . "'");
+
+            // Safety precaution - trim any trailing commas
+            $existing_contact_hashkey_string = rtrim(implode(',', $existing_contact_hashkeys), ',');
+
+            if ( $existing_contact_hashkey_string )
+            {
+                // Set the merged hashkeys with the fixed merged hashkey values
+                $q = $wpdb->prepare("UPDATE li_leads SET merged_hashkeys = %s, lead_status = %s WHERE hashkey = %s", $existing_contact_hashkey_string, $existing_contact_status, $newest->hashkey);
+                $wpdb->query($q);
+
+                // "Delete" all the old contacts
+                $q = $wpdb->prepare("UPDATE li_leads SET merged_hashkeys = '', lead_deleted = 1 WHERE hashkey IN ( $existing_contact_hashkey_string )", '');
+                $wpdb->query($q);
+
+                // Set all the pageviews and submissions to the new hashkey just in case
+                $q = $wpdb->prepare("UPDATE li_pageviews SET lead_hashkey = %s WHERE lead_hashkey IN ( $existing_contact_hashkey_string )", $newest->hashkey);
+                $wpdb->query($q);
+
+                // Update all the previous submissions to the new hashkey just in case
+                $q = $wpdb->prepare("UPDATE li_submissions SET lead_hashkey = %s WHERE lead_hashkey IN ( $existing_contact_hashkey_string )", $newest->hashkey);
+                $wpdb->query($q);
+            }
+        }
+    }
+
+    leadin_update_option('leadin_options', 'delete_flags_fixed', 1);
+}
+
+function sort_power_ups ( $power_ups, $ordered_power_ups ) 
+{ 
+    $ordered = array();
+    $i = 0;
+    foreach ( $ordered_power_ups as $key )
+    {
+        if ( in_array($key, $power_ups) )
+        {
+            array_push($ordered, $key);
+            $i++;
+        }
+    }
+
+    return $ordered;
 }
 ?>

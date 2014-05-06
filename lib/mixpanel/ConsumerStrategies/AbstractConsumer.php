@@ -1,4 +1,6 @@
 <?php
+namespace LeadIn;
+
 require_once(dirname(__FILE__) . "/../Base/MixpanelBase.php");
 
 /**
