@@ -74,6 +74,7 @@ class WPLeadInAdmin {
             {
                 $power_up->admin_init();
 
+                // Creates the menu icon for power-up if it's set. Overrides the main LeadIn menu to hit the contacts power-up
                 if ( $power_up->menu_text == 'Contacts' )
                     add_menu_page('LeadIn', 'LeadIn', 'manage_categories', 'leadin_contacts', array($power_up, 'power_up_setup_callback'), LEADIN_PATH . '/images/' . ( $wp_version < 3.8 && !is_plugin_active('mp6/mp6.php') ? 'leadin-icon-32x32.png' : 'leadin-svg-icon.svg'));
                 else if ( $power_up->menu_text )

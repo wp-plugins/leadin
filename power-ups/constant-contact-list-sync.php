@@ -44,6 +44,7 @@ require_once(LEADIN_CONSTANT_CONTACT_LIST_SYNC_PLUGIN_DIR . '/inc/li_constant_co
 class WPConstantContactListSync extends WPLeadIn {
 	
 	var $admin;
+	var $options;
 
 	/**
 	 * Class constructor
@@ -59,7 +60,7 @@ class WPConstantContactListSync extends WPLeadIn {
 
 		global $leadin_constant_contact_list_sync_wp;
 		$leadin_constant_contact_list_sync_wp = $this;
-
+		$this->options = get_option('leadin_cc_options');
  	}
 
 	public function admin_init ( )
@@ -74,26 +75,17 @@ class WPConstantContactListSync extends WPLeadIn {
 	}
 
 	/**
-	 * Activate the power-up
+	 * Activate the power-up and add the defaults
 	 */
-	function add_leadin_subscribe_defaults ()
+	function add_defaults ()
 	{
-		$lis_options = get_option('leadin_subscribe_options');
 
-		if ( ($lis_options['li_susbscibe_installed'] != 1) || (!is_array($lis_options)) )
-		{
-			$opt = array(
-				'li_susbscibe_installed' => '1',
-				'li_subscribe_heading' => 'Sign up for my newsletter to get new posts by email'
-			);
-
-			update_option('leadin_subscribe_options', $opt);
-		}
 	}
 
 	function push_constant_contact_subscriber_to_list ( $email = '', $first_name = '', $last_name = '', $phone = '' ) 
 	{
-		$options = get_option('leadin_cc_options');
+		$options = $this->options;
+
         $li_cc_subscribers_to_list = ( isset($options['li_cc_subscribers_to_list']) ? $options['li_cc_subscribers_to_list'] : '' );
         
         if ( isset($options['li_cc_email']) && isset($options['li_cc_password']) && $options['li_cc_email'] && $options['li_cc_password'] && $li_cc_subscribers_to_list )

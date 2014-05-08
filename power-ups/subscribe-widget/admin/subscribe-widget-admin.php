@@ -12,6 +12,7 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
     
     var $power_up_settings_section = 'leadin_subscribe_options_section';
     var $power_up_icon;
+    var $options;
 
     /**
      * Class constructor
@@ -26,6 +27,7 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
         {
             $this->power_up_icon = '<span class="dashicons dashicons-email-alt"></span>';
             add_action('admin_init', array($this, 'leadin_subscribe_build_settings_page'));
+            $this->options = get_option('leadin_subscribe_options');
         }
     }
 
@@ -43,7 +45,7 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
         add_settings_section(
             $this->power_up_settings_section,
             $this->power_up_icon . 'Subscribe Pop-up',
-            '',
+            array($this, 'print_hidden_settings_fields'),
             LEADIN_ADMIN_PATH
         );
 
@@ -69,17 +71,17 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
             $this->power_up_settings_section
         );
         add_settings_field(
-            'li_subscribe_name_fields',
-            'Include First and Last Name',
-            array($this, 'li_subscribe_name_fields_callback'),
+            'li_subscribe_additional_fields',
+            'Also include fields for',
+            array($this, 'li_subscribe_additional_fields_callback'),
             LEADIN_ADMIN_PATH,
             $this->power_up_settings_section
         );
-        add_settings_field(
-            'li_subscribe_phone_field',
-            'Include Phone Number',
-            array($this, 'li_subscribe_phone_field_callback'),
-            LEADIN_ADMIN_PATH,
+        add_settings_field( 
+            'li_subscribe_templates', 
+            'Show subscribe pop-up on', 
+            array($this, 'li_subscribe_templates_callback'), 
+            LEADIN_ADMIN_PATH, 
             $this->power_up_settings_section
         );
     }
@@ -92,6 +94,9 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
     public function sanitize ( $input )
     {
         $new_input = array();
+
+        if( isset( $input['li_susbscibe_installed'] ) )
+            $new_input['li_susbscibe_installed'] = sanitize_text_field( $input['li_susbscibe_installed'] );
 
         if( isset( $input['li_subscribe_vex_class'] ) )
             $new_input['li_subscribe_vex_class'] = sanitize_text_field( $input['li_subscribe_vex_class'] );
@@ -108,15 +113,38 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
         if( isset( $input['li_subscribe_phone_field'] ) )
             $new_input['li_subscribe_phone_field'] = sanitize_text_field( $input['li_subscribe_phone_field'] );
 
+        if( isset( $input['li_subscribe_template_pages'] ) )
+            $new_input['li_subscribe_template_pages'] = sanitize_text_field( $input['li_subscribe_template_pages'] );
+
+        if( isset( $input['li_subscribe_template_posts'] ) )
+            $new_input['li_subscribe_template_posts'] = sanitize_text_field( $input['li_subscribe_template_posts'] );
+        
+        if( isset( $input['li_subscribe_template_home'] ) )
+            $new_input['li_subscribe_template_home'] = sanitize_text_field( $input['li_subscribe_template_home'] );
+
+        if( isset( $input['li_subscribe_template_archives'] ) )
+            $new_input['li_subscribe_template_archives'] = sanitize_text_field( $input['li_subscribe_template_archives'] );
+
         return $new_input;
     }
 
+    function print_hidden_settings_fields ()
+    {
+         // Hacky solution to solve the Settings API overwriting the default values
+        $options = $this->options;
+        $li_susbscibe_installed = ( $options['li_susbscibe_installed'] ? $options['li_susbscibe_installed'] : 1 );
+        echo 'BOO!'; 
+
+        printf(
+            '<input id="li_susbscibe_installed" type="hidden" name="leadin_subscribe_options[li_susbscibe_installed]" value="%d"/>',
+            $li_susbscibe_installed
+        );
+    }
     /**
      * Prints subscribe location input for settings page
      */
     function li_subscribe_vex_class_callback ()
     {
-        $options = get_option('leadin_subscribe_options');
         $li_subscribe_vex_class = ( $options['li_subscribe_vex_class'] ? $options['li_subscribe_vex_class'] : 'vex-theme-bottom-right-corner' ); // Get class from options, or show default
 
         echo '<select id="li_subscribe_vex_class" name="leadin_subscribe_options[li_subscribe_vex_class]">';
@@ -132,7 +160,7 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
      */
     function li_subscribe_heading_callback ()
     {
-        $options = get_option('leadin_subscribe_options');
+        $options = $this->options;
         $li_subscribe_heading = ( $options['li_subscribe_heading'] ? $options['li_subscribe_heading'] : 'Sign up for my newsletter to get new posts by email' ); // Get header from options, or show default
         
         printf(
@@ -142,11 +170,11 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
     }
 
     /**
-     * Prints subscribe heading text input for settings page
+     * Prints button label
      */
     function li_subscribe_btn_label_callback ()
     {
-        $options = get_option('leadin_subscribe_options');
+        $options = $this->options;
         $li_subscribe_btn_label = ( $options['li_subscribe_btn_label'] ? $options['li_subscribe_btn_label'] : 'SUBSCRIBE' ); // Get button text from options, or show default
         
         printf(
@@ -157,33 +185,61 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
     }
 
     /**
-     * Prints first and last name checkbox for settings page
+     * Prints additional fields for first name, last name and phone number
      */
-    function li_subscribe_name_fields_callback ()
+    function li_subscribe_additional_fields_callback ()
     {
-        $options = get_option('leadin_subscribe_options');
+        $options = $this->options;
         $li_subscribe_name_fields = ( $options['li_subscribe_name_fields'] ? $options['li_subscribe_name_fields'] : '0' ); // Get name field options from options, or show default
-        
+        $li_subscribe_phone_field = ( $options['li_subscribe_phone_field'] ? $options['li_subscribe_phone_field'] : '0' ); // Get phone field preference from options, or show default
+
         printf(
-            '<input id="li_subscribe_name_fields" type="checkbox" name="leadin_subscribe_options[li_subscribe_name_fields]" value="1"' . checked( 1, $options['li_subscribe_name_fields'], false ) . '/>',
-            $li_subscribe_name_fields
+            '<p><input id="li_subscribe_name_fields" type="checkbox" name="leadin_subscribe_options[li_subscribe_name_fields]" value="1"' . checked( 1, $options['li_subscribe_name_fields'], false ) . '/>' . 
+            '<label for="li_subscribe_name_fields">First + last name</label></p>'
+        );
+
+        printf(
+            '<p><input id="li_subscribe_phone_field" type="checkbox" name="leadin_subscribe_options[li_subscribe_phone_field]" value="1"' . checked( 1, $options['li_subscribe_phone_field'], false ) . '/>' . 
+            '<label for="li_subscribe_phone_field">Phone number</label></p>'
         );
     }
 
     /**
-     * Prints phone number checkbox for settings page
+     * Prints the options for toggling the widget on posts, pages, archives and homepage
      */
-    function li_subscribe_phone_field_callback ()
+    function li_subscribe_templates_callback ()
     {
-        $options = get_option('leadin_subscribe_options');
-        $li_subscribe_phone_field = ( $options['li_subscribe_phone_field'] ? $options['li_subscribe_phone_field'] : '0' ); // Get phone field preference from options, or show default
-        
+        $options = $this->options;
+
+        // If none of the values are set it's safe to assume the user hasn't toggled any yet so we should default them all
+        if ( ! isset ($options['li_subscribe_template_posts']) && ! isset ($options['li_subscribe_template_pages']) && ! isset ($options['li_subscribe_template_archives']) && ! isset ($options['li_subscribe_template_home']) )
+        {
+            $options['li_subscribe_template_posts']     = 1;
+            $options['li_subscribe_template_pages']     = 1;
+            $options['li_subscribe_template_archives']  = 1;
+            $options['li_subscribe_template_home']      = 1;
+        }
+
         printf(
-            '<input id="li_subscribe_phone_field" type="checkbox" name="leadin_subscribe_options[li_subscribe_phone_field]" value="1"' . checked( 1, $options['li_subscribe_phone_field'], false ) . '/>',
-            $li_subscribe_phone_field
+            '<p><input id="li_subscribe_template_posts" type="checkbox" name="leadin_subscribe_options[li_subscribe_template_posts]" value="1"' . checked( 1, $options['li_subscribe_template_posts'], false ) . '/>' . 
+            '<label for="li_subscribe_template_posts">Posts</label></p>'
+        );
+
+        printf(
+            '<p><input id="li_subscribe_template_pages" type="checkbox" name="leadin_subscribe_options[li_subscribe_template_pages]" value="1"' . checked( 1, $options['li_subscribe_template_pages'], false ) . '/>' . 
+            '<label for="li_subscribe_template_pages">Pages</label></p>'
+        );
+
+        printf(
+            '<p><input id="li_subscribe_template_archives" type="checkbox" name="leadin_subscribe_options[li_subscribe_template_archives]" value="1"' . checked( 1, $options['li_subscribe_template_archives'], false ) . '/>' . 
+            '<label for="li_subscribe_template_archives">Archives</label></p>'
+        );
+
+        printf(
+            '<p><input id="li_subscribe_template_home" type="checkbox" name="leadin_subscribe_options[li_subscribe_template_home]" value="1"' . checked( 1, $options['li_subscribe_template_home'], false ) . '/>' . 
+            '<label for="li_subscribe_template_home">Homepage</label></p>'
         );
     }
-
 }
 
 ?>

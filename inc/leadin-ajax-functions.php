@@ -63,7 +63,7 @@ function leadin_log_pageview ()
 	global $wpdb;
 
 	$hash 		= $_POST['li_id'];
-	$title 		= htmlentities($_POST['li_title']);
+	$title 		= $_POST['li_title'];
 	$url 		= $_POST['li_url'];
 	$source 	= ( isset($_POST['li_referrer']) ? $_POST['li_referrer'] : '' );
 	$last_visit = ( isset($_POST['li_last_visit']) ? $_POST['li_last_visit'] : 0 );
@@ -130,7 +130,7 @@ function leadin_insert_form_submission ()
 
 	$submission_hash 	= $_POST['li_submission_id'];
 	$hashkey 			= $_POST['li_id'];
-	$page_title 		= htmlentities($_POST['li_title']);
+	$page_title 		= $_POST['li_title'];
 	$page_url 			= $_POST['li_url'];
 	$form_json 			= $_POST['li_fields'];
 	$email 				= $_POST['li_email'];

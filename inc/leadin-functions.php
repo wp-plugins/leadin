@@ -113,11 +113,8 @@ function leadin_get_current_user ()
 function leadin_register_user ()
 {
     $leadin_user = leadin_get_current_user();
-    return false;
-
     $mp = new LI_Mixpanel(MIXPANEL_PROJECT_TOKEN);
     
-
     // @push mixpanel event for updated email
     $mp->identify($leadin_user['user_id']);
     $mp->createAlias( $leadin_user['user_id'],  $leadin_user['alias']);
@@ -157,7 +154,7 @@ function leadin_register_user ()
     @curl_close($ch);
     echo $response;
 
-    return true;
+    return TRUE;
 }
 
 /**
@@ -169,15 +166,17 @@ function leadin_register_user ()
  */
 function leadin_track_plugin_registration_hook ( $activated )
 {
-    if ($activated) {
+    if ( $activated ) 
+    {
         leadin_register_user();
         leadin_track_plugin_activity("Activated Plugin");
     }
-    else {
+    else
+    {
         leadin_track_plugin_activity("Deactivated Plugin");
     }
 
-    return true;
+    return TRUE;
 }
 
 /**
@@ -384,7 +383,14 @@ function leadin_delete_flag_fix ()
     leadin_update_option('leadin_options', 'delete_flags_fixed', 1);
 }
 
-function sort_power_ups ( $power_ups, $ordered_power_ups ) 
+/**
+ * Sorts the powerups into a predefined order in leadin.php line 416
+ *
+ * @param   array
+ * @param   array
+ * @return  array
+ */
+function leadin_sort_power_ups ( $power_ups, $ordered_power_ups ) 
 { 
     $ordered = array();
     $i = 0;
@@ -398,5 +404,17 @@ function sort_power_ups ( $power_ups, $ordered_power_ups )
     }
 
     return $ordered;
+}
+
+/**
+ * Encodes special HTML quote characters into utf-8 safe entities
+ *
+ * @param   string
+ * @return  string
+ */
+function leadin_encode_quotes ( $string ) 
+{ 
+    $string = str_replace(array("’", "‘", '&#039;', '“', '”'), array("'", "'", "'", '"', '"'), $string);
+    return $string;
 }
 ?>

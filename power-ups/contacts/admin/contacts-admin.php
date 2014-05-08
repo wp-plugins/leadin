@@ -99,6 +99,8 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
         $li_contact->get_contact_history();
         
         $lead_email = $li_contact->history->lead->lead_email;
+        $url_parts = parse_url($lead->lead_source);
+        $lead_source = urldecode(rtrim($url_parts['host'] . '/' . $url_parts['path'], '/'));
 
         echo '<a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts">&larr; All Contacts</a>';
 

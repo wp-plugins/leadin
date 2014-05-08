@@ -40,6 +40,7 @@ require_once(LEADIN_CONTACTS_PLUGIN_DIR . '/admin/contacts-admin.php');
 class WPLeadInContacts extends WPLeadIn {
 	
 	var $admin;
+	var $options;
 
 	/**
 	 * Class constructor

@@ -3,7 +3,7 @@
 Plugin Name: LeadIn
 Plugin URI: http://leadin.com
 Description: LeadIn is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
-Version: 0.8.3
+Version: 0.8.4
 Author: Andy Cook, Nelson Joyce
 Author URI: http://leadin.com
 License: GPL2
@@ -26,7 +26,7 @@ if ( !defined('LEADIN_DB_VERSION') )
 	define('LEADIN_DB_VERSION', '0.8.3');
 
 if ( !defined('LEADIN_PLUGIN_VERSION') )
-	define('LEADIN_PLUGIN_VERSION', '0.8.3');
+	define('LEADIN_PLUGIN_VERSION', '0.8.4');
 
 if ( !defined('MIXPANEL_PROJECT_TOKEN') )
     define('MIXPANEL_PROJECT_TOKEN', 'a9615503ec58a6bce2c646a58390eac1');
@@ -77,6 +77,9 @@ class WPLeadIn {
 		add_action( 'admin_bar_menu', array($this, 'add_leadin_link_to_admin_bar'), 999 );
 
 		$li_wp_admin 	= new WPLeadInAdmin($this->power_ups);
+
+		if ( is_single() )
+			echo 'leadin single';
 	}
 
 	/**
@@ -409,7 +412,7 @@ class WPLeadIn {
             $files[] = $file;
         }
 
-        $files = sort_power_ups($files, array(
+        $files = leadin_sort_power_ups($files, array(
         	LEADIN_PLUGIN_DIR . '/power-ups/contacts' . '.php', LEADIN_PLUGIN_DIR . '/power-ups/subscribe-widget' . '.php', LEADIN_PLUGIN_DIR . '/power-ups/mailchimp-list-sync' . '.php', LEADIN_PLUGIN_DIR . '/power-ups/constant-contact-list-sync' . '.php'
         ));
 
@@ -446,12 +449,12 @@ class WPLeadIn {
 	public static function activate_power_up( $power_up_slug, $exit = TRUE )
 	{
 		if ( ! strlen( $power_up_slug ) )
-			return false;
+			return FALSE;
 
 		// If it's already active, then don't do it again
 		$active = self::is_power_up_active($power_up_slug);
 		if ( $active )
-			return true;
+			return TRUE;
 
 		$activated_power_ups = get_option('leadin_active_power_ups');
 		
