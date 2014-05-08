@@ -1,10 +1,15 @@
 <?php
 
+namespace LeadIn;
+
 /**
  * This a Base class which all Mixpanel classes extend from to provide some very basic
  * debugging and logging functionality. It also serves to persist $_options across the library.
  *
  */
+
+
+
 class Base_MixpanelBase {
 
 

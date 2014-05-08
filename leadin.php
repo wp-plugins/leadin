@@ -3,7 +3,7 @@
 Plugin Name: LeadIn
 Plugin URI: http://leadin.com
 Description: LeadIn is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
-Version: 0.6.2
+Version: 0.8.4
 Author: Andy Cook, Nelson Joyce
 Author URI: http://leadin.com
 License: GPL2
@@ -23,10 +23,10 @@ if ( !defined('LEADIN_PLUGIN_SLUG') )
 	define('LEADIN_PLUGIN_SLUG', basename(dirname(__FILE__)));
 
 if ( !defined('LEADIN_DB_VERSION') )
-	define('LEADIN_DB_VERSION', '0.6.2');
+	define('LEADIN_DB_VERSION', '0.8.3');
 
 if ( !defined('LEADIN_PLUGIN_VERSION') )
-	define('LEADIN_PLUGIN_VERSION', '0.6.2');
+	define('LEADIN_PLUGIN_VERSION', '0.8.4');
 
 if ( !defined('MIXPANEL_PROJECT_TOKEN') )
     define('MIXPANEL_PROJECT_TOKEN', 'a9615503ec58a6bce2c646a58390eac1');
@@ -42,7 +42,9 @@ require_once(LEADIN_PLUGIN_DIR . '/inc/leadin-ajax-functions.php');
 require_once(LEADIN_PLUGIN_DIR . '/inc/leadin-functions.php');
 require_once(LEADIN_PLUGIN_DIR . '/power-ups/subscribe-widget.php');
 require_once(LEADIN_PLUGIN_DIR . '/power-ups/contacts.php');
-require_once(LEADIN_PLUGIN_DIR . '/lib/mixpanel/Mixpanel.php');
+require_once(LEADIN_PLUGIN_DIR . '/power-ups/mailchimp-list-sync.php');
+require_once(LEADIN_PLUGIN_DIR . '/power-ups/constant-contact-list-sync.php');
+require_once(LEADIN_PLUGIN_DIR . '/lib/mixpanel/LI_Mixpanel.php');
 
 //=============================================
 // WPLeadIn Class
@@ -75,6 +77,9 @@ class WPLeadIn {
 		add_action( 'admin_bar_menu', array($this, 'add_leadin_link_to_admin_bar'), 999 );
 
 		$li_wp_admin 	= new WPLeadInAdmin($this->power_ups);
+
+		if ( is_single() )
+			echo 'leadin single';
 	}
 
 	/**
@@ -87,11 +92,13 @@ class WPLeadIn {
 		if ( ($li_options['li_installed'] != 1) || (!is_array($li_options)) )
 		{
 			$opt = array(
-				'li_installed'	=> 1,
-				'li_db_version'	=> LEADIN_DB_VERSION,
-				'li_email' 		=> get_bloginfo('admin_email'),
-				'onboarding_complete'	=> 0,
-				'ignore_settings_popup'	=> 0
+				'li_installed'				=> 1,
+				'li_db_version'				=> LEADIN_DB_VERSION,
+				'li_email' 					=> get_bloginfo('admin_email'),
+				'onboarding_complete'		=> 0,
+				'ignore_settings_popup'		=> 0,
+				'data_recovered'			=> 1,
+				'delete_flags_fixed'		=> 1
 			);
 			
 			update_option('leadin_options', $opt);
@@ -152,9 +159,10 @@ class WPLeadIn {
 			  `lead_email` varchar(255) DEFAULT NULL,
 			  `lead_status` set('lead','comment','subscribe') NOT NULL DEFAULT 'lead',
 			  `merged_hashkeys` text,
+			  `lead_deleted` int(1) NOT NULL DEFAULT '0',
 			  PRIMARY KEY (`lead_id`),
 			  KEY `hashkey` (`hashkey`)
-			) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=21 ;
+			) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=1;
 
 			CREATE TABLE `li_pageviews` (
 			  `pageview_id` int(11) unsigned NOT NULL AUTO_INCREMENT,
@@ -164,9 +172,10 @@ class WPLeadIn {
 			  `pageview_url` text NOT NULL,
 			  `pageview_source` text NOT NULL,
 			  `pageview_session_start` int(1) NOT NULL,
+			  `pageview_deleted` int(1) NOT NULL DEFAULT '0',
 			  PRIMARY KEY (`pageview_id`),
 			  KEY `lead_hashkey` (`lead_hashkey`)
-			) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=692 ;
+			) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=1;
 
 			CREATE TABLE `li_submissions` (
 			  `form_id` int(11) unsigned NOT NULL AUTO_INCREMENT,
@@ -177,9 +186,10 @@ class WPLeadIn {
 			  `form_fields` text NOT NULL,
 			  `form_type` set('lead','comment','subscribe') NOT NULL DEFAULT 'lead',
 			  `form_hashkey` varchar(16) NOT NULL,
+			  `form_deleted` int(1) NOT NULL DEFAULT '0',
 			  PRIMARY KEY (`form_id`),
 			  KEY `lead_hashkey` (`lead_hashkey`)
-			) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=85 ;";
+			) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=1;";
 
 		dbDelta($sql);
 
@@ -217,6 +227,12 @@ class WPLeadIn {
 			update_option('leadin_active_power_ups', serialize($auto_activate));
 		}
 
+		// 0.7.2 bug fix - data recovery algorithm for deleted contacts
+		if ( ! isset($li_options['data_recovered']) )
+		{
+			leadin_recover_contact_data();
+		}
+
 		// Set the database version if it doesn't exist
 	    if ( isset($li_options['li_db_version']) )
 	    {
@@ -236,6 +252,12 @@ class WPLeadIn {
 	    {
 	    	$this->leadin_db_install();
 	    }
+
+	    // 0.8.3 bug fix - bug fix for duplicated contacts that should be merged
+		if ( ! isset($li_options['delete_flags_fixed']) )
+		{
+			leadin_delete_flag_fix();
+		}
 	}
 
 	//=============================================
@@ -272,8 +294,7 @@ class WPLeadIn {
 	}
 
 	/**
-     * List available Jetpack modules. Simply lists .php files in /modules/.
-     * Make sure to tuck away module "library" files in a sub-directory.
+     * List available power-ups
      */
     public static function get_available_power_ups( $min_version = false, $max_version = false ) {
         static $power_ups = null;
@@ -297,6 +318,7 @@ class WPLeadIn {
 				$power_up->link_uri 		= $headers['uri'];
 				$power_up->description 		= $headers['description'];
 				$power_up->icon 			= $headers['icon'];
+				$power_up->icon_small 		= $headers['icon_small'];
 				$power_up->permanent 		= $headers['permanent'];
 				$power_up->auto_activate 	= $headers['auto_activate'];
 				$power_up->activated 		= $headers['activated'];
@@ -341,6 +363,7 @@ class WPLeadIn {
 			'uri'				=> 'Power-up URI',
 			'description'		=> 'Power-up Description',
 			'icon'				=> 'Power-up Icon',
+			'icon_small'		=> 'Power-up Icon Small',
 			'introduced'		=> 'First Introduced',
 			'auto_activate'		=> 'Auto Activate',
 			'permanent'			=> 'Permanently Enabled',
@@ -389,6 +412,10 @@ class WPLeadIn {
             $files[] = $file;
         }
 
+        $files = leadin_sort_power_ups($files, array(
+        	LEADIN_PLUGIN_DIR . '/power-ups/contacts' . '.php', LEADIN_PLUGIN_DIR . '/power-ups/subscribe-widget' . '.php', LEADIN_PLUGIN_DIR . '/power-ups/mailchimp-list-sync' . '.php', LEADIN_PLUGIN_DIR . '/power-ups/constant-contact-list-sync' . '.php'
+        ));
+
         closedir( $dir );
 
         return $files;
@@ -397,7 +424,7 @@ class WPLeadIn {
     /**
 	 * Check whether or not a LeadIn power-up is active.
 	 *
-	 * @param string $power_up The slug of a Jetpack module.
+	 * @param string $power_up The slug of a power-up
 	 * @return bool
 	 *
 	 * @static
@@ -422,12 +449,12 @@ class WPLeadIn {
 	public static function activate_power_up( $power_up_slug, $exit = TRUE )
 	{
 		if ( ! strlen( $power_up_slug ) )
-			return false;
+			return FALSE;
 
 		// If it's already active, then don't do it again
 		$active = self::is_power_up_active($power_up_slug);
 		if ( $active )
-			return true;
+			return TRUE;
 
 		$activated_power_ups = get_option('leadin_active_power_ups');
 		
