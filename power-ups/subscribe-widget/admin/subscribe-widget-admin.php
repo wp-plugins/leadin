@@ -133,7 +133,6 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
          // Hacky solution to solve the Settings API overwriting the default values
         $options = $this->options;
         $li_susbscibe_installed = ( $options['li_susbscibe_installed'] ? $options['li_susbscibe_installed'] : 1 );
-        echo 'BOO!'; 
 
         printf(
             '<input id="li_susbscibe_installed" type="hidden" name="leadin_subscribe_options[li_susbscibe_installed]" value="%d"/>',
