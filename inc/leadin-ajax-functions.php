@@ -272,24 +272,24 @@ function leadin_insert_form_submission ()
 			}
 		}
 
+		$li_emailer = new LI_Emailer();
+		if ( $li_admin_email )
+		{
+			// Send the contact email
+			$li_emailer->send_new_lead_email($hashkey);
+		}
+
 		if ( $contact_status == "comment" )
 			leadin_track_plugin_activity("New comment");
 		else if ( $contact_status == "subscribe" )
 			leadin_track_plugin_activity("New subscriber");
 		else
 		{	
-			$history = $this->get_lead_history($hashkey);
+			$history = $li_emailer->get_lead_history($hashkey);
 			if ( $history->new_contact )
 				leadin_track_plugin_activity("New lead");
 			else
 				leadin_track_plugin_activity("Returning lead");
-		}
-
-		if ( $li_admin_email )
-		{
-			// Send the contact email
-			$li_emailer = new LI_Emailer();
-			$li_emailer->send_new_lead_email($hashkey);
 		}
 
 		return $rows_updated;
