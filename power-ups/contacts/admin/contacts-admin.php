@@ -306,10 +306,13 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
     {
         global $pagenow;
 
-        if ( $pagenow == 'admin.php' && isset($_GET['page']) && strstr($_GET['page'], "leadin") ) 
+        if ( ($pagenow == 'admin.php' && isset($_GET['page']) && strstr($_GET['page'], 'leadin')) || ( $pagenow == 'post.php' && isset($_GET['post']) && isset($_GET['action']) && strstr($_GET['action'], 'edit') ) ) 
         {
             wp_register_script('leadin-admin-js', LEADIN_PATH . '/admin/js/leadin-admin.js', array ( 'jquery' ), FALSE, TRUE);
             wp_enqueue_script('leadin-admin-js');
+
+            wp_register_script('lazyload-js', LEADIN_PATH . '/admin/js/jquery.lazyload.min.js', array ( 'jquery' ), FALSE, TRUE);
+            wp_enqueue_script('lazyload-js');
         }
     }
 

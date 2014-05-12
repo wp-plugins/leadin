@@ -621,9 +621,21 @@
 }
 
 /* line 3, ../sass/_metabox.sass */
-#li_analytics-meta .li-analytics__face {
-  height: 26px;
-  width: 26px;
+#li_analytics-meta .li-analytics-link {
   float: left;
+}
+/* line 6, ../sass/_metabox.sass */
+#li_analytics-meta .li-analytics-link .li-analytics__face {
+  height: 35px;
+  width: 35px;
   margin-right: 5px;
+  margin-bottom: 5px;
+}
+/* line 12, ../sass/_metabox.sass */
+#li_analytics-meta .hidden_face {
+  display: none;
+}
+/* line 15, ../sass/_metabox.sass */
+#li_analytics-meta .show-all-faces-container {
+  clear: both;
 }

@@ -550,6 +550,9 @@ class WPLeadInAdmin {
     function li_analytics_meta_box () 
     {
         global $post;
+        $view_count         = 0;
+        $submission_count   = 0;
+        $max_faces          = 10;
         ?>
             <table class="form-table"><tbody>
                 <tr>
@@ -562,9 +565,15 @@ class WPLeadInAdmin {
                             {
                                 foreach ( $this->li_viewers->viewers as $viewer )
                                 {
+                                    $view_count++;
                                     $contact_view_url = get_bloginfo('wpurl') . "/wp-admin/admin.php?page=leadin_contacts&action=view&lead=" . $viewer->lead_id . '&post_id=' . $post->ID;
-                                    echo '<a href="' . $contact_view_url . '"><img height="35px" width="35px" src="https://app.getsignals.com/avatar/image/?emails=' . $viewer->lead_email . '" class="li-analytics__face leadin-dynamic-avatar_' . substr($viewer->lead_id, -1) . '"/></a>';
+                                    echo '<a class="li-analytics-link ' . ( $view_count > $max_faces ? 'hidden_face' : '' ) . '" href="' . $contact_view_url . '" title="' . $viewer->lead_email . '"><img height="35px" width="35px" data-original="https://app.getsignals.com/avatar/image/?emails=' . $viewer->lead_email . '" class="lazy li-analytics__face leadin-dynamic-avatar_' . substr($viewer->lead_id, -1) . '"/></a>'; 
                                 }
+                            }
+
+                            if ( $view_count > $max_faces )
+                            {
+                                echo '<div class="show-all-faces-container"><a class="show_all_faces" href="javascript:void(0)">+ Show ' . ( $view_count - $max_faces ) . ' more</a></div>';
                             }
                         ?>
                     </td>
@@ -577,8 +586,14 @@ class WPLeadInAdmin {
                         <?php 
                             foreach ( $this->li_viewers->submissions as $submission )
                             {
+                                $submission_count++;
                                 $contact_view_url = get_bloginfo('wpurl') . "/wp-admin/admin.php?page=leadin_contacts&action=view&lead=" . $submission->lead_id . '&post_id=' . $post->ID;
-                                echo '<a href="' . $contact_view_url . '"><img height="35px" width="35px" src="https://app.getsignals.com/avatar/image/?emails=' . $submission->lead_email . '" class="li-analytics__face leadin-dynamic-avatar_' . substr($submission->lead_id, -1) . '"/></a>';
+                                echo '<a class="li-analytics-link ' . ( $submission_count > $max_faces ? 'hidden_face' : '' ) . '" href="' . $contact_view_url . '" title="' . $submission->lead_email . '"><img height="35px" width="35px" data-original="https://app.getsignals.com/avatar/image/?emails=' . $submission->lead_email . '" class="lazy li-analytics__face leadin-dynamic-avatar_' . substr($submission->lead_id, -1) . '"/></a>';
+                            }
+
+                            if ( $submission_count > $max_faces )
+                            {
+                                echo '<div class="show-all-faces-container"><a class="show_all_faces" href="javascript:void(0)">+ Show ' . ( $submission_count - $max_faces ) . ' more</a></div>';
                             }
                         ?>
                     </td>
