@@ -7,7 +7,7 @@ class LI_Emailer {
 	/**
 	 * Class constructor
 	 */
-	function LI_Emailer () 
+	function __construct () 
 	{
 
 	}

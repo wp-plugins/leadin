@@ -281,7 +281,7 @@ class LI_List_Table extends WP_List_Table {
 
             $lead_array = array(
                 'ID' => $lead->lead_id,
-                'email' => sprintf('<a href="?page=%s&action=%s&lead=%s">' . "<img class='pull-left leadin-contact-avatar' src='https://app.getsignals.com/avatar/image/?emails=" . $lead->lead_email . "' width='35' height='35'/> " . '</a>', $_REQUEST['page'], 'view', $lead->lead_id) .  sprintf('<a href="?page=%s&action=%s&lead=%s"><b>' . $lead->lead_email . '</b></a>', $_REQUEST['page'], 'view', $lead->lead_id),
+                'email' => sprintf('<a href="?page=%s&action=%s&lead=%s">' . "<img class='pull-left leadin-contact-avatar leadin-dynamic-avatar_" . substr($lead->lead_id, -1) . "' src='https://app.getsignals.com/avatar/image/?emails=" . $lead->lead_email . "' width='35' height='35'/> " . '</a>', $_REQUEST['page'], 'view', $lead->lead_id) .  sprintf('<a href="?page=%s&action=%s&lead=%s"><b>' . $lead->lead_email . '</b></a>', $_REQUEST['page'], 'view', $lead->lead_id),
                 'status' => $lead_status,
                 'visits' => ( !$lead->lead_visits ? 1 : $lead->lead_visits ),
                 'submissions' => $lead->lead_form_submissions,

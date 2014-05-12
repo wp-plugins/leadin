@@ -13,7 +13,7 @@ class LI_Contact {
 	/**
 	 * Class constructor
 	 */
-	function LI_Contact () {
+	function __construct () {
 
 	}
 

@@ -89,8 +89,17 @@ To ensure quality we've tested the most popular WordPress form builder plugins.
 
 == Changelog ==
 
-- Current version: 0.8.5
-- Current version release: 2014-05-08
+- Current version: 0.9.0
+- Current version release: 2014-05-12
+
+= 0.9.0 (2014.05.12) =
+- Bug fixes
+- Remove leadin-css file enqueue call
+
+= Enhancements =
+- Show faces of people who viewed a post/page in the editor
+- Add background color to avatars so they are easier to see
+- Various UI fixes
 
 = 0.8.5 (2014.05.08) =
 - Bug fixes

@@ -102,10 +102,14 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
         $url_parts = parse_url($lead->lead_source);
         $lead_source = urldecode(rtrim($url_parts['host'] . '/' . $url_parts['path'], '/'));
 
-        echo '<a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts">&larr; All Contacts</a>';
+        if ( isset($_GET['post_id']) )
+            echo '<a href="' . get_bloginfo('wpurl') . '/wp-admin/post.php?post=' . $_GET['post_id'] . '&action=edit#li_analytics-meta">&larr; All Viewers</a>';
+        else
+            echo '<a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts">&larr; All Contacts</a>';
+
 
         echo '<div class="header-wrap">';
-            echo '<img height="40px" width="40px" src="https://app.getsignals.com/avatar/image/?emails=' . $lead_email . '" />';
+            echo '<img height="40px" width="40px" src="https://app.getsignals.com/avatar/image/?emails=' . $lead_email . '" class="leadin-dynamic-avatar_' . substr($lead_id, -1) . '"/>';
             echo '<h1 class="contact-name">' . $lead_email . '</h1>';
         echo '</div>';
         
@@ -154,7 +158,7 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                             
                             echo '<li class="event pageview">';
                                 echo '<p class="event-title">' . $pageview['pageview_title'] . '<span class="event-time-range">' . date('g:ia', strtotime($pageview['event_date'])) . '</span></p>';
-                                echo '<a class="pageview-url" href="' . $pageview['pageview_url'] . '">' . $pageview['pageview_url'] . '</a>';
+                                echo '<a class="pageview-url" target="_blank" href="' . $pageview['pageview_url'] . '">' . $pageview['pageview_url'] . '</a>';
                             echo '</li>';
                         }
                         else if ( $event['event_type'] == 'form' )

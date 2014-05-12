@@ -165,9 +165,6 @@ class WPLeadInSubscribe extends WPLeadIn {
 
 			wp_register_style('leadin-subscribe-vex-css', LEADIN_SUBSCRIBE_WIDGET_PATH . '/frontend/css/vex.css');
 			wp_enqueue_style('leadin-subscribe-vex-css');
-
-			wp_register_style('leadin-subscribe', LEADIN_SUBSCRIBE_WIDGET_PATH . '/frontend/css/leadin-subscribe.css');
-			wp_enqueue_style('leadin-subscribe');
 		}
 	}
 }
