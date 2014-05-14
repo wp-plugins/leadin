@@ -144,6 +144,7 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
      */
     function li_subscribe_vex_class_callback ()
     {
+        $options = $this->options;
         $li_subscribe_vex_class = ( $options['li_subscribe_vex_class'] ? $options['li_subscribe_vex_class'] : 'vex-theme-bottom-right-corner' ); // Get class from options, or show default
 
         echo '<select id="li_subscribe_vex_class" name="leadin_subscribe_options[li_subscribe_vex_class]">';
