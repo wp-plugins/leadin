@@ -24,8 +24,11 @@ $table-controls-border-size: 2px
                 padding: $table-controls-pading 0
                 line-height: $base-vertical-unit*4
                 font-weight: 300
-                font-size: 20px
+                font-size: 16px
                 text-decoration: none
+
+                @include at-breakpoint($break)
+                    font-size: 20px
 
                 &.current
                     margin-bottom: -2px
@@ -43,6 +46,15 @@ $table-controls-border-size: 2px
     table
         .leadin-contact-avatar
             float: left
+
+        th, td
+            display: none
+
+            &:nth-child(-n+3)
+                display: table-cell
+
+            @include at-breakpoint($break)
+                display: table-cell
 
     &.pre-mp6
         .table_search
@@ -79,3 +91,4 @@ $table-controls-border-size: 2px
 
                 .row-actions
                     float: left
+

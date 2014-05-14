@@ -187,32 +187,33 @@ class LI_List_Table extends WP_List_Table {
                     $ids_to_delete .= ',';
             }
 
-           $q = $wpdb->prepare("SELECT hashkey FROM li_leads WHERE lead_id IN ( " . $ids_to_delete . " )", $ids_to_delete);
-           $hashes = $wpdb->get_results($q);
+            $q = $wpdb->prepare("SELECT hashkey FROM li_leads WHERE lead_id IN ( " . $ids_to_delete . " )", "");
+            $hashes = $wpdb->get_results($q);
 
-            for ( $i = 0; $i < count($hashes); $i++ )
+            if ( count($hashes) )
             {
+                for ( $i = 0; $i < count($hashes); $i++ )
+                {
+                     $hashes_to_delete .= "'". $hashes[$i]->hashkey. "'";
 
-                 $hashes_to_delete .= "'". $hashes[$i]->hashkey. "'";
+                   if ( $i != (count($hashes)-1) )
+                        $hashes_to_delete .= ",";
+                }
 
-               if ( $i != (count($hashes)-1) )
-                    $hashes_to_delete .= ",";
-            }
+                //Detect when a bulk action is being triggered...
+                if( 'delete' === $this->current_action() )
+                {
+                    $q = $wpdb->prepare("UPDATE li_pageviews SET pageview_deleted  = 1 WHERE lead_hashkey IN (" . $hashes_to_delete . ")", "");
+                    $delete_pageviews = $wpdb->query($q);
 
-            //Detect when a bulk action is being triggered...
-            if( 'delete' === $this->current_action() )
-            {
-                $q = $wpdb->prepare("DELETE FROM li_pageviews WHERE lead_hashkey IN (" . $hashes_to_delete . ")", "");
-                $delete_pageviews = $wpdb->query($q);
+                    $q = $wpdb->prepare("UPDATE li_submissions SET form_deleted  = 1 WHERE lead_hashkey IN (" . $hashes_to_delete . ")", "");
+                    $delete_submissions = $wpdb->query($q);
 
-                $q = $wpdb->prepare("DELETE FROM li_submissions WHERE lead_hashkey IN (" . $hashes_to_delete . ")", "");
-                $delete_submissions = $wpdb->query($q);
-
-                $q = $wpdb->prepare("DELETE FROM li_leads WHERE lead_id IN (" . $ids_to_delete . ")", "");
-                $delete_leads = $wpdb->query($q);
+                    $q = $wpdb->prepare("UPDATE li_leads SET lead_deleted  = 1 WHERE lead_id IN (" . $ids_to_delete . ")", "");
+                    $delete_leads = $wpdb->query($q);
+                }
             }
         }
-        
     }
 
     /**
@@ -252,7 +253,7 @@ class LI_List_Table extends WP_List_Table {
                 li_leads l
             LEFT JOIN li_submissions s ON l.hashkey = s.lead_hashkey
             LEFT JOIN li_pageviews p ON l.hashkey = p.lead_hashkey 
-            WHERE l.lead_email != ''", '%Y/%m/%d %l:%i%p', '%Y/%m/%d %l:%i%p');
+            WHERE l.lead_email != '' AND l.lead_deleted = 0 ", '%Y/%m/%d %l:%i%p', '%Y/%m/%d %l:%i%p');
 
         $q .= $mysql_contact_type_filter;
         $q .= ( $mysql_search_filter ? $mysql_search_filter : "" );
@@ -264,7 +265,7 @@ class LI_List_Table extends WP_List_Table {
 
         foreach ( $leads as  $lead ) 
         {
-            $q = $wpdb->prepare("SELECT COUNT(DISTINCT pageview_id) FROM li_pageviews WHERE lead_hashkey = %s AND pageview_session_start = 1", $lead->hashkey);
+            $q = $wpdb->prepare("SELECT COUNT(DISTINCT pageview_id) FROM li_pageviews WHERE lead_hashkey = %s AND pageview_session_start = 1 AND pageview_deleted = 0", $lead->hashkey);
             $pageviews = $wpdb->get_var($q);
             $lead->lead_visits = $pageviews;
 
@@ -275,16 +276,19 @@ class LI_List_Table extends WP_List_Table {
             else if ( $lead->lead_status == 'comment' )
                 $lead_status = 'Commenter';
 
+            $url_parts = parse_url($lead->lead_source);
+            $url = urldecode(rtrim($url_parts['host'] . '/' . $url_parts['path'], '/'));
+
             $lead_array = array(
                 'ID' => $lead->lead_id,
-                'email' => sprintf('<a href="?page=%s&action=%s&lead=%s">' . "<img class='pull-left leadin-contact-avatar' src='https://app.getsignals.com/avatar/image/?emails=" . $lead->lead_email . "' width='35' height='35'/> " . '</a>', $_REQUEST['page'], 'view', $lead->lead_id) .  sprintf('<a href="?page=%s&action=%s&lead=%s"><b>' . $lead->lead_email . '</b></a>', $_REQUEST['page'], 'view', $lead->lead_id),
+                'email' => sprintf('<a href="?page=%s&action=%s&lead=%s">' . "<img class='pull-left leadin-contact-avatar leadin-dynamic-avatar_" . substr($lead->lead_id, -1) . "' src='https://app.getsignals.com/avatar/image/?emails=" . $lead->lead_email . "' width='35' height='35'/> " . '</a>', $_REQUEST['page'], 'view', $lead->lead_id) .  sprintf('<a href="?page=%s&action=%s&lead=%s"><b>' . $lead->lead_email . '</b></a>', $_REQUEST['page'], 'view', $lead->lead_id),
                 'status' => $lead_status,
                 'visits' => ( !$lead->lead_visits ? 1 : $lead->lead_visits ),
                 'submissions' => $lead->lead_form_submissions,
                 'pageviews' => $lead->lead_pageviews,
                 'date' => $lead->lead_date,
                 'last_visit' => $lead->last_visit,
-                'source' => ( $lead->lead_source ? "<a title='Visit page' href='" . $lead->lead_source . "' target='_blank'>" . $lead->lead_source . "</a>" : 'Direct' )
+                'source' => ( $lead->lead_source ? "<a title='Visit page' href='" . $lead->lead_source . "' target='_blank'>" . $url . "</a>" : 'Direct' )
             );
 
             array_push($all_leads, $lead_array);
@@ -303,13 +307,13 @@ class LI_List_Table extends WP_List_Table {
         $q = $wpdb->prepare("
             SELECT 
                 COUNT(DISTINCT lead_email) AS total_contacts,
-                ( SELECT COUNT(DISTINCT lead_email) FROM li_leads WHERE lead_status = 'lead' AND lead_email != '' ) AS total_leads,
-                ( SELECT COUNT(DISTINCT lead_email) FROM li_leads WHERE lead_status = 'comment' AND lead_email != '' ) AS total_comments,
-                ( SELECT COUNT(DISTINCT lead_email) FROM li_leads WHERE lead_status = 'subscribe' AND lead_email != '' ) AS total_subscribes
+                ( SELECT COUNT(DISTINCT lead_email) FROM li_leads WHERE lead_status = 'lead' AND lead_email != '' AND lead_deleted = 0 ) AS total_leads,
+                ( SELECT COUNT(DISTINCT lead_email) FROM li_leads WHERE lead_status = 'comment' AND lead_email != '' AND lead_deleted = 0 ) AS total_comments,
+                ( SELECT COUNT(DISTINCT lead_email) FROM li_leads WHERE lead_status = 'subscribe' AND lead_email != '' AND lead_deleted = 0 ) AS total_subscribes
             FROM 
                 li_leads
             WHERE
-                lead_email != ''", "");
+                lead_email != '' AND lead_deleted = 0", "");
 
         $totals = $wpdb->get_row($q);
         return $totals;
@@ -420,12 +424,12 @@ class LI_List_Table extends WP_List_Table {
         $this->process_bulk_action();
         $this->data = $this->get_leads();;
 
-        $orderby = ( !empty($_REQUEST['orderby']) ? $_REQUEST['orderby'] : 'date' );
+        $orderby = ( !empty($_REQUEST['orderby']) ? $_REQUEST['orderby'] : 'last_visit' );
         $order = ( !empty($_REQUEST['order']) ? $_REQUEST['order'] : 'desc' );
 
         function usort_reorder($a,$b) 
         {
-            $orderby = ( !empty($_REQUEST['orderby']) ? $_REQUEST['orderby'] : 'date' );
+            $orderby = ( !empty($_REQUEST['orderby']) ? $_REQUEST['orderby'] : 'last_visit' );
             $order = ( !empty($_REQUEST['order']) ? $_REQUEST['order'] : 'desc' );
 
             if ( $a[$orderby] == $b[$orderby] )

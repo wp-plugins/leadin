@@ -2,15 +2,18 @@
 #leadin {
   *zoom: 1;
   max-width: 1180px;
+  max-width: 73.75rem;
   _width: 1180px;
   padding-left: 20px;
+  padding-left: 1.25rem;
   padding-right: 20px;
+  padding-right: 1.25rem;
   margin-left: auto;
   margin-right: auto;
-  margin-left: 0;
+  margin: 10px 0 0;
   padding: 0;
 }
-/* line 38, ../../../../../../../.rvm/gems/ruby-1.9.3-p194/gems/compass-0.12.2/frameworks/compass/stylesheets/compass/utilities/general/_clearfix.scss */
+/* line 38, ../../../../../../../../Library/Ruby/Gems/1.8/gems/compass-core-1.0.0.alpha.19/stylesheets/compass/utilities/general/_clearfix.scss */
 #leadin:after {
   content: "";
   display: table;
@@ -19,12 +22,33 @@
 @media (min-width: 782px) {
   /* line 12, ../sass/_grid.sass */
   #leadin {
+    *zoom: 1;
     max-width: 1180px;
+    max-width: 73.75rem;
+    padding-left: 20px;
+    padding-left: 1.25rem;
+    padding-right: 20px;
+    padding-right: 1.25rem;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  /* line 38, ../../../../../../../../Library/Ruby/Gems/1.8/gems/compass-core-1.0.0.alpha.19/stylesheets/compass/utilities/general/_clearfix.scss */
+  #leadin:after {
+    content: "";
+    display: table;
+    clear: both;
   }
 }
 /* line 17, ../sass/_grid.sass */
 #leadin * {
   box-sizing: border-box;
+}
+@media (min-width: 782px) {
+  /* line 12, ../sass/_grid.sass */
+  #leadin {
+    margin: 10px 0 0;
+    padding: 0;
+  }
 }
 
 /* line 6, ../sass/_tables.sass */
@@ -34,7 +58,7 @@
   margin-bottom: 16px;
   *zoom: 1;
 }
-/* line 38, ../../../../../../../.rvm/gems/ruby-1.9.3-p194/gems/compass-0.12.2/frameworks/compass/stylesheets/compass/utilities/general/_clearfix.scss */
+/* line 38, ../../../../../../../../Library/Ruby/Gems/1.8/gems/compass-core-1.0.0.alpha.19/stylesheets/compass/utilities/general/_clearfix.scss */
 #leadin .top_table_controls:after {
   content: "";
   display: table;
@@ -60,67 +84,87 @@
   padding: 12px 0;
   line-height: 24px;
   font-weight: 300;
-  font-size: 20px;
+  font-size: 16px;
   text-decoration: none;
 }
-/* line 30, ../sass/_tables.sass */
+@media (min-width: 782px) {
+  /* line 22, ../sass/_tables.sass */
+  #leadin .table_segment_picker li a {
+    font-size: 20px;
+  }
+}
+/* line 33, ../sass/_tables.sass */
 #leadin .table_segment_picker li a.current {
   margin-bottom: -2px;
   font-weight: 400;
   border-bottom: 2px solid #f66000;
 }
-/* line 35, ../sass/_tables.sass */
+/* line 38, ../sass/_tables.sass */
 #leadin .table_segment_picker li a.current, #leadin .table_segment_picker li a:hover, #leadin .table_segment_picker li a:active {
   color: #f66000;
 }
-/* line 38, ../sass/_tables.sass */
+/* line 41, ../sass/_tables.sass */
 #leadin .table_search {
   float: right;
   padding: 10px 0;
   padding-bottom: 9px;
 }
-/* line 44, ../sass/_tables.sass */
+/* line 47, ../sass/_tables.sass */
 #leadin table .leadin-contact-avatar {
   float: left;
 }
-/* line 48, ../sass/_tables.sass */
+/* line 50, ../sass/_tables.sass */
+#leadin table th, #leadin table td {
+  display: none;
+}
+/* line 53, ../sass/_tables.sass */
+#leadin table th:nth-child(-n+3), #leadin table td:nth-child(-n+3) {
+  display: table-cell;
+}
+@media (min-width: 782px) {
+  /* line 50, ../sass/_tables.sass */
+  #leadin table th, #leadin table td {
+    display: table-cell;
+  }
+}
+/* line 60, ../sass/_tables.sass */
 #leadin.pre-mp6 .table_search {
   float: right;
   padding: 12px 0;
   padding-bottom: 11px;
 }
-/* line 53, ../sass/_tables.sass */
+/* line 65, ../sass/_tables.sass */
 #leadin.pre-mp6 table {
   background-color: white;
   border-color: #dedede;
 }
-/* line 59, ../sass/_tables.sass */
+/* line 71, ../sass/_tables.sass */
 #leadin.pre-mp6 table tr.alternate {
   background-color: white;
 }
-/* line 62, ../sass/_tables.sass */
+/* line 74, ../sass/_tables.sass */
 #leadin.pre-mp6 table th, #leadin.pre-mp6 table td {
   border-top: 0;
   padding: 12px 6px 11px;
 }
-/* line 66, ../sass/_tables.sass */
+/* line 78, ../sass/_tables.sass */
 #leadin.pre-mp6 table th a, #leadin.pre-mp6 table td a {
   padding: 0;
 }
-/* line 69, ../sass/_tables.sass */
+/* line 81, ../sass/_tables.sass */
 #leadin.pre-mp6 table th[scope="col"] {
   background: #eeeeee;
   font-family: sans-serif;
   font-size: 12px;
   text-shadow: none;
 }
-/* line 75, ../sass/_tables.sass */
+/* line 87, ../sass/_tables.sass */
 #leadin.pre-mp6 table td {
   border-color: #dedede;
   line-height: 18px;
   font-size: 14px;
 }
-/* line 80, ../sass/_tables.sass */
+/* line 92, ../sass/_tables.sass */
 #leadin.pre-mp6 table td .row-actions {
   float: left;
 }
@@ -147,7 +191,7 @@
 #leadin .metabox-holder {
   *zoom: 1;
 }
-/* line 38, ../../../../../../../.rvm/gems/ruby-1.9.3-p194/gems/compass-0.12.2/frameworks/compass/stylesheets/compass/utilities/general/_clearfix.scss */
+/* line 38, ../../../../../../../../Library/Ruby/Gems/1.8/gems/compass-core-1.0.0.alpha.19/stylesheets/compass/utilities/general/_clearfix.scss */
 #leadin .metabox-holder:after {
   content: "";
   display: table;
@@ -161,7 +205,7 @@
   color: #999999;
   border-top: 1px solid #dedede;
 }
-/* line 38, ../../../../../../../.rvm/gems/ruby-1.9.3-p194/gems/compass-0.12.2/frameworks/compass/stylesheets/compass/utilities/general/_clearfix.scss */
+/* line 38, ../../../../../../../../Library/Ruby/Gems/1.8/gems/compass-core-1.0.0.alpha.19/stylesheets/compass/utilities/general/_clearfix.scss */
 #leadin #leadin-footer:after {
   content: "";
   display: table;
@@ -191,6 +235,56 @@
   opacity: 0.6;
 }
 
+/* line 50, ../sass/leadin-admin.sass */
+.leadin-dynamic-avatar_0 {
+  background-color: #f88e4b;
+}
+
+/* line 53, ../sass/leadin-admin.sass */
+.leadin-dynamic-avatar_1 {
+  background-color: #64aada;
+}
+
+/* line 56, ../sass/leadin-admin.sass */
+.leadin-dynamic-avatar_2 {
+  background-color: #64c2b6;
+}
+
+/* line 59, ../sass/leadin-admin.sass */
+.leadin-dynamic-avatar_3 {
+  background-color: #cf7baa;
+}
+
+/* line 62, ../sass/leadin-admin.sass */
+.leadin-dynamic-avatar_4 {
+  background-color: #e7c24b;
+}
+
+/* line 65, ../sass/leadin-admin.sass */
+.leadin-dynamic-avatar_5 {
+  background-color: #9387da;
+}
+
+/* line 68, ../sass/leadin-admin.sass */
+.leadin-dynamic-avatar_6 {
+  background-color: #d6dd99;
+}
+
+/* line 71, ../sass/leadin-admin.sass */
+.leadin-dynamic-avatar_7 {
+  background-color: #ff4c4c;
+}
+
+/* line 74, ../sass/leadin-admin.sass */
+.leadin-dynamic-avatar_8 {
+  background-color: #99583d;
+}
+
+/* line 77, ../sass/leadin-admin.sass */
+.leadin-dynamic-avatar_9 {
+  background-color: #54cc14;
+}
+
 /* line 1, ../sass/_settings_page.sass */
 #icon-leadin {
   background: url("../../images/leadin-icon-32x32.png") top center no-repeat;
@@ -218,27 +312,42 @@
 }
 
 /* line 19, ../sass/_settings_page.sass */
+.power-up-settings-icon {
+  padding-right: 10px;
+  float: left;
+  max-height: 20px;
+  margin-top: -1px;
+}
+
+/* line 25, ../sass/_settings_page.sass */
+.dashicons {
+  margin-right: 10px;
+  float: left;
+  margin-top: -1px;
+}
+
+/* line 30, ../sass/_settings_page.sass */
 .steps {
   margin: 48px auto 0;
   text-align: center;
   max-width: 600px;
 }
-/* line 24, ../sass/_settings_page.sass */
+/* line 35, ../sass/_settings_page.sass */
 .steps h3, .steps p {
   margin: 0;
 }
-/* line 27, ../sass/_settings_page.sass */
+/* line 38, ../sass/_settings_page.sass */
 .steps .step-names {
   margin: 0;
   *zoom: 1;
 }
-/* line 38, ../../../../../../../.rvm/gems/ruby-1.9.3-p194/gems/compass-0.12.2/frameworks/compass/stylesheets/compass/utilities/general/_clearfix.scss */
+/* line 38, ../../../../../../../../Library/Ruby/Gems/1.8/gems/compass-core-1.0.0.alpha.19/stylesheets/compass/utilities/general/_clearfix.scss */
 .steps .step-names:after {
   content: "";
   display: table;
   clear: both;
 }
-/* line 31, ../sass/_settings_page.sass */
+/* line 42, ../sass/_settings_page.sass */
 .steps .step-names .step-name {
   color: #cccccc;
   display: list-item;
@@ -249,69 +358,67 @@
   font-size: 16px;
   list-style: decimal inside none;
 }
-/* line 41, ../sass/_settings_page.sass */
+/* line 52, ../sass/_settings_page.sass */
 .steps .step-names .step-name.active {
   color: #1f7d71;
   background-image: url(../../images/triangle.png);
   background-position: bottom center;
   background-repeat: no-repeat;
 }
-/* line 47, ../sass/_settings_page.sass */
+/* line 58, ../sass/_settings_page.sass */
 .steps .step-names .step-name.completed {
   list-style-image: url(../../images/checkmark.png);
 }
-/* line 50, ../sass/_settings_page.sass */
+/* line 61, ../sass/_settings_page.sass */
 .steps .step-content {
   margin: 0;
 }
-/* line 53, ../sass/_settings_page.sass */
+/* line 64, ../sass/_settings_page.sass */
 .steps .step-content .description {
   margin: 10px 0 20px;
   display: block;
 }
-/* line 57, ../sass/_settings_page.sass */
+/* line 68, ../sass/_settings_page.sass */
 .steps .step {
   display: none;
   padding: 18px;
   background-color: #d3eeeb;
   border: 2px solid #22aa99;
-  -webkit-border-radius: 5px;
   -moz-border-radius: 5px;
-  -ms-border-radius: 5px;
-  -o-border-radius: 5px;
+  -webkit-border-radius: 5px;
   border-radius: 5px;
   color: #1f7d71;
 }
-/* line 65, ../sass/_settings_page.sass */
+/* line 76, ../sass/_settings_page.sass */
 .steps .step h2 {
   color: #1f7d71;
   margin-top: 0;
   margin-bottom: 18px;
 }
-/* line 71, ../sass/_settings_page.sass */
+/* line 82, ../sass/_settings_page.sass */
 .steps .step ol {
   text-align: left;
   margin-bottom: 18px;
 }
-/* line 75, ../sass/_settings_page.sass */
+/* line 86, ../sass/_settings_page.sass */
 .steps .step label {
   text-align: right;
 }
-/* line 78, ../sass/_settings_page.sass */
+/* line 89, ../sass/_settings_page.sass */
 .steps .step.active {
   display: block;
 }
-/* line 82, ../sass/_settings_page.sass */
+/* line 93, ../sass/_settings_page.sass */
 .steps .step .form-table th {
   display: none;
 }
-/* line 85, ../sass/_settings_page.sass */
+/* line 96, ../sass/_settings_page.sass */
 .steps .step .form-table td {
   text-align: center;
   width: auto;
   display: block;
 }
-/* line 90, ../sass/_settings_page.sass */
+/* line 101, ../sass/_settings_page.sass */
 .steps .step .form-table input {
   width: 100%;
   font-size: 16px;
@@ -338,7 +445,7 @@
   *zoom: 1;
   padding: 9px 15px 4px 0;
 }
-/* line 38, ../../../../../../../.rvm/gems/ruby-1.9.3-p194/gems/compass-0.12.2/frameworks/compass/stylesheets/compass/utilities/general/_clearfix.scss */
+/* line 38, ../../../../../../../../Library/Ruby/Gems/1.8/gems/compass-core-1.0.0.alpha.19/stylesheets/compass/utilities/general/_clearfix.scss */
 #leadin .header-wrap:after {
   content: "";
   display: table;
@@ -357,27 +464,31 @@
 #leadin .contact-name {
   line-height: 40px;
 }
-/* line 19, ../sass/_contact_detail_page.sass */
+/* line 18, ../sass/_contact_detail_page.sass */
+#leadin .contact-info h3 {
+  margin: 0;
+}
+/* line 21, ../sass/_contact_detail_page.sass */
 #leadin .contact-info label {
   font-weight: bold;
   line-height: 1;
   cursor: default;
 }
-/* line 24, ../sass/_contact_detail_page.sass */
+/* line 26, ../sass/_contact_detail_page.sass */
 #leadin .contact-history {
   padding-left: 20px;
   margin-left: 20px;
   border-left: 2px solid #dedede;
 }
-/* line 31, ../sass/_contact_detail_page.sass */
+/* line 33, ../sass/_contact_detail_page.sass */
 #leadin .contact-history .session + .session {
   margin-top: 30px;
 }
-/* line 34, ../sass/_contact_detail_page.sass */
+/* line 36, ../sass/_contact_detail_page.sass */
 #leadin .contact-history .session-date {
   position: relative;
 }
-/* line 37, ../sass/_contact_detail_page.sass */
+/* line 39, ../sass/_contact_detail_page.sass */
 #leadin .contact-history .session-date:before {
   content: "\2022";
   font-size: 32px;
@@ -389,74 +500,74 @@
   top: 9px;
   color: #dedede;
 }
-/* line 48, ../sass/_contact_detail_page.sass */
+/* line 50, ../sass/_contact_detail_page.sass */
 #leadin .contact-history .events {
   background-color: white;
   border: 1px solid #dedede;
-  -webkit-box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
   -moz-box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+  -webkit-box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
 }
-/* line 53, ../sass/_contact_detail_page.sass */
+/* line 55, ../sass/_contact_detail_page.sass */
 #leadin .contact-history .event {
   margin: 0;
   padding: 10px 20px;
   border-bottom: 1px solid #dedede;
   border-left: 4px solid;
 }
-/* line 60, ../sass/_contact_detail_page.sass */
+/* line 62, ../sass/_contact_detail_page.sass */
 #leadin .contact-history .event:first-child {
   border-top: 0;
 }
-/* line 63, ../sass/_contact_detail_page.sass */
+/* line 65, ../sass/_contact_detail_page.sass */
 #leadin .contact-history .event.pageview {
   border-left-color: #2288cc;
   color: #2288cc;
 }
-/* line 67, ../sass/_contact_detail_page.sass */
+/* line 69, ../sass/_contact_detail_page.sass */
 #leadin .contact-history .event.form-submission {
   border-left-color: #f66000;
   color: #f66000;
 }
-/* line 71, ../sass/_contact_detail_page.sass */
+/* line 73, ../sass/_contact_detail_page.sass */
 #leadin .contact-history .event.source {
   border-left-color: #99aa1f;
   color: #99aa1f;
 }
-/* line 75, ../sass/_contact_detail_page.sass */
+/* line 77, ../sass/_contact_detail_page.sass */
 #leadin .contact-history .event-title {
   margin: 0;
   font-size: 13px;
   font-weight: 600;
 }
-/* line 80, ../sass/_contact_detail_page.sass */
+/* line 82, ../sass/_contact_detail_page.sass */
 #leadin .contact-history .event-time-range {
   float: right;
   font-weight: 400;
   font-size: 0.85em;
   color: #999999;
 }
-/* line 86, ../sass/_contact_detail_page.sass */
+/* line 88, ../sass/_contact_detail_page.sass */
 #leadin .contact-history .event-detail {
   margin-top: 20px;
   color: #444444;
 }
-/* line 90, ../sass/_contact_detail_page.sass */
+/* line 92, ../sass/_contact_detail_page.sass */
 #leadin .contact-history .event-detail li + li {
   padding-top: 6px;
   border-top: 1px solid #eeeeee;
 }
-/* line 95, ../sass/_contact_detail_page.sass */
+/* line 97, ../sass/_contact_detail_page.sass */
 #leadin .contact-history .visit-source p {
   margin: 0;
   color: #1f6696;
 }
-/* line 99, ../sass/_contact_detail_page.sass */
+/* line 101, ../sass/_contact_detail_page.sass */
 #leadin .contact-history .pageview-url {
   margin: 0;
   color: #cccccc;
 }
-/* line 103, ../sass/_contact_detail_page.sass */
+/* line 105, ../sass/_contact_detail_page.sass */
 #leadin .contact-history .field-label {
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -464,11 +575,11 @@
   margin-bottom: 6px;
   font-size: 0.9em;
 }
-/* line 110, ../sass/_contact_detail_page.sass */
+/* line 112, ../sass/_contact_detail_page.sass */
 #leadin .contact-history .field-value {
   margin: 0;
 }
-/* line 115, ../sass/_contact_detail_page.sass */
+/* line 117, ../sass/_contact_detail_page.sass */
 #leadin.pre-mp6 .events {
   background-color: #f9f9f9;
 }
@@ -488,10 +599,8 @@
   background-color: #f9f9f9;
   border-color: #cccccc;
   text-align: center;
-  -webkit-border-radius: 10px;
   -moz-border-radius: 10px;
-  -ms-border-radius: 10px;
-  -o-border-radius: 10px;
+  -webkit-border-radius: 10px;
   border-radius: 10px;
 }
 /* line 16, ../sass/_powerups_page.sass */
@@ -509,4 +618,24 @@
 /* line 26, ../sass/_powerups_page.sass */
 .powerup-list .powerup.activated h2, .powerup-list .powerup.activated p {
   color: #1f7d71;
+}
+
+/* line 3, ../sass/_metabox.sass */
+#li_analytics-meta .li-analytics-link {
+  float: left;
+}
+/* line 6, ../sass/_metabox.sass */
+#li_analytics-meta .li-analytics-link .li-analytics__face {
+  height: 35px;
+  width: 35px;
+  margin-right: 5px;
+  margin-bottom: 5px;
+}
+/* line 12, ../sass/_metabox.sass */
+#li_analytics-meta .hidden_face {
+  display: none;
+}
+/* line 15, ../sass/_metabox.sass */
+#li_analytics-meta .show-all-faces-container {
+  clear: both;
 }
