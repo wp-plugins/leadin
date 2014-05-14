@@ -26,6 +26,9 @@ if ( !class_exists('LI_Contact') )
 if ( !class_exists('LI_Pointers') )
     require_once LEADIN_PLUGIN_DIR . '/admin/inc/class-leadin-pointers.php';
 
+if ( !class_exists('LI_Viewers') )
+    require_once LEADIN_PLUGIN_DIR . '/admin/inc/class-leadin-viewers.php';
+
 include_once(ABSPATH . 'wp-admin/includes/plugin.php');
 
 //=============================================
@@ -34,6 +37,7 @@ include_once(ABSPATH . 'wp-admin/includes/plugin.php');
 class WPLeadInAdmin {
     
     var $admin_power_ups;
+    var $li_viewers;
 
     /**
      * Class constructor
@@ -51,6 +55,7 @@ class WPLeadInAdmin {
             add_action('admin_menu', array(&$this, 'leadin_add_menu_items'));
             add_action('admin_init', array(&$this, 'leadin_build_settings_page'));
             add_action('admin_print_styles', array(&$this, 'add_leadin_admin_styles'));
+            add_action('add_meta_boxes', array(&$this, 'add_li_analytics_meta_box' ));
         }
     }
     
@@ -74,6 +79,7 @@ class WPLeadInAdmin {
             {
                 $power_up->admin_init();
 
+                // Creates the menu icon for power-up if it's set. Overrides the main LeadIn menu to hit the contacts power-up
                 if ( $power_up->menu_text == 'Contacts' )
                     add_menu_page('LeadIn', 'LeadIn', 'manage_categories', 'leadin_contacts', array($power_up, 'power_up_setup_callback'), LEADIN_PATH . '/images/' . ( $wp_version < 3.8 && !is_plugin_active('mp6/mp6.php') ? 'leadin-icon-32x32.png' : 'leadin-svg-icon.svg'));
                 else if ( $power_up->menu_text )
@@ -138,11 +144,8 @@ class WPLeadInAdmin {
     function leadin_options_section_heading ( )
     {
         ?>
-        <div id="message" class="updated below-h2">
-            <p>Visitor tracking is  <span style='color: #090; font-weight: bold;'>installed and tracking visitors</span>.</p>
-            <p>The next time a visitor fills out a form on your WordPress site with an email address, LeadIn will send you an email with the contact's referral source and page view history.</p>
-            <p>All of your visitor's form submissions are stored in your <a href='<?php echo get_bloginfo('wpurl');?>/wp-admin/admin.php?page=leadin_contacts'>LeadIn Contacts</a>.</p>
-        </div>
+        <p style='color: #090; font-weight: bold;'>Visitor tracking is installed and tracking visitors.</p>
+        <p>The next time a visitor fills out a form on your WordPress site with an email address, LeadIn will send you an email with the contact's referral source and page view history.</p>
         <?php
 
        $this->print_hidden_settings_fields();        
@@ -156,6 +159,10 @@ class WPLeadInAdmin {
         $li_db_version = ( $options['li_db_version'] ? $options['li_db_version'] : LEADIN_DB_VERSION );
         $ignore_settings_popup = ( $options['ignore_settings_popup'] ? $options['ignore_settings_popup'] : 0 );
         $onboarding_complete = ( $options['onboarding_complete'] ? $options['onboarding_complete'] : 0 );
+        $data_recovered = ( $options['data_recovered'] ? $options['data_recovered'] : 0 );
+        $delete_flags_fixed = ( $options['delete_flags_fixed'] ? $options['delete_flags_fixed'] : 0 );
+
+        
 
         printf(
             '<input id="li_installed" type="hidden" name="leadin_options[li_installed]" value="%d"/>',
@@ -175,6 +182,16 @@ class WPLeadInAdmin {
         printf(
             '<input id="onboarding_complete" type="hidden" name="leadin_options[onboarding_complete]" value="%d"/>',
             $onboarding_complete
+        );
+
+        printf(
+            '<input id="data_recovered" type="hidden" name="leadin_options[data_recovered]" value="%d"/>',
+            $data_recovered
+        );
+
+        printf(
+            '<input id="delete_flags_fixed" type="hidden" name="leadin_options[delete_flags_fixed]" value="%d"/>',
+            $delete_flags_fixed
         );
     }
 
@@ -303,12 +320,12 @@ class WPLeadInAdmin {
     function li_email_callback ()
     {
         $options = get_option('leadin_options');
-        $li_email = ( $options['li_email'] ? $options['li_email'] : get_bloginfo('admin_email') ); // Get email from plugin settings, if none set, use admin email
-
+        $li_email = ( isset($options['li_email']) && $options['li_email'] ? $options['li_email'] : '' ); // Get email from plugin settings, if none set, use admin email
+       
         printf(
-            '<input id="li_email" type="text" id="title" name="leadin_options[li_email]" value="%s" size="50"/><br/><span class="description">Separate multiple emails with commas</span>',
+            '<input id="li_email" type="text" id="title" name="leadin_options[li_email]" value="%s" size="50"/><br/><span class="description">Separate multiple emails with commas. Leave blank to disable email notifications.</span>',
             $li_email
-        );
+        );    
     }
 
     /**
@@ -475,8 +492,13 @@ class WPLeadInAdmin {
     {
         ?>
         <div id="leadin-footer">
-            <p class="support"><a href="http://leadin.com">LeadIn</a> <?php echo LEADIN_PLUGIN_VERSION?> | Need help? <a href="#" onclick="return SnapEngage.startLink();">Contact us</a>.</p>
+            <p class="support">
+                <a href="http://leadin.com">LeadIn</a> <?php echo LEADIN_PLUGIN_VERSION?> 
+                <span style="padding: 0px 5px;">|</span> Need help? <a href="#" onclick="return SnapEngage.startLink();">Contact us</a>
+                <span style="padding: 0px 5px;">|</span> Love Leadin? <a href="http://wordpress.org/support/view/plugin-reviews/leadin?rate=5#postform">Review us</a>
+            </p>
             <p class="sharing"><a href="https://twitter.com/leadinapp" class="twitter-follow-button" data-show-count="false">Follow @leadinapp</a>
+
             <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script></p>
         </div>
         <!-- begin SnapEngage code -->
@@ -498,6 +520,88 @@ class WPLeadInAdmin {
         <!-- end SnapEngage code -->
         <?php
     }
+
+    /**
+     * Adds the analytics meta box in the post editor
+     */
+    function add_li_analytics_meta_box ()
+    {
+        global $post;
+        if ( ! in_array(get_post_status($post->ID), array('publish', 'private')) )
+            return false;
+
+        $post_types = get_post_types( array( 'public' => true ) );
+
+        $permalink = get_permalink($post->ID);
+        $this->li_viewers = new LI_Viewers();
+        $this->li_viewers->get_identified_viewers($permalink);
+        $this->li_viewers->get_submissions($permalink);
+
+        if ( is_array( $post_types ) && $post_types !== array() ) {
+            foreach ( $post_types as $post_type ) {
+                add_meta_box( 'li_analytics-meta', 'LeadIn Analytics', array( $this, 'li_analytics_meta_box' ), $post_type, 'normal', 'high');
+            }
+        }
+    }
+
+    /**
+     * Output the LeadIn Analytics meta box
+     */
+    function li_analytics_meta_box () 
+    {
+        global $post;
+        $view_count         = 0;
+        $submission_count   = 0;
+        $max_faces          = 10;
+        ?>
+            <table class="form-table"><tbody>
+                <tr>
+                    <th scope="row">
+                        <?php echo count($this->li_viewers->viewers) . ' ' . ( count($this->li_viewers->viewers) != 1 ? 'identified viewers:' : 'identified viewer:' ); ?>
+                    </th>
+                    <td>
+                        <?php
+                            if ( count($this->li_viewers->viewers) )
+                            {
+                                foreach ( $this->li_viewers->viewers as $viewer )
+                                {
+                                    $view_count++;
+                                    $contact_view_url = get_bloginfo('wpurl') . "/wp-admin/admin.php?page=leadin_contacts&action=view&lead=" . $viewer->lead_id . '&post_id=' . $post->ID;
+                                    echo '<a class="li-analytics-link ' . ( $view_count > $max_faces ? 'hidden_face' : '' ) . '" href="' . $contact_view_url . '" title="' . $viewer->lead_email . '"><img height="35px" width="35px" data-original="https://app.getsignals.com/avatar/image/?emails=' . $viewer->lead_email . '" class="lazy li-analytics__face leadin-dynamic-avatar_' . substr($viewer->lead_id, -1) . '"/></a>'; 
+                                }
+                            }
+
+                            if ( $view_count > $max_faces )
+                            {
+                                echo '<div class="show-all-faces-container"><a class="show_all_faces" href="javascript:void(0)">+ Show ' . ( $view_count - $max_faces ) . ' more</a></div>';
+                            }
+                        ?>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">
+                        <?php echo count($this->li_viewers->submissions) . ' ' . ( count($this->li_viewers->submissions) != 1 ? 'form submissions:' : 'form submission:' ); ?>
+                    </th>
+                    <td>
+                        <?php 
+                            foreach ( $this->li_viewers->submissions as $submission )
+                            {
+                                $submission_count++;
+                                $contact_view_url = get_bloginfo('wpurl') . "/wp-admin/admin.php?page=leadin_contacts&action=view&lead=" . $submission->lead_id . '&post_id=' . $post->ID;
+                                echo '<a class="li-analytics-link ' . ( $submission_count > $max_faces ? 'hidden_face' : '' ) . '" href="' . $contact_view_url . '" title="' . $submission->lead_email . '"><img height="35px" width="35px" data-original="https://app.getsignals.com/avatar/image/?emails=' . $submission->lead_email . '" class="lazy li-analytics__face leadin-dynamic-avatar_' . substr($submission->lead_id, -1) . '"/></a>';
+                            }
+
+                            if ( $submission_count > $max_faces )
+                            {
+                                echo '<div class="show-all-faces-container"><a class="show_all_faces" href="javascript:void(0)">+ Show ' . ( $submission_count - $max_faces ) . ' more</a></div>';
+                            }
+                        ?>
+                    </td>
+                </tr>
+            </tbody></table>
+        <?php
+    }
+
 }
 
 ?>

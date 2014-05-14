@@ -1,6 +1,6 @@
 <?php
 /**
-	* Power-up Name: Contacts Tracking
+	* Power-up Name: Visitor Tracking
 	* Power-up Class: WPLeadInContacts
 	* Power-up Menu Text: Contacts
 	* Power-up Menu Link: contacts
@@ -8,6 +8,7 @@
 	* Power-up URI: http://leadin.com/
 	* Power-up Description: Get an in-depth history of each contact in your database.
 	* Power-up Icon: powerup-icon-leads
+	* Power-up Icon Small: powerup-icon-leads
 	* First Introduced: 0.4.7
 	* Power-up Tags: Lead Tracking
 	* Auto Activate: Yes
@@ -39,6 +40,7 @@ require_once(LEADIN_CONTACTS_PLUGIN_DIR . '/admin/contacts-admin.php');
 class WPLeadInContacts extends WPLeadIn {
 	
 	var $admin;
+	var $options;
 
 	/**
 	 * Class constructor

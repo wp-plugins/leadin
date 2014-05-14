@@ -99,11 +99,17 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
         $li_contact->get_contact_history();
         
         $lead_email = $li_contact->history->lead->lead_email;
+        $url_parts = parse_url($lead->lead_source);
+        $lead_source = urldecode(rtrim($url_parts['host'] . '/' . $url_parts['path'], '/'));
 
-        echo '<a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts">&larr; All Contacts</a>';
+        if ( isset($_GET['post_id']) )
+            echo '<a href="' . get_bloginfo('wpurl') . '/wp-admin/post.php?post=' . $_GET['post_id'] . '&action=edit#li_analytics-meta">&larr; All Viewers</a>';
+        else
+            echo '<a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts">&larr; All Contacts</a>';
+
 
         echo '<div class="header-wrap">';
-            echo '<img height="40px" width="40px" src="https://app.getsignals.com/avatar/image/?emails=' . $lead_email . '" />';
+            echo '<img height="40px" width="40px" src="https://app.getsignals.com/avatar/image/?emails=' . $lead_email . '" class="leadin-dynamic-avatar_' . substr($lead_id, -1) . '"/>';
             echo '<h1 class="contact-name">' . $lead_email . '</h1>';
         echo '</div>';
         
@@ -152,7 +158,7 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                             
                             echo '<li class="event pageview">';
                                 echo '<p class="event-title">' . $pageview['pageview_title'] . '<span class="event-time-range">' . date('g:ia', strtotime($pageview['event_date'])) . '</span></p>';
-                                echo '<a class="pageview-url" href="' . $pageview['pageview_url'] . '">' . $pageview['pageview_url'] . '</a>';
+                                echo '<a class="pageview-url" target="_blank" href="' . $pageview['pageview_url'] . '">' . $pageview['pageview_url'] . '</a>';
                             echo '</li>';
                         }
                         else if ( $event['event_type'] == 'form' )
@@ -276,13 +282,13 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
         $q = $wpdb->prepare("SELECT hashkey FROM li_leads WHERE lead_id = %d", $lead_id);
         $lead_hash = $wpdb->get_var($q);
 
-        $q = $wpdb->prepare("DELETE FROM li_pageviews WHERE lead_hashkey = %s", $lead_hash);
+        $q = $wpdb->prepare("UPDATE li_pageviews SET pageview_deleted = 1 WHERE lead_hashkey = %s AND pageview_deleted = 0", $lead_hash);
         $delete_pageviews = $wpdb->query($q);
 
-        $q = $wpdb->prepare("DELETE FROM li_submissions WHERE lead_hashkey = %s", $lead_hash);
+        $q = $wpdb->prepare("UPDATE li_submissions SET form_deleted = 1  WHERE lead_hashkey = %s AND form_deleted = 0", $lead_hash);
         $delete_submissions = $wpdb->query($q);
 
-        $q = $wpdb->prepare("DELETE FROM li_leads WHERE lead_id = %d", $lead_id);
+        $q = $wpdb->prepare("UPDATE li_leads SET lead_deleted = 1 WHERE lead_id = %d AND lead_deleted = 0", $lead_id);
         $delete_lead = $wpdb->query($q);
 
         return $delete_lead;
@@ -300,10 +306,13 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
     {
         global $pagenow;
 
-        if ( $pagenow == 'admin.php' && isset($_GET['page']) && strstr($_GET['page'], "leadin") ) 
+        if ( ($pagenow == 'admin.php' && isset($_GET['page']) && strstr($_GET['page'], 'leadin')) || ( $pagenow == 'post.php' && isset($_GET['post']) && isset($_GET['action']) && strstr($_GET['action'], 'edit') ) ) 
         {
             wp_register_script('leadin-admin-js', LEADIN_PATH . '/admin/js/leadin-admin.js', array ( 'jquery' ), FALSE, TRUE);
             wp_enqueue_script('leadin-admin-js');
+
+            wp_register_script('lazyload-js', LEADIN_PATH . '/admin/js/jquery.lazyload.min.js', array ( 'jquery' ), FALSE, TRUE);
+            wp_enqueue_script('lazyload-js');
         }
     }
 
