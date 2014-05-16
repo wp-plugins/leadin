@@ -38,6 +38,7 @@ class WPLeadInAdmin {
     
     var $admin_power_ups;
     var $li_viewers;
+    var $power_up_icon;
 
     /**
      * Class constructor
@@ -122,6 +123,8 @@ class WPLeadInAdmin {
      */
     function leadin_build_settings_page ()
     {
+        global $leadin_contacts;
+
         // Show the settings popup on all pages except the settings page
         if( isset($_GET['settings-updated']) )
         {
@@ -135,7 +138,9 @@ class WPLeadInAdmin {
         }
         
         register_setting('leadin_settings_options', 'leadin_options', array($this, 'sanitize'));
-        add_settings_section('leadin_settings_section', 'Visitor Tracking', array($this, 'leadin_options_section_heading'), LEADIN_ADMIN_PATH);
+
+        $visitor_tracking_icon = $leadin_contacts->icon_small;
+        add_settings_section('leadin_settings_section', $visitor_tracking_icon . 'Visitor Tracking', array($this, 'leadin_options_section_heading'), LEADIN_ADMIN_PATH);
         add_settings_field('li_email', 'Email', array($this, 'li_email_callback'), LEADIN_ADMIN_PATH, 'leadin_settings_section');
         
         add_filter( 'update_option_leadin_options', array($this, 'update_option_leadin_options_callback'), 10, 2 );
@@ -143,12 +148,8 @@ class WPLeadInAdmin {
 
     function leadin_options_section_heading ( )
     {
-        ?>
-        <p style='color: #090; font-weight: bold;'>Visitor tracking is installed and tracking visitors.</p>
-        <p>The next time a visitor fills out a form on your WordPress site with an email address, LeadIn will send you an email with the contact's referral source and page view history.</p>
-        <?php
-
-       $this->print_hidden_settings_fields();        
+       $this->print_hidden_settings_fields();
+       $this->tracking_code_installed_message();     
     }
 
     function print_hidden_settings_fields ()
@@ -161,8 +162,6 @@ class WPLeadInAdmin {
         $onboarding_complete = ( $options['onboarding_complete'] ? $options['onboarding_complete'] : 0 );
         $data_recovered = ( $options['data_recovered'] ? $options['data_recovered'] : 0 );
         $delete_flags_fixed = ( $options['delete_flags_fixed'] ? $options['delete_flags_fixed'] : 0 );
-
-        
 
         printf(
             '<input id="li_installed" type="hidden" name="leadin_options[li_installed]" value="%d"/>',
@@ -195,6 +194,14 @@ class WPLeadInAdmin {
         );
     }
 
+    function tracking_code_installed_message ( )
+    {
+        echo '<div class="leadin-section">';
+            echo '<p style="color: #090; font-weight: bold;">Visitor tracking is installed and tracking visitors.</p>';
+            echo '<p>The next time a visitor fills out a form on your WordPress site with an email address, LeadIn will send you an email with the contact\'s referral source and page view history.</p>';
+        echo '</div>';
+    }
+
     function update_option_leadin_options_callback ( $old_value, $new_value )
     {
         $user_email = $new_value["li_email"];
@@ -207,7 +214,7 @@ class WPLeadInAdmin {
     function leadin_plugin_options ()
     {
         global  $wp_version;
-        
+
         if ( !current_user_can( 'manage_categories' ) )
         {
             wp_die(__('You do not have sufficient permissions to access this page.'));
@@ -225,7 +232,6 @@ class WPLeadInAdmin {
         else
             $this->leadin_plugin_settings();
 
-        
         $this->leadin_footer();
         
         //end wrap
@@ -311,6 +317,9 @@ class WPLeadInAdmin {
         if( isset( $input['ignore_settings_popup'] ) )
             $new_input['ignore_settings_popup'] = $input['ignore_settings_popup'];
 
+        if( isset( $input['beta_tester'] ) )
+            $new_input['beta_tester'] = sanitize_text_field($input['beta_tester']);
+
         return $new_input;
     }
 
@@ -321,7 +330,7 @@ class WPLeadInAdmin {
     {
         $options = get_option('leadin_options');
         $li_email = ( isset($options['li_email']) && $options['li_email'] ? $options['li_email'] : '' ); // Get email from plugin settings, if none set, use admin email
-       
+     
         printf(
             '<input id="li_email" type="text" id="title" name="leadin_options[li_email]" value="%s" size="50"/><br/><span class="description">Separate multiple emails with commas. Leave blank to disable email notifications.</span>',
             $li_email
@@ -353,9 +362,19 @@ class WPLeadInAdmin {
             <ul class="powerup-list">
 
                 <?php foreach ( $this->admin_power_ups as $power_up ) : ?>
+                    <?php 
+                        // Skip displaying the power-up on the power-ups page if it's hidden
+                        if ( $power_up->hidden )
+                            continue;
+                    ?>
+
                     <li class="powerup <?php echo ( $power_up->activated ? 'activated' : ''); ?>">
                         <h2><?php echo $power_up->power_up_name; ?></h2>
-                        <img src="<?php echo LEADIN_PATH . '/images/' . $power_up->icon . '@2x.png'; ?>" height="80px" width="80px"/>
+                        <?php if ( strstr($power_up->icon, 'dashicons') ) : ?>
+                            <div class="power-up-icon dashicons <?php echo $power_up->icon; ?>"></div>
+                        <?php else : ?>
+                            <img src="<?php echo LEADIN_PATH . '/images/' . $power_up->icon . '@2x.png'; ?>" height="80px" width="80px"/>
+                        <?php endif; ?>
                         <p><?php echo $power_up->description; ?></p>
                         <p><a href="<?php echo $power_up->link_uri; ?>" target="_blank">Learn more</a></p>
                         <?php if ( $power_up->activated ) : ?>
@@ -377,6 +396,7 @@ class WPLeadInAdmin {
                     </li>
                 <?php endforeach; ?>
 
+                <!-- static power-ups -->
                 <li class="powerup">
                     <h2>Content Analytics</h2>
                     <img src="<?php echo LEADIN_PATH; ?>/images/powerup-icon-analytics@2x.png" height="80px" width="80px">
@@ -465,7 +485,7 @@ class WPLeadInAdmin {
         $postbox_wrap = "";
         $postbox_wrap .= '<div id="' . $id . '" class="postbox leadin-admin-postbox">';
         $postbox_wrap .= ( $handle ? '<div class="handlediv" title="Click to toggle"><br /></div>' : '' );
-        $postbox_wrap .= '<h3><span>' . $title . '</span></h3>';
+        $postbox_wrap .= '<h3 class="hndle"><span>' . $title . '</span></h3>';
         $postbox_wrap .= '<div class="inside">' . $content . '</div>';
         $postbox_wrap .= '</div>';
         return $postbox_wrap;
@@ -600,8 +620,7 @@ class WPLeadInAdmin {
                 </tr>
             </tbody></table>
         <?php
-    }
-
+    } 
 }
 
 ?>

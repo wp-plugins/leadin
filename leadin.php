@@ -3,7 +3,7 @@
 Plugin Name: LeadIn
 Plugin URI: http://leadin.com
 Description: LeadIn is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
-Version: 0.9.1
+Version: 0.9.2
 Author: Andy Cook, Nelson Joyce
 Author URI: http://leadin.com
 License: GPL2
@@ -26,7 +26,7 @@ if ( !defined('LEADIN_DB_VERSION') )
 	define('LEADIN_DB_VERSION', '0.8.3');
 
 if ( !defined('LEADIN_PLUGIN_VERSION') )
-	define('LEADIN_PLUGIN_VERSION', '0.9.1');
+	define('LEADIN_PLUGIN_VERSION', '0.9.2');
 
 if ( !defined('MIXPANEL_PROJECT_TOKEN') )
     define('MIXPANEL_PROJECT_TOKEN', 'a9615503ec58a6bce2c646a58390eac1');
@@ -40,10 +40,12 @@ require_once(LEADIN_PLUGIN_DIR . '/admin/leadin-admin.php');
 require_once(LEADIN_PLUGIN_DIR . '/inc/class-emailer.php');
 require_once(LEADIN_PLUGIN_DIR . '/inc/leadin-ajax-functions.php');
 require_once(LEADIN_PLUGIN_DIR . '/inc/leadin-functions.php');
+require_once(LEADIN_PLUGIN_DIR . '/inc/class-leadin-updater.php');
 require_once(LEADIN_PLUGIN_DIR . '/power-ups/subscribe-widget.php');
 require_once(LEADIN_PLUGIN_DIR . '/power-ups/contacts.php');
 require_once(LEADIN_PLUGIN_DIR . '/power-ups/mailchimp-list-sync.php');
 require_once(LEADIN_PLUGIN_DIR . '/power-ups/constant-contact-list-sync.php');
+require_once(LEADIN_PLUGIN_DIR . '/power-ups/beta-program.php');
 require_once(LEADIN_PLUGIN_DIR . '/lib/mixpanel/LI_Mixpanel.php');
 
 //=============================================
@@ -52,6 +54,7 @@ require_once(LEADIN_PLUGIN_DIR . '/lib/mixpanel/LI_Mixpanel.php');
 class WPLeadIn {
 	
 	var $power_ups;
+	var $options;
 
 	/**
 	 * Class constructor
@@ -69,6 +72,7 @@ class WPLeadIn {
 		register_deactivation_hook( __FILE__, array(&$this, 'deactivate_leadin'));
 
 		$this->power_ups = $this->get_available_power_ups();
+		$this->options = get_option('leadin_options');
 
 		add_action('plugins_loaded', array($this, 'leadin_update_check'));
 		add_filter('init', array($this, 'add_leadin_frontend_scripts'));
@@ -76,10 +80,10 @@ class WPLeadIn {
 		add_filter('plugin_action_links_' . plugin_basename(__FILE__), array(&$li_wp_admin, 'leadin_plugin_settings_link'));
 		add_action( 'admin_bar_menu', array($this, 'add_leadin_link_to_admin_bar'), 999 );
 
-		$li_wp_admin 	= new WPLeadInAdmin($this->power_ups);
+		$li_wp_admin = new WPLeadInAdmin($this->power_ups);
 
-		if ( is_single() )
-			echo 'leadin single';
+		if ( isset($this->options['beta_tester']) && $this->options['beta_tester'] )
+			$li_wp_updater = new WPLeadInUpdater();
 	}
 
 	/**
@@ -87,9 +91,9 @@ class WPLeadIn {
 	 */
 	function add_leadin_defaults ()
 	{
-		$li_options = get_option('leadin_options');
+		$options = $this->options;
 
-		if ( ($li_options['li_installed'] != 1) || (!is_array($li_options)) )
+		if ( ($options['li_installed'] != 1) || (!is_array($options)) )
 		{
 			$opt = array(
 				'li_installed'				=> 1,
@@ -98,7 +102,8 @@ class WPLeadIn {
 				'onboarding_complete'		=> 0,
 				'ignore_settings_popup'		=> 0,
 				'data_recovered'			=> 1,
-				'delete_flags_fixed'		=> 1
+				'delete_flags_fixed'		=> 1,
+				'beta_tester'				=> 0
 			);
 			
 			update_option('leadin_options', $opt);
@@ -110,7 +115,8 @@ class WPLeadIn {
 		if ( !$leadin_active_power_ups )
 		{
 			$auto_activate = array(
-				'contacts'
+				'contacts',
+				'beta_program'
 			);
 
 			update_option('leadin_active_power_ups', serialize($auto_activate));
@@ -202,7 +208,7 @@ class WPLeadIn {
 	function leadin_update_check ()
 	{
 	    global $wpdb;
-	    $li_options = get_option('leadin_options');
+	    $options = $this->options;
 
 	    // 0.4.0 upgrade - Delete legacy db option version 0.4.0 (remove after beta is launched)
         if ( get_option('leadin_db_version') )
@@ -221,22 +227,30 @@ class WPLeadIn {
 		if ( !$leadin_active_power_ups )
 		{
 			$auto_activate = array(
-				'contacts'
+				'contacts',
+				'beta_program'
 			);
 
 			update_option('leadin_active_power_ups', serialize($auto_activate));
 		}
+		else
+		{
+			// 0.9.2 upgrade - set beta program power-up to auto-activate
+			$activated_power_ups = unserialize($leadin_active_power_ups);
+			$activated_power_ups[] = 'beta_program';
+			update_option('leadin_active_power_ups', serialize($activated_power_ups));
+		}
 
 		// 0.7.2 bug fix - data recovery algorithm for deleted contacts
-		if ( ! isset($li_options['data_recovered']) )
+		if ( ! isset($options['data_recovered']) )
 		{
 			leadin_recover_contact_data();
 		}
 
 		// Set the database version if it doesn't exist
-	    if ( isset($li_options['li_db_version']) )
+	    if ( isset($options['li_db_version']) )
 	    {
-	    	if ( $li_options['li_db_version'] != LEADIN_DB_VERSION ) {
+	    	if ( $options['li_db_version'] != LEADIN_DB_VERSION ) {
 	        	$this->leadin_db_install();
 
 	        	// 0.4.2 upgrade - After the DB installation converts the set structure from contact to lead, update all the blank contacts = leads
@@ -254,7 +268,7 @@ class WPLeadIn {
 	    }
 
 	    // 0.8.3 bug fix - bug fix for duplicated contacts that should be merged
-		if ( ! isset($li_options['delete_flags_fixed']) )
+		if ( ! isset($options['delete_flags_fixed']) )
 		{
 			leadin_delete_flag_fix();
 		}
@@ -281,10 +295,15 @@ class WPLeadIn {
 		}
 	}
 
+	/**
+     * Adds LeadIn link to top-level admin bar
+     */
 	function add_leadin_link_to_admin_bar( $wp_admin_bar ) {
+		global $wp_version;
+
 		$args = array(
 			'id'     => 'leadin-admin-menu',     // id of the existing child node (New > Post)
-			'title'  => '<span class="ab-icon"><img src="/wp-content/plugins/leadin/images/leadin-svg-icon.svg" style="height:16px; width:16px;"></span><span class="ab-label">LeadIn</span>', // alter the title of existing node
+			'title'  => '<span class="ab-icon" '. ( $wp_version < 3.8 && !is_plugin_active('mp6/mp6.php') ? ' style="margin-top: 3px;"' : ''). '><img src="/wp-content/plugins/leadin/images/leadin-svg-icon.svg" style="height:16px; width:16px;"></span><span class="ab-label">LeadIn</span>', // alter the title of existing node
 			'parent' => false,	 // set parent to false to make it a top level (parent) node
 			'href' => get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts',
 			'meta' => array('title' => 'LeadIn')
@@ -318,10 +337,16 @@ class WPLeadIn {
 				$power_up->link_uri 		= $headers['uri'];
 				$power_up->description 		= $headers['description'];
 				$power_up->icon 			= $headers['icon'];
-				$power_up->icon_small 		= $headers['icon_small'];
-				$power_up->permanent 		= $headers['permanent'];
-				$power_up->auto_activate 	= $headers['auto_activate'];
+				$power_up->permanent 		= ( $headers['permanent'] == 'Yes' ? 1 : 0 );
+				$power_up->auto_activate 	= ( $headers['auto_activate'] == 'Yes' ? 1 : 0 );
+				$power_up->hidden 			= ( $headers['hidden'] == 'Yes' ? 1 : 0 );
 				$power_up->activated 		= $headers['activated'];
+
+				// Set the small icons HTML for the settings page
+				if ( strstr($headers['icon_small'], 'dashicons') )
+					$power_up->icon_small = '<span class="dashicons ' . $headers['icon_small'] . '"></span>';
+				else
+					$power_up->icon_small = '<img src="' . LEADIN_PATH . '/images/' . $headers['icon_small'] . '.png" class="power-up-settings-icon"/>';
 
 				array_push($power_ups, $power_up);
             }
@@ -367,7 +392,8 @@ class WPLeadIn {
 			'introduced'		=> 'First Introduced',
 			'auto_activate'		=> 'Auto Activate',
 			'permanent'			=> 'Permanently Enabled',
-			'power_up_tags'		=> 'Power-up Tags'
+			'power_up_tags'		=> 'Power-up Tags',
+			'hidden'			=> 'Hidden'
 		);
 
 		$file = WPLeadIn::get_power_up_path( WPLeadIn::get_power_up_slug( $power_up ) );
@@ -413,7 +439,11 @@ class WPLeadIn {
         }
 
         $files = leadin_sort_power_ups($files, array(
-        	LEADIN_PLUGIN_DIR . '/power-ups/contacts' . '.php', LEADIN_PLUGIN_DIR . '/power-ups/subscribe-widget' . '.php', LEADIN_PLUGIN_DIR . '/power-ups/mailchimp-list-sync' . '.php', LEADIN_PLUGIN_DIR . '/power-ups/constant-contact-list-sync' . '.php'
+        	LEADIN_PLUGIN_DIR . '/power-ups/contacts.php', 
+        	LEADIN_PLUGIN_DIR . '/power-ups/subscribe-widget.php', 
+        	LEADIN_PLUGIN_DIR . '/power-ups/mailchimp-list-sync.php', 
+        	LEADIN_PLUGIN_DIR . '/power-ups/constant-contact-list-sync.php',
+        	LEADIN_PLUGIN_DIR . '/power-ups/beta-program.php'
         ));
 
         closedir( $dir );

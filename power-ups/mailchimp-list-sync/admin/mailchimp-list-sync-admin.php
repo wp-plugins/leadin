@@ -10,7 +10,7 @@ class WPMailChimpListSyncAdmin extends WPLeadInAdmin {
     /**
      * Class constructor
      */
-    function __construct ( $small_icon )
+    function __construct ( $power_up_icon_small )
     {
         //=============================================
         // Hooks & Filters
@@ -18,7 +18,7 @@ class WPMailChimpListSyncAdmin extends WPLeadInAdmin {
 
         if ( is_admin() )
         {
-            $this->power_up_icon = '<img src="' . LEADIN_PATH . '/images/' . $small_icon . '.png" class="power-up-settings-icon"/>';
+            $this->power_up_icon = $power_up_icon_small;
             add_action('admin_init', array($this, 'leadin_mls_build_settings_page'));
         }
     }

@@ -12,6 +12,8 @@
 	* First Introduced: 0.4.7
 	* Power-up Tags: Lead Generation
 	* Auto Activate: Yes
+	* Permanently Enabled: No
+	* Hidden: No
 */
 
 //=============================================
@@ -52,7 +54,6 @@ class WPLeadInSubscribe extends WPLeadIn {
 		if ( ! $activated )
 			return false;
 
-
 		$this->options = get_option('leadin_subscribe_options');
 		add_action('get_footer', array(&$this, 'append_leadin_subscribe_settings'));
 		
@@ -65,7 +66,7 @@ class WPLeadInSubscribe extends WPLeadIn {
 	public function admin_init ( )
 	{
 		$admin_class = get_class($this) . 'Admin';
-		$this->admin = new $admin_class($this->icon);
+		$this->admin = new $admin_class($this->icon_small);
 	}
 
 	function power_up_setup_callback ( )
