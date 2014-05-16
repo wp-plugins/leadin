@@ -13,7 +13,7 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
     /**
      * Class constructor
      */
-    function __construct ()
+    function __construct ( $power_up_icon_small )
     {
         //=============================================
         // Hooks & Filters

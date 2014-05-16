@@ -13,6 +13,7 @@
 	* Power-up Tags: Lead Tracking
 	* Auto Activate: Yes
 	* Permanently Enabled: Yes
+	* Hidden: No
 */
 
 //=============================================
@@ -54,13 +55,16 @@ class WPLeadInContacts extends WPLeadIn {
 		if ( ! $activated )
 			return false;
 
+		global $leadin_contacts;
+		$leadin_contacts = $this;
+
 		add_action('admin_print_scripts', array(&$this, 'add_leadin_contacts_admin_scripts'));
 	}
 
 	public function admin_init ( )
 	{
 		$admin_class = get_class($this) . 'Admin';
-		$this->admin = new $admin_class();
+		$this->admin = new $admin_class($this->icon_small);
 	}
 
 	function power_up_setup_callback ( )

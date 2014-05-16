@@ -27,6 +27,9 @@ class LI_MailChimp
     function __construct($api_key)
     {
         $this->api_key = $api_key;
+        if ( !strstr($this->api_key, '-') )
+            return FALSE;
+        
         list(, $datacentre) = explode('-', $this->api_key);
         $this->api_endpoint = str_replace('<dc>', $datacentre, $this->api_endpoint);
     }

@@ -17,7 +17,7 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
     /**
      * Class constructor
      */
-    function __construct (  $power_up_icon )
+    function __construct (  $power_up_icon_small )
     {
         //=============================================
         // Hooks & Filters
@@ -25,7 +25,7 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
         
         if ( is_admin() )
         {
-            $this->power_up_icon = '<span class="dashicons dashicons-email-alt"></span>';
+            $this->power_up_icon = $power_up_icon_small;
             add_action('admin_init', array($this, 'leadin_subscribe_build_settings_page'));
             $this->options = get_option('leadin_subscribe_options');
         }
@@ -190,16 +190,14 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
     function li_subscribe_additional_fields_callback ()
     {
         $options = $this->options;
-        $li_subscribe_name_fields = ( $options['li_subscribe_name_fields'] ? $options['li_subscribe_name_fields'] : '0' ); // Get name field options from options, or show default
-        $li_subscribe_phone_field = ( $options['li_subscribe_phone_field'] ? $options['li_subscribe_phone_field'] : '0' ); // Get phone field preference from options, or show default
 
         printf(
-            '<p><input id="li_subscribe_name_fields" type="checkbox" name="leadin_subscribe_options[li_subscribe_name_fields]" value="1"' . checked( 1, $options['li_subscribe_name_fields'], false ) . '/>' . 
+            '<p><input id="li_subscribe_name_fields" type="checkbox" name="leadin_subscribe_options[li_subscribe_name_fields]" value="1"' . checked( 1, ( isset($options['li_subscribe_name_fields']) ? $options['li_subscribe_name_fields'] : '0' ), false ) . '/>' . 
             '<label for="li_subscribe_name_fields">First + last name</label></p>'
         );
 
         printf(
-            '<p><input id="li_subscribe_phone_field" type="checkbox" name="leadin_subscribe_options[li_subscribe_phone_field]" value="1"' . checked( 1, $options['li_subscribe_phone_field'], false ) . '/>' . 
+            '<p><input id="li_subscribe_phone_field" type="checkbox" name="leadin_subscribe_options[li_subscribe_phone_field]" value="1"' . checked( 1, ( isset($options['li_subscribe_phone_field']) ? $options['li_subscribe_phone_field'] : '0' ), false ) . '/>' . 
             '<label for="li_subscribe_phone_field">Phone number</label></p>'
         );
     }
@@ -221,22 +219,22 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
         }
 
         printf(
-            '<p><input id="li_subscribe_template_posts" type="checkbox" name="leadin_subscribe_options[li_subscribe_template_posts]" value="1"' . checked( 1, $options['li_subscribe_template_posts'], false ) . '/>' . 
+            '<p><input id="li_subscribe_template_posts" type="checkbox" name="leadin_subscribe_options[li_subscribe_template_posts]" value="1"' . checked( 1, ( isset($options['li_subscribe_template_posts']) ? $options['li_subscribe_template_posts'] : '0' ), false ) . '/>' . 
             '<label for="li_subscribe_template_posts">Posts</label></p>'
         );
 
         printf(
-            '<p><input id="li_subscribe_template_pages" type="checkbox" name="leadin_subscribe_options[li_subscribe_template_pages]" value="1"' . checked( 1, $options['li_subscribe_template_pages'], false ) . '/>' . 
+            '<p><input id="li_subscribe_template_pages" type="checkbox" name="leadin_subscribe_options[li_subscribe_template_pages]" value="1"' . checked( 1, ( isset($options['li_subscribe_template_pages']) ? $options['li_subscribe_template_pages'] : '0' ), false ) . '/>' . 
             '<label for="li_subscribe_template_pages">Pages</label></p>'
         );
 
         printf(
-            '<p><input id="li_subscribe_template_archives" type="checkbox" name="leadin_subscribe_options[li_subscribe_template_archives]" value="1"' . checked( 1, $options['li_subscribe_template_archives'], false ) . '/>' . 
+            '<p><input id="li_subscribe_template_archives" type="checkbox" name="leadin_subscribe_options[li_subscribe_template_archives]" value="1"' . checked( 1, ( isset($options['li_subscribe_template_archives']) ? $options['li_subscribe_template_archives'] : '0' ), false ) . '/>' . 
             '<label for="li_subscribe_template_archives">Archives</label></p>'
         );
 
         printf(
-            '<p><input id="li_subscribe_template_home" type="checkbox" name="leadin_subscribe_options[li_subscribe_template_home]" value="1"' . checked( 1, $options['li_subscribe_template_home'], false ) . '/>' . 
+            '<p><input id="li_subscribe_template_home" type="checkbox" name="leadin_subscribe_options[li_subscribe_template_home]" value="1"' . checked( 1, ( isset($options['li_subscribe_template_home']) ? $options['li_subscribe_template_home'] : '0' ), false ) . '/>' . 
             '<label for="li_subscribe_template_home">Homepage</label></p>'
         );
     }

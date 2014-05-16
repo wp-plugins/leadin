@@ -12,6 +12,8 @@
 	* First Introduced: 0.8.0
 	* Power-up Tags: Newsletter, Email
 	* Auto Activate: No
+	* Permanently Enabled: No
+	* Hidden: No
 */
 
 //=============================================
