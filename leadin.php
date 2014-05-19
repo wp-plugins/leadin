@@ -3,7 +3,7 @@
 Plugin Name: LeadIn
 Plugin URI: http://leadin.com
 Description: LeadIn is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
-Version: 0.9.2
+Version: 0.9.3
 Author: Andy Cook, Nelson Joyce
 Author URI: http://leadin.com
 License: GPL2
@@ -12,6 +12,8 @@ License: GPL2
 //=============================================
 // Define Constants
 //=============================================
+
+
 
 if ( !defined('LEADIN_PATH') )
     define('LEADIN_PATH', untrailingslashit(plugins_url('', __FILE__ )));
@@ -26,10 +28,12 @@ if ( !defined('LEADIN_DB_VERSION') )
 	define('LEADIN_DB_VERSION', '0.8.3');
 
 if ( !defined('LEADIN_PLUGIN_VERSION') )
-	define('LEADIN_PLUGIN_VERSION', '0.9.2');
+	define('LEADIN_PLUGIN_VERSION', '0.9.3');
 
 if ( !defined('MIXPANEL_PROJECT_TOKEN') )
     define('MIXPANEL_PROJECT_TOKEN', 'a9615503ec58a6bce2c646a58390eac1');
+
+
 
 
 //=============================================
@@ -237,7 +241,25 @@ class WPLeadIn {
 		{
 			// 0.9.2 upgrade - set beta program power-up to auto-activate
 			$activated_power_ups = unserialize($leadin_active_power_ups);
-			$activated_power_ups[] = 'beta_program';
+
+			// 0.9.3 bug fix for dupliate beta_program values being stored in the active power-ups array
+			if ( !in_array('beta_program', $activated_power_ups) )
+			{
+				$activated_power_ups[] = 'beta_program';
+				update_option('leadin_active_power_ups', serialize($activated_power_ups));
+			}
+			else 
+			{
+				$tmp = array_count_values($activated_power_ups);
+				$count = $tmp['beta_program'];
+
+				if ( $count > 1 )
+				{
+					$activated_power_ups = array_unique($activated_power_ups);
+					update_option('leadin_active_power_ups', serialize($activated_power_ups));
+				}
+			}
+
 			update_option('leadin_active_power_ups', serialize($activated_power_ups));
 		}
 
