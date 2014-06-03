@@ -1,0 +1,86 @@
+@import "compass/utilities/general/clearfix"
+@import "compass/css3"
+
+@import admin/variables.sass
+@import admin/grid.sass
+@import admin/tables.sass
+
+//WordPress stuff
+#leadin
+    padding-right: 20px
+
+    @media screen and (min-width: 500px)
+        padding-right: 10px
+
+    label
+        cursor: default
+
+    .col-wrap
+        padding: 0 14px 0 0
+
+    .metabox-holder
+        +pie-clearfix
+    
+    #leadin-footer
+        +pie-clearfix
+        clear: both
+        margin-top: $base-vertical-unit*8
+        color: $color-text-light
+        border-top: 1px solid $color-border
+
+        .support .sharing
+            height: 18px
+            text-align: left
+
+        @media screen and (min-width: 500px)
+            .support, .version, .sharing
+                width: 50%
+                float: left
+
+            .sharing
+                text-align: right
+
+#wp-admin-bar-leadin-admin-menu
+    
+    img
+        height: 16px
+        width: 16px
+        opacity: 0.6
+
+.leadin-dynamic-avatar_0
+    background-color: #F88E4B
+
+.leadin-dynamic-avatar_1
+    background-color: #64AADA
+
+.leadin-dynamic-avatar_2
+    background-color: #64C2B6
+
+.leadin-dynamic-avatar_3
+    background-color: #CF7BAA
+
+.leadin-dynamic-avatar_4
+    background-color: #E7C24B
+
+.leadin-dynamic-avatar_5
+    background-color: #9387DA
+
+.leadin-dynamic-avatar_6
+    background-color: #D6DD99
+
+.leadin-dynamic-avatar_7
+    background-color: #FF4C4C
+
+.leadin-dynamic-avatar_8
+    background-color: #99583D
+
+.leadin-dynamic-avatar_9
+    background-color: #54CC14
+
+// Pages
+@import admin/settings_page.sass
+@import admin/contacts_list_page.sass
+@import admin/contact_detail_page.sass
+@import admin/powerups_page.sass
+@import admin/metabox.sass
+

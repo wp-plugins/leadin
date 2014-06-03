@@ -89,8 +89,24 @@ To ensure quality we've tested the most popular WordPress form builder plugins.
 
 == Changelog ==
 
-- Current version: 0.9.3
-- Current version release: 2014-05-19
+- Current version: 0.10.0
+- Current version release: 2014-06-03
+
+= 0.10.0 (2014.06.03) =
+- Bug fixes
+- Fixed original referrer in contact timeline
+- Fixed unncessary queries on contact timeline
+- Only run the update check if the version number is different than the saved number
+- Remove "fakepath" from file path text in uploaded file input types
+
+= Enhancements =
+- Expire the subscribe cookie after a few weeks
+- Ability to disable a subscribe notification
+- Added jQuery validation to the subscribe pop-up
+- Multi-select input support
+- Block forms with credit card fields from capturing contact information
+- Updated contact timeline views
+- Updated new contact notification emails
 
 = 0.9.3 (2014.05.19) =
 - Bug fixes

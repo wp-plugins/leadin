@@ -43,9 +43,9 @@ class LI_Contact {
 		// Get the contact details
 		$q = $wpdb->prepare("
 			SELECT 
-				DATE_FORMAT(lead_date, %s) AS lead_date, 
+				DATE_FORMAT(lead_date, %s) AS lead_date,
+				lead_id,
 				lead_ip, 
-				lead_source, 
 				lead_email, 
 				lead_status 
 			FROM 
@@ -100,19 +100,18 @@ class LI_Contact {
 		$total_visits = 0;
 		$total_pageviews = 0;
 		$total_submissions = 0;
+		$new_session = TRUE;
 
 		foreach ( $events_array as $event_name => $event )
 		{
 			// Create a new session array if pageview started a new session
-			if ( (isset($event['pageview_session_start']) && $event['pageview_session_start'] ) || $first_iteration )
+			if ( $new_session )
 			{
 				$cur_array = $count;
+
 				$sessions['session_' . $cur_array] = array();
 				$sessions['session_' . $cur_array]['session_date'] = $event['event_date']; 
 				$sessions['session_' . $cur_array]['events'] = array();
-
-				if ( $first_iteration )
-					$first_iteration = FALSE;
 
 				$cur_event = $count;
 				$sessions['session_' . $cur_array]['events']['event_' . $cur_event] = array();
@@ -120,14 +119,12 @@ class LI_Contact {
 				$sessions['session_' . $cur_array]['events']['event_' . $cur_event]['event_date'] = $event['event_date'];
 				
 				// Set the first submission if it's not set and then leave it alone
-				if ( ! isset($lead->first_visit) )
-					$lead->first_visit = $event['event_date'];
-
-				// Always overwrite the last_submission date which will end as last submission date
-				$lead->last_visit = $event['event_date'];
+				if ( ! isset($lead->last_visit) )
+					$lead->last_visit = $event['event_date'];
 
 				// Used for $lead->total_visits
 				$total_visits++;
+				$new_session = FALSE;
 			}
 
 			// Pageview activity
@@ -139,6 +136,10 @@ class LI_Contact {
 				$sessions['session_' . $cur_array]['events']['event_' . $cur_event]['event_date'] = $event['event_date'];
 				$sessions['session_' . $cur_array]['events']['event_' . $cur_event]['activities'][] = $event;
 				$total_pageviews++;
+
+				// Always overwrite first_visit which will end as last pageview date
+				$lead->first_visit = $event['event_date'];
+				$lead->lead_source = $event['pageview_source'];
 			}
 			else
 			{
@@ -149,14 +150,20 @@ class LI_Contact {
 				$sessions['session_' . $cur_array]['events']['event_' . $cur_event]['activities'][] = $event;
 
 				// Set the first submission if it's not set and then leave it alone
-				if ( ! isset($lead->first_submission) )
-					$lead->first_submission = $event['event_date'];
+				if ( ! isset($lead->last_submission) )
+					$lead->last_submission = $event['event_date'];
 
 				// Always overwrite the last_submission date which will end as last submission date
-				$lead->last_submission = $event['event_date'];
+				$lead->first_submission = $event['event_date'];
+				$lead->last_submission_type = $event['form_type'];
 
 				// Used for $lead->total_submissions
 				$total_submissions++;
+			}
+
+			if ( (isset($event['pageview_session_start'])) && $event['pageview_session_start'] )
+			{
+				$new_session = TRUE;
 			}
 
 			$count++;
@@ -181,7 +188,7 @@ class LI_Contact {
 	 * @return	array
 	 */
 	function sort_by_event_date ( $a, $b ) {
-		return $a['event_date'] > $b['event_date'];
+		return $a['event_date'] < $b['event_date'];
 	}
 
 	/**

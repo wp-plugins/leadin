@@ -84,6 +84,13 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
             LEADIN_ADMIN_PATH, 
             $this->power_up_settings_section
         );
+        add_settings_field( 
+            'li_subscribe_confirmation', 
+            'Subscription confirmation', 
+            array($this, 'li_subscribe_confirmation_callback'), 
+            LEADIN_ADMIN_PATH, 
+            $this->power_up_settings_section
+        );
     }
 
     /**
@@ -124,6 +131,11 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
 
         if( isset( $input['li_subscribe_template_archives'] ) )
             $new_input['li_subscribe_template_archives'] = sanitize_text_field( $input['li_subscribe_template_archives'] );
+
+        if( isset( $input['li_subscribe_confirmation'] ) )
+            $new_input['li_subscribe_confirmation'] = sanitize_text_field( $input['li_subscribe_template_home'] );
+        else
+            $new_input['li_subscribe_confirmation'] = '0';
 
         return $new_input;
     }
@@ -236,6 +248,19 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
         printf(
             '<p><input id="li_subscribe_template_home" type="checkbox" name="leadin_subscribe_options[li_subscribe_template_home]" value="1"' . checked( 1, ( isset($options['li_subscribe_template_home']) ? $options['li_subscribe_template_home'] : '0' ), false ) . '/>' . 
             '<label for="li_subscribe_template_home">Homepage</label></p>'
+        );
+    }
+
+    /**
+     * Prints the options for toggling the widget on posts, pages, archives and homepage
+     */
+    function li_subscribe_confirmation_callback ()
+    {
+        $options = $this->options;
+
+        printf(
+            '<p><input id="li_subscribe_confirmation" type="checkbox" name="leadin_subscribe_options[li_subscribe_confirmation]" value="1"' . checked( 1, ( isset($options['li_subscribe_confirmation']) ? $options['li_subscribe_confirmation'] : 1 ) , false ) . '/>' . 
+            '<label for="li_subscribe_confirmation">Send new subscribers a confirmation email</label></p>'
         );
     }
 }

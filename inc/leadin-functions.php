@@ -158,6 +158,20 @@ function leadin_register_user ()
 }
 
 /**
+ * Register LeadIn user
+ *
+ * @return  bool
+ */
+function leadin_set_beta_tester_property ( $beta_tester )
+{
+    $leadin_user = leadin_get_current_user();
+    $mp = new LI_Mixpanel(MIXPANEL_PROJECT_TOKEN);
+    $mp->people->set( $leadin_user['user_id'], array(
+        '$beta_tester'  => $beta_tester
+    ));
+}
+
+/**
  * Send Mixpanel event when plugin is activated/deactivated
  *
  * @param   bool
@@ -419,5 +433,18 @@ function leadin_encode_quotes ( $string )
 { 
     $string = str_replace(array("’", "‘", '&#039;', '“', '”'), array("'", "'", "'", '"', '"'), $string);
     return $string;
+}
+
+/**
+ * Strip url get parameters off a url and return the base url
+ *
+ * @param   string
+ * @return  string
+ */
+function leadin_strip_params_from_url ( $url ) 
+{ 
+    $url_parts = parse_url($url);
+    $base_url = urldecode(rtrim($url_parts['host'] . '/' . ltrim($url_parts['path'], '/'), '/'));
+    return $base_url;
 }
 ?>

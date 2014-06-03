@@ -158,16 +158,11 @@ class WPLeadInSubscribe extends WPLeadIn {
 
 		if ( ! is_admin() && $pagenow != 'wp-login.php' )
 		{
-			wp_register_script('leadin-subscribe', LEADIN_SUBSCRIBE_WIDGET_PATH . '/frontend/js/leadin-subscribe.js', array ('jquery', 'leadin'), false, true);
-			wp_register_script('vex', LEADIN_SUBSCRIBE_WIDGET_PATH . '/frontend/js/vex.js', array ('jquery', 'leadin'), false, true);
-			wp_register_script('vex-dialog', LEADIN_SUBSCRIBE_WIDGET_PATH . '/frontend/js/vex.dialog.js', array ('jquery', 'leadin'), false, true);
-
+			wp_register_script('leadin-subscribe', LEADIN_PATH . '/assets/js/build/leadin-subscribe.min.js', array ('jquery', 'leadin-tracking'), false, true);
 			wp_enqueue_script('leadin-subscribe');
-			wp_enqueue_script('vex');
-			wp_enqueue_script('vex-dialog');
 
-			wp_register_style('leadin-subscribe-vex-css', LEADIN_SUBSCRIBE_WIDGET_PATH . '/frontend/css/vex.css');
-			wp_enqueue_style('leadin-subscribe-vex-css');
+			wp_register_style('leadin-subscribe-css', LEADIN_PATH . '/assets/css/build/leadin-subscribe.css');
+			wp_enqueue_style('leadin-subscribe-css');
 		}
 	}
 }

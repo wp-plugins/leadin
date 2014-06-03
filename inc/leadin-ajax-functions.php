@@ -272,7 +272,7 @@ function leadin_insert_form_submission ()
 			}
 		}
 
-		$li_emailer = new LI_Emailer();
+		$li_emailer = new LI_Emailer_new();
 		if ( $li_admin_email )
 		{
 			// Send the contact email
@@ -281,15 +281,27 @@ function leadin_insert_form_submission ()
 
 		if ( $contact_status == "comment" )
 			leadin_track_plugin_activity("New comment");
-		else if ( $contact_status == "subscribe" )
-			leadin_track_plugin_activity("New subscriber");
 		else
-		{	
+		{
 			$history = $li_emailer->get_lead_history($hashkey);
-			if ( $history->new_contact )
-				leadin_track_plugin_activity("New lead");
+
+			if ( $contact_status == "subscribe" )
+			{
+				// Send the subscription confirmation kickback email
+				$leadin_subscribe_settings = get_option('leadin_subscribe_options');
+				if ( !isset($leadin_subscribe_settings['li_subscribe_confirmation']) || $leadin_subscribe_settings['li_subscribe_confirmation'] )
+					$li_emailer->send_subscriber_confirmation_email($history);
+
+				leadin_track_plugin_activity("New subscriber");
+			}
 			else
-				leadin_track_plugin_activity("Returning lead");
+			{	
+				if ( $history->new_contact )
+					leadin_track_plugin_activity("New lead");
+				else
+					leadin_track_plugin_activity("Returning lead");
+			}
+			
 		}
 
 		return $rows_updated;

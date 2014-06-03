@@ -1,0 +1,94 @@
+$table-controls-pading: $base-vertical-unit*2
+$table-controls-border-size: 2px
+
+#leadin
+
+    .top_table_controls
+        border-bottom: $table-controls-border-size solid $color-border
+        margin: 0 0 $base-vertical-unit*3 0
+        margin-bottom: $base-vertical-unit*3 - $table-controls-border-size
+        @include pie-clearfix
+
+    .table_segment_picker
+        float: left
+        margin: 0
+
+        li
+            display: inline-block
+            margin: 0
+
+            & + li
+                margin-left: 2em
+            a
+                display: block
+                padding: $table-controls-pading 0
+                line-height: $base-vertical-unit*4
+                font-weight: 300
+                font-size: 16px
+                text-decoration: none
+
+                @include at-breakpoint($break)
+                    font-size: 20px
+
+                &.current
+                    margin-bottom: -2px
+                    font-weight: 400
+                    border-bottom: 2px solid $color-primary
+
+                &.current, &:hover, &:active
+                    color: $color-primary
+
+    .table_search
+        float: right
+        padding: ($table-controls-pading - 2px) 0 
+        padding-bottom: $table-controls-pading - 3px
+    
+    table
+        .leadin-contact-avatar
+            float: left
+
+        th, td
+            display: none
+
+            &:nth-child(-n+3)
+                display: table-cell
+
+            @include at-breakpoint($break)
+                display: table-cell
+
+    &.pre-mp6
+        .table_search
+            float: right
+            padding: $table-controls-pading 0 
+            padding-bottom: $table-controls-pading - 1px
+
+        table
+            background-color: #fff
+            border-color: $color-border
+
+            tr
+                
+                &.alternate
+                    background-color: #fff
+            
+            th, td
+                border-top: 0
+                padding: $base-vertical-unit*2 $base-vertical-unit $base-vertical-unit*2 - 1px
+
+                a
+                    padding: 0
+
+            th[scope="col"]
+                background: #eee
+                font-family: $font-sans
+                font-size: 12px
+                text-shadow: none
+
+            td
+                border-color: $color-border
+                line-height: $base-vertical-unit*3
+                font-size: 14px
+
+                .row-actions
+                    float: left
+

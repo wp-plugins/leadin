@@ -318,7 +318,12 @@ class WPLeadInAdmin {
             $new_input['ignore_settings_popup'] = $input['ignore_settings_popup'];
 
         if( isset( $input['beta_tester'] ) )
+        {
             $new_input['beta_tester'] = sanitize_text_field($input['beta_tester']);
+            leadin_set_beta_tester_property(TRUE);
+        }
+        else
+            leadin_set_beta_tester_property(FALSE);
 
         return $new_input;
     }
@@ -464,7 +469,7 @@ class WPLeadInAdmin {
      */
     function add_leadin_admin_styles ()
     {
-        wp_register_style('leadin-admin-css', LEADIN_PATH . '/admin/css/leadin-admin.css');
+        wp_register_style('leadin-admin-css', LEADIN_PATH . '/assets/css/build/leadin-admin.css');
         wp_enqueue_style('leadin-admin-css');
     }
 

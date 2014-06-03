@@ -72,9 +72,9 @@ class WPConstantContactListSyncAdmin extends WPLeadInAdmin {
     function cc_section_callback ( )
     {
         if ( ! $this->auth_set )
-            echo 'Sign into your Constant Contact account below to setup Contact Sync';
+            echo '<div class="leadin-section">Sign into your Constant Contact account below to setup Contact Sync</div>';
         else if ( $this->bad_api_call )
-            echo '<div id="message" class="updated below-h2 error"><p>' . $this->constant_contact->cc_exception . '</p></div>';
+            echo '<div class="leadin-section"><p style="color: #f33f33; font-weight: bold;">' . $this->constant_contact->cc_exception . '</p></div>';
 
         $this->print_hidden_settings_fields();        
     }

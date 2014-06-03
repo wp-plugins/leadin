@@ -13,7 +13,7 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
     /**
      * Class constructor
      */
-    function __construct ( $power_up_icon_small )
+    function __construct ()
     {
         //=============================================
         // Hooks & Filters
@@ -99,8 +99,8 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
         $li_contact->get_contact_history();
         
         $lead_email = $li_contact->history->lead->lead_email;
-        $url_parts = parse_url($lead->lead_source);
-        $lead_source = urldecode(rtrim($url_parts['host'] . '/' . $url_parts['path'], '/'));
+
+        $lead_source = leadin_strip_params_from_url($li_contact->history->lead->lead_source);
 
         if ( isset($_GET['post_id']) )
             echo '<a href="' . get_bloginfo('wpurl') . '/wp-admin/post.php?post=' . $_GET['post_id'] . '&action=edit#li_analytics-meta">&larr; All Viewers</a>';
@@ -119,28 +119,23 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
             echo '<h2>Contact History</h2>';
             echo '<div class="col-wrap contact-history">';
                 echo '<ul class="sessions">';
-                $sessions = array_reverse($li_contact->history->sessions);
+                $sessions = $li_contact->history->sessions;
                 foreach ( $sessions as &$session )
                 {
-                    $first_event = array_values($session['events']);
-                    $first_event_date = $first_event[0]['activities'][0]['event_date'];
-                    $session_date = date('M j', strtotime($first_event_date));
-                    $session_start_time = date('g:i a', strtotime($first_event_date));
+                    $first_event = end($session['events']);
+                    $first_event_date = $first_event['event_date'];
+                    $session_date = date('F j, Y, g:ia', strtotime($first_event['event_date']));
+                    $session_start_time = date('g:ia', strtotime($first_event['event_date']));
 
-                    $last_event = end($session['events']);
-                    $last_activity = end($last_event['activities']);
-                    $session_end_time = date('g:i a', strtotime($last_activity['event_date']));
-
-                    if ( $session_end_time != $session_start_time )
-                        $session_time_range = $session_start_time . ' - ' . $session_end_time;
-                    else
-                        $session_time_range = $session_start_time;
+                    $last_event = array_values($session['events']);
+                    $session_end_time = date('g:ia', strtotime($last_event[0]['event_date']));
 
                     echo '<li class="session">';
-                    echo '<h3 class="session-date">' . $session_date . '<span class="event-time-range">' . $session_time_range . '</span></h3>';
+                    echo '<h3 class="session-date">' . $session_date . ( $session_start_time != $session_end_time ? ' - ' . $session_end_time : '' ) . '</h3>';
 
                     echo '<ul class="events">';
 
+                    //$events = array_reverse($session['events']);
                     $events = $session['events'];
                     foreach ( $events as &$event )
                     {
@@ -148,18 +143,23 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                         {
                             $pageview = $event['activities'][0];
                             
-                            if ( $pageview['event_date'] == $first_event_date )
+                            echo '<li class="event pageview">';
+                                echo '<div class="event-time">' . date('g:ia', strtotime($pageview['event_date'])) . '</div>';
+                                echo '<div class="event-content">';
+                                    echo '<p class="event-title">' . $pageview['pageview_title'] . '</p>';
+                                    echo '<a class="event-detail pageview-url" target="_blank" href="' . $pageview['pageview_url'] . '">' . leadin_strip_params_from_url($pageview['pageview_url']) . '</a>';
+                                echo '</div>';
+                            echo '</li>';
+
+                            if ( $pageview['event_date'] == $first_event['event_date'] )
                             {
                                 echo '<li class="event source">';
-                                    echo '<p class="event-title">Traffic Source: ' . ( $pageview['pageview_source'] ? '<a href="' . $pageview['pageview_source'] . '">' . $pageview['pageview_source'] : 'Direct' ) . '</a></p>';
+                                    echo '<div class="event-time">' . date('g:ia', strtotime($pageview['event_date'])) . '</div>';
+                                    echo '<div class="event-content">';
+                                        echo '<p class="event-title">Traffic Source: ' . ( $pageview['pageview_source'] ? '<a href="' . $pageview['pageview_source'] . '">' . leadin_strip_params_from_url($pageview['pageview_source']) : 'Direct' ) . '</a></p>';
+                                    echo '</div>';
                                 echo '</li>';
                             }
-                            
-                            
-                            echo '<li class="event pageview">';
-                                echo '<p class="event-title">' . $pageview['pageview_title'] . '<span class="event-time-range">' . date('g:ia', strtotime($pageview['event_date'])) . '</span></p>';
-                                echo '<a class="pageview-url" target="_blank" href="' . $pageview['pageview_url'] . '">' . $pageview['pageview_url'] . '</a>';
-                            echo '</li>';
                         }
                         else if ( $event['event_type'] == 'form' )
                         {
@@ -169,16 +169,19 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                             $num_form_fieds = count($form_fields);
                             
                             echo '<li class="event form-submission">';
-                                echo '<p class="event-title">Filled out form on page <a href="' . $submission['form_page_url'] . '">' . $submission['form_page_title']  . '</a><span class="event-time-range">' . date('g:ia', strtotime($submission['event_date'])) . '</span></p>';
-                                echo '<ul class="event-detail fields">';
-                                foreach ( $form_fields as $field )
-                                {
-                                    echo '<li class="field">';
-                                        echo '<label class="field-label">' . $field->label . ':</label>';
-                                        echo '<p class="field-value">' . $field->value . '</p>';
-                                    echo '</li>';
-                                }
-                                echo '</ul>';
+                                echo '<div class="event-time">' . date('g:ia', strtotime($submission['event_date'])) . '</div>';
+                                echo '<div class="event-content">';
+                                    echo '<p class="event-title">Filled out form on page <a href="' . $submission['form_page_url'] . '">' . $submission['form_page_title']  . '</a></p>';
+                                    echo '<ul class="event-detail fields">';
+                                    foreach ( $form_fields as $field )
+                                    {
+                                        echo '<li class="field">';
+                                            echo '<label class="field-label">' . $field->label . ':</label>';
+                                            echo '<p class="field-value">' . $field->value . '</p>';
+                                        echo '</li>';
+                                    }
+                                    echo '</ul>';
+                                echo '</div>';
                             echo '</li>';
                         }
                     }
@@ -194,16 +197,16 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                 echo '<div class="contact-info postbox">';
                     echo '<h3>Contact Information</h3>';
                     echo '<div class="inside">';
-                        echo '<p><label>Email:</label> <a href="mailto:' . $lead_email . '">' . $lead_email . '</a></p>';
-                        echo '<p><label>Status:</label> ' . $li_contact->history->lead->lead_status . '</p>';
-                        echo '<p><label>Original referrer:</label> <a href="' . $li_contact->history->lead->lead_source . '">' . $li_contact->history->lead->lead_source . '</a></p>';
-                        echo '<p><label>First visit:</label> ' . self::date_format_contact_stat($li_contact->history->lead->first_visit) . '</p>';
-                        echo '<p><label>Last Visit:</label> ' . self::date_format_contact_stat($li_contact->history->lead->last_visit) . '</p>';
-                        echo '<p><label>Total Visits:</label> ' . $li_contact->history->lead->total_visits . '</p>';
-                        echo '<p><label>Total Pageviews:</label> ' . $li_contact->history->lead->total_pageviews . '</p>';
-                        echo '<p><label>First submission:</label> ' . self::date_format_contact_stat($li_contact->history->lead->first_submission) . '</p>';
-                        echo '<p><label>Last submission:</label> ' . self::date_format_contact_stat($li_contact->history->lead->last_submission) . '</p>';
-                        echo '<p><label>Total submissions:</label> ' . $li_contact->history->lead->total_submissions . '</p>';
+                        echo '<p><b>Email:</b> <a href="mailto:' . $lead_email . '">' . $lead_email . '</a></p>';
+                        echo '<p><b>Status:</b> ' . $li_contact->history->lead->lead_status . '</p>';
+                        echo '<p><b>Original referrer:</b> ' . ( $li_contact->history->lead->lead_source ? '<a href="' . $li_contact->history->lead->lead_source . '">' . $lead_source . '</a></p>' : 'Direct' );
+                        echo '<p><b>First visit:</b> ' . self::date_format_contact_stat($li_contact->history->lead->first_visit) . '</p>';
+                        echo '<p><b>Last Visit:</b> ' . self::date_format_contact_stat($li_contact->history->lead->last_visit) . '</p>';
+                        echo '<p><b>Total Visits:</b> ' . $li_contact->history->lead->total_visits . '</p>';
+                        echo '<p><b>Total Pageviews:</b> ' . $li_contact->history->lead->total_pageviews . '</p>';
+                        echo '<p><b>First submission:</b> ' . self::date_format_contact_stat($li_contact->history->lead->first_submission) . '</p>';
+                        echo '<p><b>Last submission:</b> ' . self::date_format_contact_stat($li_contact->history->lead->last_submission) . '</p>';
+                        echo '<p><b>Total submissions:</b> ' . $li_contact->history->lead->total_submissions . '</p>';
                     echo '</div>';
                 echo '</div>';
             echo '</div>';
@@ -324,7 +327,7 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
      */
     function date_format_contact_stat ( $timestamp )
     {
-        return date('M j, Y g:i:a', strtotime($timestamp));
+        return date('M j, Y g:ia', strtotime($timestamp));
     }
 
 }

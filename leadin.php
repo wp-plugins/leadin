@@ -3,7 +3,7 @@
 Plugin Name: LeadIn
 Plugin URI: http://leadin.com
 Description: LeadIn is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
-Version: 0.9.3
+Version: 0.10.0
 Author: Andy Cook, Nelson Joyce
 Author URI: http://leadin.com
 License: GPL2
@@ -12,8 +12,6 @@ License: GPL2
 //=============================================
 // Define Constants
 //=============================================
-
-
 
 if ( !defined('LEADIN_PATH') )
     define('LEADIN_PATH', untrailingslashit(plugins_url('', __FILE__ )));
@@ -28,13 +26,10 @@ if ( !defined('LEADIN_DB_VERSION') )
 	define('LEADIN_DB_VERSION', '0.8.3');
 
 if ( !defined('LEADIN_PLUGIN_VERSION') )
-	define('LEADIN_PLUGIN_VERSION', '0.9.3');
+	define('LEADIN_PLUGIN_VERSION', '0.10.0');
 
 if ( !defined('MIXPANEL_PROJECT_TOKEN') )
     define('MIXPANEL_PROJECT_TOKEN', 'a9615503ec58a6bce2c646a58390eac1');
-
-
-
 
 //=============================================
 // Include Needed Files
@@ -42,6 +37,7 @@ if ( !defined('MIXPANEL_PROJECT_TOKEN') )
 
 require_once(LEADIN_PLUGIN_DIR . '/admin/leadin-admin.php');
 require_once(LEADIN_PLUGIN_DIR . '/inc/class-emailer.php');
+require_once(LEADIN_PLUGIN_DIR . '/inc/class-emailer-new.php');
 require_once(LEADIN_PLUGIN_DIR . '/inc/leadin-ajax-functions.php');
 require_once(LEADIN_PLUGIN_DIR . '/inc/leadin-functions.php');
 require_once(LEADIN_PLUGIN_DIR . '/inc/class-leadin-updater.php');
@@ -214,6 +210,10 @@ class WPLeadIn {
 	    global $wpdb;
 	    $options = $this->options;
 
+	    // If the plugin version matches the latest version escape the update function
+	    if ( isset ($options['leadin_version']) && $options['leadin_version'] == LEADIN_PLUGIN_VERSION )
+	    	return FALSE;
+	    
 	    // 0.4.0 upgrade - Delete legacy db option version 0.4.0 (remove after beta is launched)
         if ( get_option('leadin_db_version') )
             delete_option('leadin_db_version');
@@ -294,6 +294,9 @@ class WPLeadIn {
 		{
 			leadin_delete_flag_fix();
 		}
+
+		// Set the plugin version
+	    leadin_update_option('leadin_options', 'leadin_version', LEADIN_PLUGIN_VERSION);
 	}
 
 	//=============================================
@@ -307,13 +310,9 @@ class WPLeadIn {
 	{
 		if ( !is_admin() )
 		{
-			wp_register_script('leadin', LEADIN_PATH . '/frontend/js/leadin.js', array ('jquery'), false, true);
-			wp_register_script('jquery.cookie', LEADIN_PATH . '/frontend/js/jquery.cookie.js', array ('jquery'), false, true);
-			
-			wp_enqueue_script('leadin');
-			wp_enqueue_script('jquery.cookie');
-			
-			wp_localize_script('leadin', 'li_ajax', array('ajax_url' => admin_url('admin-ajax.php')));
+			wp_register_script('leadin-tracking', LEADIN_PATH . '/assets/js/build/leadin-tracking.min.js', array ('jquery'), false, true);
+			wp_enqueue_script('leadin-tracking');
+			wp_localize_script('leadin-tracking', 'li_ajax', array('ajax_url' => admin_url('admin-ajax.php')));
 		}
 	}
 

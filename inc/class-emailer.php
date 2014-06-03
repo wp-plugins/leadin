@@ -114,7 +114,6 @@ class LI_Emailer {
 		else if ( $history->submission->form_type == "subscribe" )
 		{
 			$subject = "New subscriber from " . $history->submission->form_page_title;
-			$this->send_subscriber_confirmation_email($history);
 		}
 		else
 		{	

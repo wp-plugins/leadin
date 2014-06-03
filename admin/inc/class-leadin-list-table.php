@@ -260,15 +260,13 @@ class LI_List_Table extends WP_List_Table {
         $q .=  " GROUP BY l.lead_email";
 
         $leads = $wpdb->get_results($q);
-        
+
         $all_leads = array();
+
+        $contact_count = 0;
 
         foreach ( $leads as  $lead ) 
         {
-            $q = $wpdb->prepare("SELECT COUNT(DISTINCT pageview_id) FROM li_pageviews WHERE lead_hashkey = %s AND pageview_session_start = 1 AND pageview_deleted = 0", $lead->hashkey);
-            $pageviews = $wpdb->get_var($q);
-            $lead->lead_visits = $pageviews;
-
             $lead_status = 'Lead';
 
             if ( $lead->lead_status == 'subscribe' )
@@ -276,11 +274,11 @@ class LI_List_Table extends WP_List_Table {
             else if ( $lead->lead_status == 'comment' )
                 $lead_status = 'Commenter';
 
-            $url_parts = parse_url($lead->lead_source);
-            $url = urldecode(rtrim($url_parts['host'] . '/' . $url_parts['path'], '/'));
+            $url = leadin_strip_params_from_url($lead->lead_source);
 
             $lead_array = array(
                 'ID' => $lead->lead_id,
+                'hashkey' => $lead->hashkey,
                 'email' => sprintf('<a href="?page=%s&action=%s&lead=%s">' . "<img class='pull-left leadin-contact-avatar leadin-dynamic-avatar_" . substr($lead->lead_id, -1) . "' src='https://app.getsignals.com/avatar/image/?emails=" . $lead->lead_email . "' width='35' height='35'/> " . '</a>', $_REQUEST['page'], 'view', $lead->lead_id) .  sprintf('<a href="?page=%s&action=%s&lead=%s"><b>' . $lead->lead_email . '</b></a>', $_REQUEST['page'], 'view', $lead->lead_id),
                 'status' => $lead_status,
                 'visits' => ( !$lead->lead_visits ? 1 : $lead->lead_visits ),
@@ -288,10 +286,11 @@ class LI_List_Table extends WP_List_Table {
                 'pageviews' => $lead->lead_pageviews,
                 'date' => $lead->lead_date,
                 'last_visit' => $lead->last_visit,
-                'source' => ( $lead->lead_source ? "<a title='Visit page' href='" . $lead->lead_source . "' target='_blank'>" . $url . "</a>" : 'Direct' )
+                'source' => ( $lead->lead_source ? "<a title='Visit page' href='" . $lead->lead_source . "' target='_blank'>" . leadin_strip_params_from_url($lead->lead_source) . "</a>" : 'Direct' )
             );
-
+            
             array_push($all_leads, $lead_array);
+            $contact_count++;
         }
 
         return $all_leads;
@@ -304,7 +303,7 @@ class LI_List_Table extends WP_List_Table {
     {
         global $wpdb;
         // @TODO Need to select distinct emails
-        $q = $wpdb->prepare("
+        $q = "
             SELECT 
                 COUNT(DISTINCT lead_email) AS total_contacts,
                 ( SELECT COUNT(DISTINCT lead_email) FROM li_leads WHERE lead_status = 'lead' AND lead_email != '' AND lead_deleted = 0 ) AS total_leads,
@@ -313,9 +312,10 @@ class LI_List_Table extends WP_List_Table {
             FROM 
                 li_leads
             WHERE
-                lead_email != '' AND lead_deleted = 0", "");
+                lead_email != '' AND lead_deleted = 0";
 
         $totals = $wpdb->get_row($q);
+
         return $totals;
     }
 
@@ -341,24 +341,26 @@ class LI_List_Table extends WP_List_Table {
        $totals = $this->get_contact_type_totals();
 
        $current = ( !empty($_GET['contact_type']) ? html_entity_decode($_GET['contact_type']) : 'all' );
+       $all_params = array( 'contact_type', 's', 'paged', '_wpnonce', '_wpreferrer', '_wp_http_referer', 'action', 'action2');
+       $all_url = remove_query_arg($all_params);
 
        // All link
        $class = ( $current == 'all' ? ' class="current"' :'' );
-       $all_url = remove_query_arg('contact_type');
        $views['all'] = "<a href='{$all_url }' {$class} >" . ( $totals->total_leads + $totals->total_comments + $totals->total_subscribes ) .  " total</a>";
 
        // Leads link
-       $leads_url = add_query_arg('contact_type','lead');
+       $leads_url = add_query_arg('contact_type','lead', $all_url);
        $class = ( $current == 'lead' ? ' class="current"' :'' );
        $views['contacts'] = "<a href='{$leads_url}' {$class} >" . leadin_single_plural_label($totals->total_leads, 'lead', 'leads') .  "</a>";
 
        // Commenters link
-       $comments_url = add_query_arg('contact_type','comment');
+       
+       $comments_url = add_query_arg('contact_type','comment', $all_url);
        $class = ( $current == 'comment' ? ' class="current"' :'' );
        $views['commenters'] = "<a href='{$comments_url}' {$class} >" . leadin_single_plural_label($totals->total_comments, 'commenter', 'commenters') .  "</a>";
 
        // Commenters link
-       $subscribers_url = add_query_arg('contact_type','subscribe');
+       $subscribers_url = add_query_arg('contact_type','subscribe', $all_url);
        $class = ( $current == 'subscribe' ? ' class="current"' :'' );
        $views['subscribe'] = "<a href='{$subscribers_url}' {$class} >" . leadin_single_plural_label($totals->total_subscribes, 'subscriber', 'subscribers') .  "</a>";
 
@@ -390,7 +392,8 @@ class LI_List_Table extends WP_List_Table {
         echo "<div class='top_table_controls'>\n";
 
             echo "<ul class='table_segment_picker'>\n";
-                foreach ( $views as $class => $view ) {
+                foreach ( $views as $class => $view ) 
+                {
                     $views[ $class ] = "\t<li class='$class'>$view";
                 }
                 echo implode( "</li>\n", $views ) . "</li>\n";
@@ -422,31 +425,25 @@ class LI_List_Table extends WP_List_Table {
         $sortable = $this->get_sortable_columns();
         $this->_column_headers = array($columns, $hidden, $sortable);
         $this->process_bulk_action();
-        $this->data = $this->get_leads();;
-
+        
         $orderby = ( !empty($_REQUEST['orderby']) ? $_REQUEST['orderby'] : 'last_visit' );
         $order = ( !empty($_REQUEST['order']) ? $_REQUEST['order'] : 'desc' );
 
-        function usort_reorder($a,$b) 
-        {
-            $orderby = ( !empty($_REQUEST['orderby']) ? $_REQUEST['orderby'] : 'last_visit' );
-            $order = ( !empty($_REQUEST['order']) ? $_REQUEST['order'] : 'desc' );
-
-            if ( $a[$orderby] == $b[$orderby] )
-                $result = 0;
-            else if ( $a[$orderby] < $b[$orderby] )
-                $result = -1;
-            else
-                $result = 1;
-
-            return ( $order === 'asc' ? $result : -$result );
-        }
-
-        usort($this->data, 'usort_reorder');
+        usort($this->data, array($this, 'usort_reorder'));
         
         $current_page = $this->get_pagenum();
         $total_items = count($this->data);
         $this->data = array_slice($this->data, (($current_page-1)*$per_page), $per_page);
+
+        foreach ( $this->data as &$contact )
+        {
+            $q = $wpdb->prepare("SELECT COUNT(DISTINCT pageview_id) AS num_pageviews, MAX(pageview_source) AS pageview_source FROM li_pageviews WHERE lead_hashkey = %s AND pageview_session_start = 1 AND pageview_deleted = 0", $contact['hashkey']);
+            $pageviews = $wpdb->get_row($q);
+
+            $contact['visits'] = $pageviews->num_pageviews;
+            $contact['source'] = ( $pageviews->pageview_source ? "<a title='Visit page' href='" . $pageviews->pageview_source . "' target='_blank'>" . leadin_strip_params_from_url($pageviews->pageview_source) . "</a>" : 'Direct' );
+        }
+
         $this->items = $this->data;
 
         $this->set_pagination_args( array(
@@ -454,6 +451,21 @@ class LI_List_Table extends WP_List_Table {
             'per_page'    => $per_page,
             'total_pages' => ceil($total_items/$per_page)
         ) );
+    }
+
+    function usort_reorder ( $a, $b ) 
+    {
+        $orderby = ( !empty($_REQUEST['orderby']) ? $_REQUEST['orderby'] : 'last_visit' );
+        $order = ( !empty($_REQUEST['order']) ? $_REQUEST['order'] : 'desc' );
+
+        if ( $a[$orderby] == $b[$orderby] )
+            $result = 0;
+        else if ( $a[$orderby] < $b[$orderby] )
+            $result = -1;
+        else
+            $result = 1;
+
+        return ( $order === 'asc' ? $result : -$result );
     }
     
 }
