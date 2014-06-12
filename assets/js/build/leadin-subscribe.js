@@ -338,6 +338,9 @@
 
 }).call(this);
 
+var ignore_date = new Date();
+ignore_date.setTime(ignore_date.getTime() + (60 * 60 * 24 * 14 * 1000));
+
 jQuery(document).ready( function ( $ ) {
     var li_subscribe_flag = $.cookie('li_subscribe');
 
@@ -353,7 +356,8 @@ jQuery(document).ready( function ( $ ) {
                 }
                 else
                 {
-                    $.cookie("li_subscribe", 'ignore', {path: "/", domain: ""});
+                    alert('ignore ' + ignore_date);
+                    $.cookie("li_subscribe", 'ignore', {path: "/", domain: "", expires: ignore_date});
                 }
             });
         }
@@ -392,12 +396,28 @@ function bind_leadin_subscribe_widget ()
                 showCloseButton: true,
                 className: 'leadin-subscribe ' + $('#leadin-subscribe-vex-class').val(),
                 message: $('#leadin-subscribe-heading').val(),
-                input: '<input id="leadin-subscribe-email" name="email" type="email" placeholder="Email address" required />' +
-                    (($('#leadin-subscribe-name-fields').val()==0) ? '' : '<input id="leadin-subscribe-fname" name="fname" type="text" placeholder="First Name" required /><input id="leadin-subscribe-lname" name="lname" type="text" placeholder="Last Name" required />') +
-                    (($('#leadin-subscribe-phone-field').val()==0) ? '' : '<input id="leadin-subscribe-phone" name="phone" type="tel" placeholder="Phone" required />'),
+                input: '<input id="leadin-subscribe-email" name="email" type="email" placeholder="Email address" />' +
+                    (($('#leadin-subscribe-name-fields').val()==0) ? '' : '<input id="leadin-subscribe-fname" name="fname" type="text" placeholder="First Name" /><input id="leadin-subscribe-lname" name="lname" type="text" placeholder="Last Name"  />') +
+                    (($('#leadin-subscribe-phone-field').val()==0) ? '' : '<input id="leadin-subscribe-phone" name="phone" type="tel" placeholder="Phone" />'),
                 buttons: [$.extend({}, vex.dialog.buttons.YES, { text: ( $('#leadin-subscribe-btn-label').val() ? $('#leadin-subscribe-btn-label').val() : 'SUBSCRIBE' ) })],
                 onSubmit: function ( data )
                 {
+                    $subscribe_form = $(this);
+                    $subscribe_form.find('input.error').removeClass('error');
+                    var form_validated = true;
+
+                    $subscribe_form.find('input').each( function ( e ) {
+                        var $input = $(this);
+                        if ( ! $input.val() )
+                        {
+                            $input.addClass('error');
+                            form_validated = false;
+                        }
+                    });
+
+                    if ( ! form_validated )
+                        return false;
+
                     $('.vex-dialog-form').fadeOut(300, function ( e ) {
                         $('.vex-dialog-form').html(
                             '<div class="vex-close"></div>' + 
@@ -410,15 +430,15 @@ function bind_leadin_subscribe_widget ()
                     });
 
                     leadin_submit_form($('.leadin-subscribe form'), $, 'subscribe');
-                    $.cookie("li_subscribe", 'ignore', {path: "/", domain: ""});
+                    $.cookie("li_subscribe", 'ignore', {path: "/", domain: "", expires: ignore_date});
                     return false;
                 },
                 callback: function(data) {
                     if (data === false) {
-                        $.cookie("li_subscribe", 'ignore', {path: "/", domain: ""});
+                        $.cookie("li_subscribe", 'ignore', {path: "/", domain: "", expires: ignore_date});
                     }
                     
-                    $.cookie("li_subscribe", 'ignore', {path: "/", domain: ""});
+                    $.cookie("li_subscribe", 'ignore', {path: "/", domain: "", expires: ignore_date});
                 }
             });
 

@@ -194,6 +194,7 @@ function leadin_submit_form ( $form, $, form_type )
 	var lead_last_name 	= '';
 	var lead_phone 		= '';
 	var form_submission_type = ( form_type ? form_type : 'lead' );
+	var ignore_form = false;
 
 	// Excludes hidden input fields + submit inputs
 	$this.find('input[type!="submit"], textarea').not('input[type="hidden"], input[type="radio"], input[type="password"]').each( function ( index ) { 
@@ -285,7 +286,13 @@ function leadin_submit_form ( $form, $, form_type )
 			}
 		}
 
+		// Remove fakepath from input[type="file"]
+		$value = $value.replace("C:\\fakepath\\", "");
+
 		var $label_text = $.trim($label.replaceArray(["(", ")", "required", "Required", "*", ":"], [""]));
+
+		if ( $label_text.toLowerCase().indexOf('credit card') != -1 || $label_text.toLowerCase().indexOf('card number') != -1 )
+			ignore_form = true;
 
 		push_form_field($label_text, $value, form_fields);
 
@@ -364,7 +371,24 @@ function leadin_submit_form ( $form, $, form_type )
 			}
 		}
 
-		push_form_field($select_label, $select.val(), form_fields);
+		var select_value = '';
+		if ( $select.val() instanceof Array )
+		{
+			var select_vals = $select.val();
+			
+			for ( i = 0; i < select_vals.length; i++ )
+			{
+				select_value += select_vals[i];
+				if ( i != select_vals.length - 1 )
+					select_value += ', ';
+			}
+		}
+		else
+		{
+			select_value = $select.val();
+		}
+
+		push_form_field($select_label, select_value, form_fields);
 	});
 
 	$this.find('.li_used').removeClass('li_used'); // Clean up added classes
@@ -374,8 +398,8 @@ function leadin_submit_form ( $form, $, form_type )
 		form_submission_type = 'comment';
 	}
 
-	// Save submission into database, send LeadIn email, and submit form as usual
-	if ( lead_email )
+	// Save submission into database if email is present and form is not ignore, send LeadIn email, and submit form as usual
+	if ( lead_email && ! ignore_form )
 	{
 		var submission_hash = Math.random().toString(36).slice(2);
 		var hashkey = $.cookie("li_hash");

@@ -272,37 +272,23 @@ function leadin_insert_form_submission ()
 			}
 		}
 
-		$li_emailer = new LI_Emailer_new();
+		$li_emailer = new LI_Emailer();
+
 		if ( $li_admin_email )
 		{
 			// Send the contact email
 			$li_emailer->send_new_lead_email($hashkey);
 		}
 
-		if ( $contact_status == "comment" )
-			leadin_track_plugin_activity("New comment");
-		else
+		if ( $contact_status == "subscribe" )
 		{
-			$history = $li_emailer->get_lead_history($hashkey);
-
-			if ( $contact_status == "subscribe" )
-			{
-				// Send the subscription confirmation kickback email
-				$leadin_subscribe_settings = get_option('leadin_subscribe_options');
-				if ( !isset($leadin_subscribe_settings['li_subscribe_confirmation']) || $leadin_subscribe_settings['li_subscribe_confirmation'] )
-					$li_emailer->send_subscriber_confirmation_email($history);
-
-				leadin_track_plugin_activity("New subscriber");
-			}
-			else
-			{	
-				if ( $history->new_contact )
-					leadin_track_plugin_activity("New lead");
-				else
-					leadin_track_plugin_activity("Returning lead");
-			}
-			
+			// Send the subscription confirmation kickback email
+			$leadin_subscribe_settings = get_option('leadin_subscribe_options');
+			if ( !isset($leadin_subscribe_settings['li_subscribe_confirmation']) || $leadin_subscribe_settings['li_subscribe_confirmation'] )
+				$li_emailer->send_subscriber_confirmation_email($li_emailer->history);
 		}
+
+		leadin_track_plugin_activity("New lead", array("contact_type" => $contact_status));
 
 		return $rows_updated;
 	}
@@ -353,4 +339,28 @@ function leadin_subscribe_show ()
 
 add_action('wp_ajax_leadin_subscribe_show', 'leadin_subscribe_show'); // Call when user logged in
 add_action('wp_ajax_nopriv_leadin_subscribe_show', 'leadin_subscribe_show'); // Call when user is not logged in
+
+/**
+ * Gets post and pages (name + title) for contacts filtering
+ *
+ * @param 	int
+ * @return	json object
+ */
+function leadin_get_posts_and_pages ( )
+{
+	global $wpdb;
+
+	$search_term = $_POST['search_term'];
+
+	$q = $wpdb->prepare("SELECT post_title, post_name, post_date FROM " . $wpdb->prefix . "posts WHERE post_status = 'publish' AND ( post_name LIKE '%%%s%%' OR post_title LIKE '%%%s%%' ) GROUP BY post_name ORDER BY post_date DESC", $search_term, $search_term);
+    $wp_posts = $wpdb->get_results($q);
+
+    echo json_encode($wp_posts);
+    die();
+}
+
+add_action('wp_ajax_leadin_get_posts_and_pages', 'leadin_get_posts_and_pages'); // Call when user logged in
+add_action('wp_ajax_nopriv_leadin_get_posts_and_pages', 'leadin_get_posts_and_pages'); // Call when user is not logged in
+
+
 ?>

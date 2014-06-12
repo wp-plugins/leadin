@@ -18,6 +18,12 @@ class LI_List_Table extends WP_List_Table {
      * Variables
      */
     public $data = array();
+    private $current_view;
+    public $view_label;
+    private $view_count;
+    private $views;
+    private $totals;
+    private $total_filtered;
 
     /**
      * Class constructor
@@ -223,16 +229,25 @@ class LI_List_Table extends WP_List_Table {
      */
     function get_leads ()
     {
+        /*** 
+            == FILTER ARGS ==
+            - &visited          = visited a specific page url
+            - &num_pageviews    = visited at least # pages
+            - &submitted        = submitted a form on specific page url
+        */
+
         global $wpdb;
 
         $mysql_search_filter = '';
 
+        // search filter
         if ( isset($_GET['s']) )
         {
             $search_query = $_GET['s'];
             $mysql_search_filter = $wpdb->prepare(" AND ( l.lead_email LIKE '%%%s%%' OR l.lead_source LIKE '%%%s%%' ) ", like_escape($search_query), like_escape($search_query));
         }
 
+        // contact type filter
         if ( isset($_GET['contact_type']) )
         {
             $mysql_contact_type_filter = $wpdb->prepare("AND l.lead_status = %s ", $_GET['contact_type']);
@@ -242,56 +257,110 @@ class LI_List_Table extends WP_List_Table {
             $mysql_contact_type_filter = " AND ( l.lead_status = 'lead' OR l.lead_status = 'comment' OR l.lead_status = 'subscribe') ";
         }
 
-        $q =  $wpdb->prepare("
-            SELECT 
-                l.lead_id AS lead_id, 
-                LOWER(DATE_FORMAT(l.lead_date, %s)) AS lead_date, l.lead_ip, l.lead_source, l.lead_email, l.lead_status, l.hashkey,
-                COUNT(DISTINCT s.form_id) AS lead_form_submissions,
-                COUNT(DISTINCT p.pageview_id) AS lead_pageviews,
-                LOWER(DATE_FORMAT(MAX(p.pageview_date), %s)) AS last_visit
-            FROM 
-                li_leads l
-            LEFT JOIN li_submissions s ON l.hashkey = s.lead_hashkey
-            LEFT JOIN li_pageviews p ON l.hashkey = p.lead_hashkey 
-            WHERE l.lead_email != '' AND l.lead_deleted = 0 ", '%Y/%m/%d %l:%i%p', '%Y/%m/%d %l:%i%p');
+        // filter for visiting a specific page
+        if ( isset($_GET['filter_action']) && $_GET['filter_action'] == 'visited' )
+        {
+            $q = $wpdb->prepare("SELECT lead_hashkey FROM li_pageviews WHERE pageview_title LIKE '%%%s%%' GROUP BY lead_hashkey",  htmlspecialchars(urldecode($_GET['filter_content'])));
+            $filtered_contacts = $wpdb->get_results($q);
 
-        $q .= $mysql_contact_type_filter;
-        $q .= ( $mysql_search_filter ? $mysql_search_filter : "" );
-        $q .=  " GROUP BY l.lead_email";
+            if ( count($filtered_contacts) )
+            {
+                $filtered_hashkeys = '';
+                for ( $i = 0; $i < count($filtered_contacts); $i++ )
+                    $filtered_hashkeys .= "'" . $filtered_contacts[$i]->lead_hashkey . "'" . ( $i != (count($filtered_contacts) - 1) ? ', ' : '' );
+            
+                $mysql_search_filter = " AND l.hashkey IN ( " . $filtered_hashkeys . " ) ";
+            }
+        }
+        
+        // filter for a form submitted on a specific page
+        if ( isset($_GET['filter_action']) && $_GET['filter_action'] == 'submitted' )
+        {
+            $q = $wpdb->prepare("SELECT lead_hashkey FROM li_submissions WHERE form_page_title LIKE '%%%s%%' GROUP BY lead_hashkey", htmlspecialchars(urldecode($_GET['filter_content'])));
+            $filtered_contacts = $wpdb->get_results($q);
 
-        $leads = $wpdb->get_results($q);
+            if ( count($filtered_contacts) )
+            {
+                $filtered_hashkeys = '';
+                for ( $i = 0; $i < count($filtered_contacts); $i++ )
+                    $filtered_hashkeys .= "'" . $filtered_contacts[$i]->lead_hashkey . "'" . ( $i != (count($filtered_contacts) - 1) ? ', ' : '' );
+            
+                $mysql_search_filter = " AND l.hashkey IN ( " . $filtered_hashkeys . " ) ";
+            }
+        }
+
+        if ( ( isset($_GET['filter_action']) && $mysql_search_filter ) || !isset($_GET['filter_action']) )
+        {
+            $q =  $wpdb->prepare("
+                SELECT 
+                    l.lead_id AS lead_id, 
+                    LOWER(DATE_FORMAT(l.lead_date, %s)) AS lead_date, l.lead_ip, l.lead_source, l.lead_email, l.lead_status, l.hashkey,
+                    COUNT(DISTINCT s.form_id) AS lead_form_submissions,
+                    COUNT(DISTINCT p.pageview_id) AS lead_pageviews,
+                    LOWER(DATE_FORMAT(MAX(p.pageview_date), %s)) AS last_visit,
+                    ( SELECT COUNT(DISTINCT pageview_id) FROM li_pageviews WHERE lead_hashkey = l.hashkey AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS visits,
+                    ( SELECT MAX(pageview_source) AS pageview_source FROM li_pageviews WHERE lead_hashkey = l.hashkey AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS pageview_source 
+                FROM 
+                    li_leads l
+                LEFT JOIN li_submissions s ON l.hashkey = s.lead_hashkey
+                LEFT JOIN li_pageviews p ON l.hashkey = p.lead_hashkey 
+                WHERE l.lead_email != '' AND l.lead_deleted = 0 ", '%Y/%m/%d %l:%i%p', '%Y/%m/%d %l:%i%p');
+
+            $q .= $mysql_contact_type_filter;
+            $q .= ( $mysql_search_filter ? $mysql_search_filter : "" );
+            $q .=  " GROUP BY l.lead_email";
+
+            $leads = $wpdb->get_results($q);
+        }
+        else
+        {
+            $leads = array();
+        }
 
         $all_leads = array();
 
         $contact_count = 0;
 
-        foreach ( $leads as  $lead ) 
+        if ( count($leads) )
         {
-            $lead_status = 'Lead';
+            foreach ( $leads as $key => $lead ) 
+            {
+                $lead_status = 'Lead';
 
-            if ( $lead->lead_status == 'subscribe' )
-                $lead_status = 'Subscriber';
-            else if ( $lead->lead_status == 'comment' )
-                $lead_status = 'Commenter';
+                if ( $lead->lead_status == 'subscribe' )
+                    $lead_status = 'Subscriber';
+                else if ( $lead->lead_status == 'comment' )
+                    $lead_status = 'Commenter';
 
-            $url = leadin_strip_params_from_url($lead->lead_source);
+                // filter for number of page views and skipping lead if it doesn't meet the minimum
+                if ( isset($_GET['filter_action']) && $_GET['filter_action'] == 'num_pageviews' )
+                {
+                    if ( $lead->lead_pageviews < $_GET['filter_content'] )
+                        continue;
+                }
 
-            $lead_array = array(
-                'ID' => $lead->lead_id,
-                'hashkey' => $lead->hashkey,
-                'email' => sprintf('<a href="?page=%s&action=%s&lead=%s">' . "<img class='pull-left leadin-contact-avatar leadin-dynamic-avatar_" . substr($lead->lead_id, -1) . "' src='https://app.getsignals.com/avatar/image/?emails=" . $lead->lead_email . "' width='35' height='35'/> " . '</a>', $_REQUEST['page'], 'view', $lead->lead_id) .  sprintf('<a href="?page=%s&action=%s&lead=%s"><b>' . $lead->lead_email . '</b></a>', $_REQUEST['page'], 'view', $lead->lead_id),
-                'status' => $lead_status,
-                'visits' => ( !$lead->lead_visits ? 1 : $lead->lead_visits ),
-                'submissions' => $lead->lead_form_submissions,
-                'pageviews' => $lead->lead_pageviews,
-                'date' => $lead->lead_date,
-                'last_visit' => $lead->last_visit,
-                'source' => ( $lead->lead_source ? "<a title='Visit page' href='" . $lead->lead_source . "' target='_blank'>" . leadin_strip_params_from_url($lead->lead_source) . "</a>" : 'Direct' )
-            );
-            
-            array_push($all_leads, $lead_array);
-            $contact_count++;
+                $url = leadin_strip_params_from_url($lead->lead_source);
+
+                $lead_array = array(
+                    'ID' => $lead->lead_id,
+                    'hashkey' => $lead->hashkey,
+                    'email' => sprintf('<a href="?page=%s&action=%s&lead=%s">' . "<img class='pull-left leadin-contact-avatar leadin-dynamic-avatar_" . substr($lead->lead_id, -1) . "' src='https://app.getsignals.com/avatar/image/?emails=" . $lead->lead_email . "' width='35' height='35'/> " . '</a>', $_REQUEST['page'], 'view', $lead->lead_id) .  sprintf('<a href="?page=%s&action=%s&lead=%s"><b>' . $lead->lead_email . '</b></a>', $_REQUEST['page'], 'view', $lead->lead_id),
+                    'status' => $lead_status,
+                    'visits' => ( !isset($lead->visits) ? 1 : $lead->visits ),
+                    'submissions' => $lead->lead_form_submissions,
+                    'pageviews' => $lead->lead_pageviews,
+                    'date' => $lead->lead_date,
+                    'source' => ( $lead->pageview_source ? "<a title='Visit page' href='" . $lead->pageview_source . "' target='_blank'>" . leadin_strip_params_from_url($lead->pageview_source) . "</a>" : 'Direct' ),
+                    'last_visit' => $lead->last_visit,
+                    'source' => ( $lead->lead_source ? "<a title='Visit page' href='" . $lead->lead_source . "' target='_blank'>" . leadin_strip_params_from_url($lead->lead_source) . "</a>" : 'Direct' )
+                );
+                
+                array_push($all_leads, $lead_array);
+                $contact_count++;
+            }
         }
+
+        $this->total_filtered = count($all_leads);
 
         return $all_leads;
     }
@@ -326,8 +395,24 @@ class LI_List_Table extends WP_List_Table {
      */
     function get_view ()
     {
-        $current = ( !empty($_GET['contact_type']) ? html_entity_decode($_GET['contact_type']) : 'all' );
-        return $current;
+        $current_contact_type = ( !empty($_GET['contact_type']) ? html_entity_decode($_GET['contact_type']) : 'contacts' );
+        return $current_contact_type;
+    }
+
+    /**
+     * Gets the current action filter based off $_GET['contact_type']
+     *
+     * @return  string
+     */
+    function get_filters ()
+    {
+        $current_filters = array();
+
+        $current_filters['contact_type'] = ( !empty($_GET['contact_type']) ? html_entity_decode($_GET['contact_type']) : 'all' );
+        $current_filters['action'] = ( !empty($_GET['filter_action']) ? html_entity_decode($_GET['filter_action']) : 'all' );
+        $current_filters['content'] = ( !empty($_GET['filter_content']) ? html_entity_decode($_GET['filter_content']) : 'all' );
+
+        return $current_filters;
     }
     
     /**
@@ -338,77 +423,114 @@ class LI_List_Table extends WP_List_Table {
     function get_views ()
     {
        $views = array();
-       $totals = $this->get_contact_type_totals();
+       $this->totals = $this->get_contact_type_totals();
 
        $current = ( !empty($_GET['contact_type']) ? html_entity_decode($_GET['contact_type']) : 'all' );
-       $all_params = array( 'contact_type', 's', 'paged', '_wpnonce', '_wpreferrer', '_wp_http_referer', 'action', 'action2');
+       $all_params = array( 'contact_type', 's', 'paged', '_wpnonce', '_wpreferrer', '_wp_http_referer', 'action', 'action2', 'filter_action', 'filter_content');
        $all_url = remove_query_arg($all_params);
 
        // All link
        $class = ( $current == 'all' ? ' class="current"' :'' );
-       $views['all'] = "<a href='{$all_url }' {$class} >" . ( $totals->total_leads + $totals->total_comments + $totals->total_subscribes ) .  " total</a>";
+       $views['all'] = "<a href='{$all_url }' {$class} >" . ( $this->totals->total_leads + $this->totals->total_comments + $this->totals->total_subscribes ) .  " total contacts</a>";
 
        // Leads link
        $leads_url = add_query_arg('contact_type','lead', $all_url);
        $class = ( $current == 'lead' ? ' class="current"' :'' );
-       $views['contacts'] = "<a href='{$leads_url}' {$class} >" . leadin_single_plural_label($totals->total_leads, 'lead', 'leads') .  "</a>";
+       $views['contacts'] = "<a href='{$leads_url}' {$class} >" . leadin_single_plural_label($this->totals->total_leads, 'lead', 'leads') .  "</a>";
 
        // Commenters link
        
        $comments_url = add_query_arg('contact_type','comment', $all_url);
        $class = ( $current == 'comment' ? ' class="current"' :'' );
-       $views['commenters'] = "<a href='{$comments_url}' {$class} >" . leadin_single_plural_label($totals->total_comments, 'commenter', 'commenters') .  "</a>";
+       $views['commenters'] = "<a href='{$comments_url}' {$class} >" . leadin_single_plural_label($this->totals->total_comments, 'commenter', 'commenters') .  "</a>";
 
        // Commenters link
        $subscribers_url = add_query_arg('contact_type','subscribe', $all_url);
        $class = ( $current == 'subscribe' ? ' class="current"' :'' );
-       $views['subscribe'] = "<a href='{$subscribers_url}' {$class} >" . leadin_single_plural_label($totals->total_subscribes, 'subscriber', 'subscribers') .  "</a>";
+       $views['subscribe'] = "<a href='{$subscribers_url}' {$class} >" . leadin_single_plural_label($this->totals->total_subscribes, 'subscriber', 'subscribers') .  "</a>";
 
        return $views;
     }
 
     /**
-     * Prints contacts menu above contacts table
+     * Prints contacts menu next to contacts table
      */
     function views ()
     {
-        $views = $this->get_views();
-        $views = apply_filters( 'views_' . $this->screen->id, $views );
+        $this->views = $this->get_views();
+        $this->views = apply_filters( 'views_' . $this->screen->id, $this->views );
 
-        $current_view = $this->get_view();
+        $this->current_view = $this->get_view();
 
-        if ( $current_view == 'lead' )
-            $view_label = 'Leads';
-        else if ( $current_view == 'comment' )
-            $view_label = 'Commenters';
-        else if ( $current_view == 'subscribe' )
-            $view_label = 'Subscribers';
+        if ( $this->current_view == 'lead' )
+        {
+            $this->view_label = 'Leads';
+            $this->view_count = $this->totals->total_leads;
+        }
+        else if ( $this->current_view == 'comment' )
+        {
+            $this->view_label = 'Commenters';
+            $this->view_count = $this->totals->total_comments;
+        }
+        else if ( $this->current_view == 'subscribe' )
+        {
+            $this->view_label = 'Subscribers';
+            $this->view_count = $this->totals->total_subscribes;
+        }
         else
-            $view_label = 'Contacts';
+        {
+            $this->view_label = 'Contacts';
+            $this->view_count = $this->totals->total_leads + $this->totals->total_comments + $this->totals->total_subscribes;
+        }
 
-        if ( empty( $views ) )
+        if ( empty( $this->views ) )
             return;
 
-        echo "<div class='top_table_controls'>\n";
+        echo "<ul class='leadin-contacts__type-picker'>\n";
+            foreach ( $this->views as $class => $view ) 
+            {
+                $this->views[ $class ] = "\t<li class='$class'>$view";
+            }
+            echo implode( "</li>\n", $this->views ) . "</li>\n";
+        echo "</ul>";
+    }
 
-            echo "<ul class='table_segment_picker'>\n";
-                foreach ( $views as $class => $view ) 
-                {
-                    $views[ $class ] = "\t<li class='$class'>$view";
-                }
-                echo implode( "</li>\n", $views ) . "</li>\n";
-            echo "</ul>";
-            
-            echo "<span class='table_search'>\n";
-                echo "<label class='screen-reader-text' for='post-search-input'>Search Contacts:</label>";
-                echo "<input type='search' id='leadin-contact-search-input' name='s' value='" . print_submission_val('s') . "'/>";
-                if ( isset ($_GET['contact_type']) ) {
-                    echo "<input type='hidden' name='contact_type' value='" . print_submission_val('contact_type') . "'/>";
-                }
-                echo "<input type='submit' name='' id='leadin-search-submit' class='button' value='Search " . $view_label . "'>";
-            echo "</span>";
 
-        echo "</div>";
+    /**
+     * Prints contacts filter above contacts table
+     */
+    function filters ()
+    {
+        global $wpdb;
+
+        $filters = $this->get_filters();
+
+        ?>
+            <form id="leadin-contacts-filter" class="leadin-contacts__filter" method="GET">
+
+                <h3 class="leadin-contacts__filter-text">
+                    Viewing <span class="leadin-contacts__filter-count"> <?php echo ( $this->total_filtered != $this->view_count ? $this->total_filtered . '/' : '' ) . strtolower(leadin_single_plural_label($this->view_count, rtrim($this->view_label, 's'), $this->view_label)); ?></span> who 
+                    <select class="select2" name="filter_action" id="filter_action" style="width:200px">
+                        <option value="visited" <?php echo ( $filters['action']=='visited' ? 'selected' : '' ) ?> >Viewed</option>
+                        <option value="submitted" <?php echo ( $filters['action']=='submitted' ? 'selected' : '' ) ?> >Submitted a form on</option>
+                    </select>
+
+                    <input type="hidden" name="filter_content" class="bigdrop" id="filter_content" style="width:300px" value="<?php echo ( isset($_GET['filter_content']) ? stripslashes($_GET['filter_content']) : '' ); ?>"/>
+                    <input type="submit" name="" id="leadin-contacts-filter-button" class="button action" value="Apply">
+
+                    <?php if ( isset($_GET['filter_action']) || isset($_GET['filter_content']) ) : ?>
+                        <a href="<?php echo get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts' . ( isset($_GET['contact_type']) ? '&contact_type=' . $_GET['contact_type'] : '' ); ?>" id="clear-filter">clear filter</a>
+                    <?php endif; ?>
+                </h3>
+
+                <?php if ( isset($_GET['contact_type']) ) : ?>
+                    <input type="hidden" name="contact_type" value="<?php echo $_GET['contact_type']; ?>"/>
+                <?php endif; ?>
+
+                <input type="hidden" name="page" value="leadin_contacts"/>
+
+            </form>
+        <?php
     }
 
     /**
@@ -430,19 +552,10 @@ class LI_List_Table extends WP_List_Table {
         $order = ( !empty($_REQUEST['order']) ? $_REQUEST['order'] : 'desc' );
 
         usort($this->data, array($this, 'usort_reorder'));
-        
+
         $current_page = $this->get_pagenum();
         $total_items = count($this->data);
         $this->data = array_slice($this->data, (($current_page-1)*$per_page), $per_page);
-
-        foreach ( $this->data as &$contact )
-        {
-            $q = $wpdb->prepare("SELECT COUNT(DISTINCT pageview_id) AS num_pageviews, MAX(pageview_source) AS pageview_source FROM li_pageviews WHERE lead_hashkey = %s AND pageview_session_start = 1 AND pageview_deleted = 0", $contact['hashkey']);
-            $pageviews = $wpdb->get_row($q);
-
-            $contact['visits'] = $pageviews->num_pageviews;
-            $contact['source'] = ( $pageviews->pageview_source ? "<a title='Visit page' href='" . $pageviews->pageview_source . "' target='_blank'>" . leadin_strip_params_from_url($pageviews->pageview_source) . "</a>" : 'Direct' );
-        }
 
         $this->items = $this->data;
 
