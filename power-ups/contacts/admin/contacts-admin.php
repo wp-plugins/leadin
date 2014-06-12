@@ -1,5 +1,4 @@
 <?php
-
 //=============================================
 // Include Needed Files
 //=============================================
@@ -94,6 +93,11 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
      */
     function leadin_render_contact_detail ( $lead_id )
     {
+        if ( isset($_GET['contact_status']) )
+        {
+            $this->update_contact_status($lead_id, $_GET['contact_status']);
+        }
+
         $li_contact = new LI_Contact();
         $li_contact->set_hashkey_by_id($lead_id);
         $li_contact->get_contact_history();
@@ -104,19 +108,33 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
 
         if ( isset($_GET['post_id']) )
             echo '<a href="' . get_bloginfo('wpurl') . '/wp-admin/post.php?post=' . $_GET['post_id'] . '&action=edit#li_analytics-meta">&larr; All Viewers</a>';
+        else if ( isset($_GET['stats_dashboard']) )
+            echo '<a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_stats">&larr; Stat Dashboard</a>';
         else
             echo '<a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts">&larr; All Contacts</a>';
 
-
-        echo '<div class="header-wrap">';
-            echo '<img height="40px" width="40px" src="https://app.getsignals.com/avatar/image/?emails=' . $lead_email . '" class="leadin-dynamic-avatar_' . substr($lead_id, -1) . '"/>';
-            echo '<h1 class="contact-name">' . $lead_email . '</h1>';
+        echo '<div class="contact-header-wrap">';
+            echo '<img class="contact-header-avatar leadin-dynamic-avatar_' . substr($lead_id, -1) . '" height="76px" width="76px" src="https://app.getsignals.com/avatar/image/?emails=' . $lead_email . '"/>';
+            echo '<div class="contact-header-info">';
+                echo '<h1 class="contact-name">' . $lead_email . '</h1>';
+                echo '<form id="contact-status" class="contact-status">';
+                    echo '<input type="hidden" name="page" value="leadin_contacts">';
+                    echo '<input type="hidden" name="action" value="view">';
+                    echo '<input type="hidden" name="lead" value="' . $_GET['lead'] . '">';
+                    echo '<label>contact status </label>';
+                    echo '<select id="leadin-contact-status" name="contact_status">';
+                        echo '<option value="lead" ' . ( $li_contact->history->lead->lead_status == 'Lead' ? 'selected="selected"' : '' ) . '>lead</option>';
+                        echo '<option value="comment" ' . ( $li_contact->history->lead->lead_status == 'Commenter' ? 'selected="selected"' : '' ) . '>commenter</option>';
+                        echo '<option value="subscribe" ' . ( $li_contact->history->lead->lead_status == 'Subscriber' ? 'selected="selected"' : '' ) . '>subscriber</option>';
+                    echo '</select>';
+                    echo '<input type="submit" name="" id="leadin-contact-status-button" class="button action" style="margin-left: 5px;" value="Apply">';
+                echo '</form>';
+            echo '</div>';
         echo '</div>';
         
         echo '<div id="col-container">';
             
             echo '<div id="col-right">';
-            echo '<h2>Contact History</h2>';
             echo '<div class="col-wrap contact-history">';
                 echo '<ul class="sessions">';
                 $sessions = $li_contact->history->sessions;
@@ -173,12 +191,15 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                                 echo '<div class="event-content">';
                                     echo '<p class="event-title">Filled out form on page <a href="' . $submission['form_page_url'] . '">' . $submission['form_page_title']  . '</a></p>';
                                     echo '<ul class="event-detail fields">';
-                                    foreach ( $form_fields as $field )
+                                    if ( count($form_fields) )
                                     {
-                                        echo '<li class="field">';
-                                            echo '<label class="field-label">' . $field->label . ':</label>';
-                                            echo '<p class="field-value">' . $field->value . '</p>';
-                                        echo '</li>';
+                                        foreach ( $form_fields as $field )
+                                        {
+                                            echo '<li class="field">';
+                                                echo '<label class="field-label">' . $field->label . ':</label>';
+                                                echo '<p class="field-value">' . $field->value . '</p>';
+                                            echo '</li>';
+                                        }
                                     }
                                     echo '</ul>';
                                 echo '</div>';
@@ -194,9 +215,8 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
 
             echo '<div id="col-left" class="metabox-holder">';
             echo '<div class="col-wrap">';
-                echo '<div class="contact-info postbox">';
-                    echo '<h3>Contact Information</h3>';
-                    echo '<div class="inside">';
+                echo '<div class="contact-info leadin-postbox">';
+                    echo '<div class="leadin-postbox__content">';
                         echo '<p><b>Email:</b> <a href="mailto:' . $lead_email . '">' . $lead_email . '</a></p>';
                         echo '<p><b>Status:</b> ' . $li_contact->history->lead->lead_status . '</p>';
                         echo '<p><b>Original referrer:</b> ' . ( $li_contact->history->lead->lead_source ? '<a href="' . $li_contact->history->lead->lead_source . '">' . $lead_source . '</a></p>' : 'Direct' );
@@ -232,42 +252,60 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
         $leadinListTable->prepare_items();
 
         ?>
+        <div class="leadin-contacts">
+
+            <form id="leadin-contacts-search" class="leadin-contacts__search" method="GET">
+                <span class="table_search">
+                    <input type="hidden" name="page" value="<?php echo $_REQUEST['page'] ?>" />
+                    <input type="search" id="leadin-contact-search-input" name="s" value="<?php echo print_submission_val('s')?>"/>
+                    <input type="submit" name="" id="leadin-search-submit" class="button" value="Search all contacts">
+                </span>
+            </form>
+
+            <?php
+
+                $this->leadin_header('LeadIn Contacts', 'leadin-contacts__header');
+            ?>
+
+            <div class="leadin-contacts__nav">
+                <?php $leadinListTable->views(); ?>
+            </div>
             
-        <?php 
-            $this->leadin_header('LeadIn Contacts');
+            <div class="leadin-contacts__content">
 
-            $current_view = $leadinListTable->get_view();
+                <div class="leadin-contacts__filter">
+                    <?php $leadinListTable->filters(); ?>
+                </div>
 
-            if ( $current_view == 'lead' )
-                $view_label = 'Leads';
-            else if ( $current_view == 'comment' )
-                $view_label = 'Commenters';
-            else if ( $current_view == 'subscribe' )
-                $view_label = 'Subscribers';
-            else
-                $view_label = 'Contacts';
-        ?>
+                <!-- Forms are NOT created automatically, so you need to wrap the table in one to use features like bulk actions -->
+                <form id="leadin-contacts" method="GET">
+                    
+                    <!-- For plugins, we also need to ensure that the form posts back to our current page -->
+                    <input type="hidden" name="page" value="<?php echo $_REQUEST['page'] ?>" />
 
-        <!-- Forms are NOT created automatically, so you need to wrap the table in one to use features like bulk actions -->
-        <form id="leadin-contacts" method="GET">
-            <?php $leadinListTable->views(); ?>
-            
-            <!-- For plugins, we also need to ensure that the form posts back to our current page -->
-            <input type="hidden" name="page" value="<?php echo $_REQUEST['page'] ?>" />
-            
-            <!-- Now we can render the completed list table -->
-            <?php $leadinListTable->display() ?>
-        </form>
+                    <div class="leadin-contacts__table">
+                        <!-- Now we can render the completed list table -->
+                        <?php $leadinListTable->display() ?>
+                    </div>
+                
+                </form>
+                
+            </div>
 
-        <form id="export-form" name="export-form" method="POST">
-            <p class="submit">
-                <?php if ( !isset($_GET['contact_type']) ) : ?>
-                    <input type="submit" value="<?php esc_attr_e('Export All Contacts'); ?>" name="export-all" id="leadin-export-leads" class="button button-primary">
-                <?php endif; ?>
-                <input type="submit" value="<?php esc_attr_e('Export Selected ' . $view_label ); ?>" name="export-selected" id="leadin-export-selected-leads" class="button button-primary" disabled>
+            <?php
+                $export_button_labels = $leadinListTable->view_label;
+
+                if ( isset($_GET['filter_action']) || isset($_GET['filter_content']) )
+                    $export_button_labels = 'Filtered Contacts';
+            ?>
+
+            <form id="export-form" class="leadin-contacts__export-form" name="export-form" method="POST">
+                <input type="submit" value="<?php esc_attr_e('Export All ' . $export_button_labels ); ?>" name="export-all" id="leadin-export-leads" class="button" <?php echo ( ! count($leadinListTable->data) ? 'disabled' : '' ); ?>>
+                <input type="submit" value="<?php esc_attr_e('Export Selected ' . $export_button_labels ); ?>" name="export-selected" id="leadin-export-selected-leads" class="button" disabled>
                 <input type="hidden" id="leadin-selected-contacts" name="leadin-selected-contacts" value=""/>
-            </p>
-        </form>
+            </form>
+
+        </div>
 
         <?php
     }
@@ -297,6 +335,23 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
         return $delete_lead;
     }
 
+    /**
+     * Updates the contact status
+     *
+     * @param   int
+     * @param   string
+     * @return  bool
+     */
+    function update_contact_status ( $lead_id, $contact_status )
+    {
+        global $wpdb;
+        
+        $q = $wpdb->prepare("UPDATE li_leads SET lead_status = %s WHERE lead_id = %d", $contact_status, $lead_id);
+        $result = $wpdb->query($q);
+
+        return $result;
+    }
+
 
     //=============================================
     // Admin Styles & Scripts
@@ -309,13 +364,17 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
     {
         global $pagenow;
 
-        if ( ($pagenow == 'admin.php' && isset($_GET['page']) && strstr($_GET['page'], 'leadin')) || ( $pagenow == 'post.php' && isset($_GET['post']) && isset($_GET['action']) && strstr($_GET['action'], 'edit') ) ) 
+        if ( ($pagenow == 'admin.php' && isset($_GET['page']) && strstr($_GET['page'], 'leadin')) ) 
         {
-            wp_register_script('leadin-admin-js', LEADIN_PATH . '/admin/js/leadin-admin.js', array ( 'jquery' ), FALSE, TRUE);
+            wp_register_script('leadin-admin-js', LEADIN_PATH . '/assets/js/build/leadin-admin.min.js', array ( 'jquery' ), FALSE, TRUE);
             wp_enqueue_script('leadin-admin-js');
+            wp_localize_script('leadin-admin-js', 'li_admin_ajax', array('ajax_url' => admin_url('admin-ajax.php')));
+        }
 
-            wp_register_script('lazyload-js', LEADIN_PATH . '/admin/js/jquery.lazyload.min.js', array ( 'jquery' ), FALSE, TRUE);
-            wp_enqueue_script('lazyload-js');
+        if ( $pagenow == 'post.php' && isset($_GET['post']) && isset($_GET['action']) && strstr($_GET['action'], 'edit') )
+        {
+            wp_register_script('leadin-lazyload', LEADIN_PATH . '/assets/js/build/leadin-lazyload.min.js', array ( 'jquery' ), FALSE, TRUE);
+            wp_enqueue_script('leadin-lazyload');
         }
     }
 
@@ -329,7 +388,6 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
     {
         return date('M j, Y g:ia', strtotime($timestamp));
     }
-
 }
 
 /** Export functionality for the contacts list */
@@ -338,10 +396,10 @@ if ( isset($_POST['export-all']) || isset($_POST['export-selected']) )
     global $wpdb;
 
     $sitename = sanitize_key(get_bloginfo('name'));
-    
+
     if ( ! empty($sitename) )
         $sitename .= '.';
-    
+
     $filename = $sitename . '.contacts.' . date('Y-m-d-H-i-s') . '.csv';
 
     header('Content-Description: File Transfer');
@@ -353,7 +411,7 @@ if ( isset($_POST['export-all']) || isset($_POST['export-selected']) )
     );
 
     $fields = array(
-        'lead_email', 'lead_source', 'lead_status', 'lead_visits', 'lead_pageviews', 'lead_form_submissions', 'last_visit', 'lead_date'
+        'lead_email', 'lead_source', 'lead_status', 'visits', 'lead_pageviews', 'lead_form_submissions', 'last_visit', 'lead_date'
     );
 
     $headers = array();
@@ -363,19 +421,73 @@ if ( isset($_POST['export-all']) || isset($_POST['export-selected']) )
     }
     echo implode(',', $headers) . "\n";
 
-    $q = $wpdb->prepare("
+    $mysql_search_filter = '';
+
+    // search filter
+    if ( isset($_GET['s']) )
+    {
+        $search_query = $_GET['s'];
+        $mysql_search_filter = $wpdb->prepare(" AND ( l.lead_email LIKE '%%%s%%' OR l.lead_source LIKE '%%%s%%' ) ", like_escape($search_query), like_escape($search_query));
+    }
+
+    // contact type filter
+    if ( isset($_GET['contact_type']) )
+    {
+        $mysql_contact_type_filter = $wpdb->prepare("AND l.lead_status = %s ", $_GET['contact_type']);
+    }
+    else 
+    {
+        $mysql_contact_type_filter = " AND ( l.lead_status = 'lead' OR l.lead_status = 'comment' OR l.lead_status = 'subscribe') ";
+    }
+
+    // filter for visiting a specific page
+    if ( isset($_GET['filter_action']) && $_GET['filter_action'] == 'visited' )
+    {
+        $q = $wpdb->prepare("SELECT lead_hashkey FROM li_pageviews WHERE pageview_title LIKE '%%%s%%' GROUP BY lead_hashkey",  htmlspecialchars(urldecode($_GET['filter_content'])));
+        $filtered_contacts = $wpdb->get_results($q);
+
+        if ( count($filtered_contacts) )
+        {
+            $filtered_hashkeys = '';
+            for ( $i = 0; $i < count($filtered_contacts); $i++ )
+                $filtered_hashkeys .= "'" . $filtered_contacts[$i]->lead_hashkey . "'" . ( $i != (count($filtered_contacts) - 1) ? ', ' : '' );
+        
+            $mysql_search_filter = " AND l.hashkey IN ( " . $filtered_hashkeys . " ) ";
+        }
+    }
+    
+    // filter for a form submitted on a specific page
+    if ( isset($_GET['filter_action']) && $_GET['filter_action'] == 'submitted' )
+    {
+        $q = $wpdb->prepare("SELECT lead_hashkey FROM li_submissions WHERE form_page_title LIKE '%%%s%%' GROUP BY lead_hashkey", htmlspecialchars(urldecode($_GET['filter_content'])));
+        $filtered_contacts = $wpdb->get_results($q);
+
+        $filtered_hashkeys = '';
+        for ( $i = 0; $i < count($filtered_contacts); $i++ )
+            $filtered_hashkeys .= "'" . $filtered_contacts[$i]->lead_hashkey . "'" . ( $i != (count($filtered_contacts) - 1) ? ', ' : '' );
+    
+        $mysql_search_filter = " AND l.hashkey IN ( " . $filtered_hashkeys . " ) ";
+    }
+
+    $q =  $wpdb->prepare("
         SELECT 
-            l.lead_id, LOWER(DATE_FORMAT(l.lead_date, %s)) AS lead_date, l.lead_ip, l.lead_source, l.lead_email, l.lead_status,
+            l.lead_id AS lead_id, 
+            LOWER(DATE_FORMAT(l.lead_date, %s)) AS lead_date, l.lead_ip, l.lead_source, l.lead_email, l.lead_status, l.hashkey,
             COUNT(DISTINCT s.form_id) AS lead_form_submissions,
             COUNT(DISTINCT p.pageview_id) AS lead_pageviews,
-            (SELECT COUNT(DISTINCT p.pageview_id) FROM li_pageviews p WHERE l.hashkey = p.lead_hashkey AND p.pageview_session_start = 1) AS lead_visits,
-            LOWER(DATE_FORMAT(MAX(p.pageview_date), %s)) AS last_visit
-        FROM li_leads l
+            LOWER(DATE_FORMAT(MAX(p.pageview_date), %s)) AS last_visit,
+            ( SELECT COUNT(DISTINCT pageview_id) FROM li_pageviews WHERE lead_hashkey = l.hashkey AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS visits,
+            ( SELECT MAX(pageview_source) AS pageview_source FROM li_pageviews WHERE lead_hashkey = l.hashkey AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS pageview_source 
+        FROM 
+            li_leads l
         LEFT JOIN li_submissions s ON l.hashkey = s.lead_hashkey
         LEFT JOIN li_pageviews p ON l.hashkey = p.lead_hashkey 
-        WHERE l.lead_email != '' " .
-        ( isset ($_POST['export-selected']) ? " AND l.lead_id IN ( " . $_POST['leadin-selected-contacts'] . " ) " : "" ) .
-        "GROUP BY l.lead_email ORDER BY l.lead_date DESC", '%Y/%m/%d %l:%i%p', '%Y/%m/%d %l:%i%p');
+        WHERE l.lead_email != '' AND l.lead_deleted = 0 " .
+        ( isset ($_POST['export-selected']) ? " AND l.lead_id IN ( " . $_POST['leadin-selected-contacts'] . " ) " : "" ), '%Y/%m/%d %l:%i%p', '%Y/%m/%d %l:%i%p');
+
+    $q .= $mysql_contact_type_filter;
+    $q .= ( $mysql_search_filter ? $mysql_search_filter : "" );
+    $q .=  " GROUP BY l.lead_email";
 
     $leads = $wpdb->get_results($q);
 

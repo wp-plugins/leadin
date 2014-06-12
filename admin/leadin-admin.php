@@ -29,6 +29,9 @@ if ( !class_exists('LI_Pointers') )
 if ( !class_exists('LI_Viewers') )
     require_once LEADIN_PLUGIN_DIR . '/admin/inc/class-leadin-viewers.php';
 
+if ( !class_exists('LI_StatsDashboard') )
+    require_once LEADIN_PLUGIN_DIR . '/admin/inc/class-stats-dashboard.php';
+
 include_once(ABSPATH . 'wp-admin/includes/plugin.php');
 
 //=============================================
@@ -39,6 +42,7 @@ class WPLeadInAdmin {
     var $admin_power_ups;
     var $li_viewers;
     var $power_up_icon;
+    var $stats_dashboard;
 
     /**
      * Class constructor
@@ -57,6 +61,11 @@ class WPLeadInAdmin {
             add_action('admin_init', array(&$this, 'leadin_build_settings_page'));
             add_action('admin_print_styles', array(&$this, 'add_leadin_admin_styles'));
             add_action('add_meta_boxes', array(&$this, 'add_li_analytics_meta_box' ));
+
+            if ( isset($_GET['page']) && $_GET['page'] == 'leadin_stats' )
+            {
+                add_action('admin_footer', array($this, 'build_contacts_chart'));
+            }
         }
     }
     
@@ -74,6 +83,8 @@ class WPLeadInAdmin {
         
         self::check_admin_action();
 
+        add_menu_page('LeadIn', 'LeadIn', 'manage_categories', 'leadin_stats', array($this, 'leadin_build_stats_page'), LEADIN_PATH . '/images/' . ( $wp_version < 3.8 && !is_plugin_active('mp6/mp6.php') ? 'leadin-icon-32x32.png' : 'leadin-svg-icon.svg'));
+
         foreach ( $this->admin_power_ups as $power_up )
         {
             if ( $power_up->activated )
@@ -81,16 +92,15 @@ class WPLeadInAdmin {
                 $power_up->admin_init();
 
                 // Creates the menu icon for power-up if it's set. Overrides the main LeadIn menu to hit the contacts power-up
-                if ( $power_up->menu_text == 'Contacts' )
-                    add_menu_page('LeadIn', 'LeadIn', 'manage_categories', 'leadin_contacts', array($power_up, 'power_up_setup_callback'), LEADIN_PATH . '/images/' . ( $wp_version < 3.8 && !is_plugin_active('mp6/mp6.php') ? 'leadin-icon-32x32.png' : 'leadin-svg-icon.svg'));
-                else if ( $power_up->menu_text )
-                    add_submenu_page('leadin_contacts', $power_up->menu_text, $power_up->menu_text, 'manage_categories', 'leadin_' . $power_up->menu_link, array($power_up, 'power_up_setup_callback'));    
+                //if ( $power_up->menu_text == 'Contacts' )
+                if ( $power_up->menu_text )
+                    add_submenu_page('leadin_stats', $power_up->menu_text, $power_up->menu_text, 'manage_categories', 'leadin_' . $power_up->menu_link, array($power_up, 'power_up_setup_callback'));    
             }
         }
 
-        add_submenu_page('leadin_contacts', 'Settings', 'Settings', 'manage_categories', 'leadin_settings', array(&$this, 'leadin_plugin_options'));
-        add_submenu_page('leadin_contacts', 'Power-ups', 'Power-ups', 'manage_categories', 'leadin_power_ups', array(&$this, 'leadin_power_ups_page'));
-        $submenu['leadin_contacts'][0][0] = 'Contacts';
+        add_submenu_page('leadin_stats', 'Settings', 'Settings', 'manage_categories', 'leadin_settings', array(&$this, 'leadin_plugin_options'));
+        add_submenu_page('leadin_stats', 'Power-ups', 'Power-ups', 'manage_categories', 'leadin_power_ups', array(&$this, 'leadin_power_ups_page'));
+        $submenu['leadin_stats'][0][0] = 'Stats';
 
         if ( !isset($_GET['page']) || $_GET['page'] != 'leadin_settings' )
         {
@@ -116,6 +126,212 @@ class WPLeadInAdmin {
        $settings_link = '<a href="' . $url . '">Settings</a>';
        array_unshift($links, $settings_link);
        return $links;
+    }
+
+    /**
+     * Creates the stats page
+     */
+    function leadin_build_stats_page ()
+    {
+        global $wp_version;
+        $this->stats_dashboard = new LI_StatsDashboard();
+        
+        leadin_track_plugin_activity("Loaded Stats Page");
+
+        if ( !current_user_can( 'manage_categories' ) )
+        {
+            wp_die(__('You do not have sufficient permissions to access this page.'));
+        }
+
+        echo '<div id="leadin" class="li-stats wrap '. ( $wp_version < 3.8 && !is_plugin_active('mp6/mp6.php') ? 'pre-mp6' : ''). '">';
+        
+        $this->leadin_header('LeadIn Stats: ' . date('F j Y, g:ia', current_time('timestamp')), 'leadin-stats__header');
+
+        echo '<div class="leadin-stats__top-container">';
+            echo $this->leadin_postbox('leadin-stats__chart', leadin_single_plural_label(number_format($this->stats_dashboard->total_contacts_last_30_days), 'new contact', 'new contacts') . ' last 30 days', $this->leadin_build_contacts_chart_stats());
+        echo '</div>';
+
+        echo '<div class="leadin-stats__postbox_containter">';
+            echo $this->leadin_postbox('leadin-stats__new-contacts', leadin_single_plural_label(number_format($this->stats_dashboard->total_new_contacts), 'new contact', 'new contacts') . ' today', $this->leadin_build_new_contacts_postbox());
+            echo $this->leadin_postbox('leadin-stats__returning-contacts', leadin_single_plural_label(number_format($this->stats_dashboard->total_returning_contacts), 'returning contact', 'returning contacts') . ' today', $this->leadin_build_returning_contacts_postbox());
+        echo '</div>';
+
+
+
+        echo '<div class="leadin-stats__postbox_containter">';
+            echo $this->leadin_postbox('leadin-stats__sources', 'New contact sources last 30 days', $this->leadin_build_sources_postbox());
+        echo '</div>';
+
+    }
+
+    /**
+     * Creates contacts chart content
+     */
+    function leadin_build_contacts_chart_stats () 
+    {
+        $contacts_chart = "";
+
+        $contacts_chart .= "<div class='leadin-stats__chart-container'>";
+            $contacts_chart .= "<div id='contacts_chart' style='width:100%; height:250px;'></div>";
+        $contacts_chart .= "</div>";
+        $contacts_chart .= "<div class='leadin-stats__big-numbers-container'>";
+            $contacts_chart .= "<div class='leadin-stats__big-number'>";
+                $contacts_chart .= "<label class='leadin-stats__big-number-top-label'>TODAY</label>";
+                $contacts_chart .= "<h1  class='leadin-stats__big-number-content'>" . number_format($this->stats_dashboard->total_new_contacts) . "</h1>";
+                $contacts_chart .= "<label class='leadin-stats__big-number-bottom-label'>new " . ( $this->stats_dashboard->total_new_contacts != 1 ? 'contacts' : 'contact' ) . "</label>";
+            $contacts_chart .= "</div>";
+            $contacts_chart .= "<div class='leadin-stats__big-number big-number--average'>";
+                $contacts_chart .= "<label class='leadin-stats__big-number-top-label'>AVG LAST 90 DAYS</label>";
+                $contacts_chart .= "<h1  class='leadin-stats__big-number-content'>" . number_format($this->stats_dashboard->avg_contacts_last_90_days) . "</h1>";
+                $contacts_chart .= "<label class='leadin-stats__big-number-bottom-label'>new " . ( $this->stats_dashboard->avg_contacts_last_90_days != 1 ? 'contacts' : 'contact' ) . "</label>";
+            $contacts_chart .= "</div>";
+            $contacts_chart .= "<div class='leadin-stats__big-number'>";
+                $contacts_chart .= "<label class='leadin-stats__big-number-top-label'>BEST DAY EVER</label>";
+                $contacts_chart .= "<h1  class='leadin-stats__big-number-content'>" . number_format($this->stats_dashboard->best_day_ever) . "</h1>";
+                $contacts_chart .= "<label class='leadin-stats__big-number-bottom-label'>new " . ( $this->stats_dashboard->best_day_ever != 1 ? 'contacts' : 'contact' ) . "</label>";
+            $contacts_chart .= "</div>";
+            $contacts_chart .= "<div class='leadin-stats__big-number'>";
+                $contacts_chart .= "<label class='leadin-stats__big-number-top-label'>ALL TIME</label>";
+                $contacts_chart .= "<h1  class='leadin-stats__big-number-content'>" . number_format($this->stats_dashboard->total_contacts) . "</h1>";
+                $contacts_chart .= "<label class='leadin-stats__big-number-bottom-label'>total " . ( $this->stats_dashboard->total_contacts != 1 ? 'contacts' : 'contact' ) . "</label>";
+            $contacts_chart .= "</div>";
+        $contacts_chart .= "</div>";
+
+        return $contacts_chart;
+    }
+
+     /**
+     * Creates contacts chart content
+     */
+    function leadin_build_new_contacts_postbox () 
+    {
+        $new_contacts_postbox = "";
+
+        if ( count($this->stats_dashboard->new_contacts) )
+        {
+            $new_contacts_postbox .= '<table class="leadin-postbox__table"><tbody>';
+                $new_contacts_postbox .= '<tr>';
+                    $new_contacts_postbox .= '<th>contact</th>';
+                    $new_contacts_postbox .= '<th>pageviews</th>';
+                    $new_contacts_postbox .= '<th>original source</th>';
+                $new_contacts_postbox .= '</tr>';
+
+                
+
+                foreach ( $this->stats_dashboard->new_contacts as $contact )
+                {
+                    $new_contacts_postbox .= '<tr>';
+                        $new_contacts_postbox .= '<td class="">';
+                            $new_contacts_postbox .= '<a href="?page=leadin_contacts&action=view&lead=' . $contact->lead_id . '&stats_dashboard=1"><img class="lazy pull-left leadin-contact-avatar leadin-dynamic-avatar_' . substr($contact->lead_id, -1) .'" src="https://app.getsignals.com/avatar/image/?emails=' . $contact->lead_email . '" width="35" height="35"><b>' . $contact->lead_email . '</b></a>';
+                        $new_contacts_postbox .= '</td>';
+                        $new_contacts_postbox .= '<td class="">' . $contact->pageviews . '</td>';
+                        $new_contacts_postbox .= '<td class="">' . $this->stats_dashboard->print_readable_source($this->stats_dashboard->check_lead_source($contact->lead_source)) . '</td>';
+                    $new_contacts_postbox .= '</tr>';
+                }
+
+            $new_contacts_postbox .= '</tbody></table>';
+        }
+        else
+            $new_contacts_postbox .= '<i>No new contacts today...</i>';
+
+        
+
+        return $new_contacts_postbox;
+    }
+
+    /**
+     * Creates contacts chart content
+     */
+    function leadin_build_returning_contacts_postbox () 
+    {
+        $returning_contacts_postbox = "";
+
+        if ( count($this->stats_dashboard->returning_contacts) )
+        {
+            $returning_contacts_postbox .= '<table class="leadin-postbox__table"><tbody>';
+                $returning_contacts_postbox .= '<tr>';
+                    $returning_contacts_postbox .= '<th>contact</th>';
+                    $returning_contacts_postbox .= '<th>pageviews</th>';
+                    $returning_contacts_postbox .= '<th>original source</th>';
+                $returning_contacts_postbox .= '</tr>';
+
+                foreach ( $this->stats_dashboard->returning_contacts as $contact )
+                {
+                    $returning_contacts_postbox .= '<tr>';
+                        $returning_contacts_postbox .= '<td class="">';
+                            $returning_contacts_postbox .= '<a href="?page=leadin_contacts&action=view&lead=' . $contact->lead_id . '&stats_dashboard=1"><img class="lazy pull-left leadin-contact-avatar leadin-dynamic-avatar_' . substr($contact->lead_id, -1) .'" src="https://app.getsignals.com/avatar/image/?emails=' . $contact->lead_email . '" width="35" height="35"><b>' . $contact->lead_email . '</b></a>';
+                        $returning_contacts_postbox .= '</td>';
+                        $returning_contacts_postbox .= '<td class="">' . $contact->pageviews . '</td>';
+                        $returning_contacts_postbox .= '<td class="">' . $this->stats_dashboard->print_readable_source($this->stats_dashboard->check_lead_source($contact->lead_source)) . '</td>';
+                    $returning_contacts_postbox .= '</tr>';
+                }
+
+            $returning_contacts_postbox .= '</tbody></table>';
+        }
+        else
+            $returning_contacts_postbox .= '<i>No returning contacts today...</i>';
+
+        return $returning_contacts_postbox;
+    }
+
+    /**
+     * Creates contacts chart content
+     */
+    function leadin_build_sources_postbox () 
+    {
+        $sources_postbox = "";
+
+        $sources_postbox .= '<table class="leadin-postbox__table"><tbody>';
+            $sources_postbox .= '<tr>';
+                $sources_postbox .= '<th width="150">source</th>';
+                $sources_postbox .= '<th width="20">Contacts</th>';
+                $sources_postbox .= '<th></th>';
+            $sources_postbox .= '</tr>';
+            $sources_postbox .= '<tr>';
+                $sources_postbox .= '<td class="">Direct Traffic</td>';
+                $sources_postbox .= '<td class="">' . $this->stats_dashboard->direct_count . '</td>';
+                $sources_postbox .= '<td>';
+                    $sources_postbox .= '<div style="background: #f0f0f0; padding: 0px; height: 20px !important;"><div style="background: #f16b18; height: 100%; width: ' . ( $this->stats_dashboard->max_source ? (($this->stats_dashboard->direct_count/$this->stats_dashboard->max_source)*100) : '0' ) . '%;">&nbsp;</div></div>';
+                $sources_postbox .= '</td>';
+            $sources_postbox .= '</tr>';
+            $sources_postbox .= '<tr>';
+                $sources_postbox .= '<td class="">Organic Search</td>';
+                $sources_postbox .= '<td class="">' . $this->stats_dashboard->organic_count . '</td>';
+                $sources_postbox .= '<td>';
+                    $sources_postbox .= '<div style="background: #f0f0f0; padding: 0px; height: 20px !important;"><div style="background: #f16b18; height: 100%; width: ' . ( $this->stats_dashboard->max_source ? (($this->stats_dashboard->organic_count/$this->stats_dashboard->max_source)*100) : '0' ) . '%;">&nbsp;</div></div>';
+                $sources_postbox .= '</td>';
+            $sources_postbox .= '</tr>';
+            $sources_postbox .= '<tr>';
+                $sources_postbox .= '<td class="">Referrals</td>';
+                $sources_postbox .= '<td class="">' . $this->stats_dashboard->referral_count . '</td>';
+                $sources_postbox .= '<td>';
+                    $sources_postbox .= '<div style="background: #f0f0f0; padding: 0px; height: 20px !important;"><div style="background: #f16b18; height: 100%; width: ' . ( $this->stats_dashboard->max_source ? (($this->stats_dashboard->referral_count/$this->stats_dashboard->max_source)*100) : '0' ) . '%;">&nbsp;</div></div>';
+                $sources_postbox .= '</td>';
+            $sources_postbox .= '</tr>';
+            $sources_postbox .= '<tr>';
+                $sources_postbox .= '<td class="">Social Media</td>';
+                $sources_postbox .= '<td class="">' . $this->stats_dashboard->social_count . '</td>';
+                $sources_postbox .= '<td>';
+                    $sources_postbox .= '<div style="background: #f0f0f0; padding: 0px; height: 20px !important;"><div style="background: #f16b18; height: 100%; width: ' . ( $this->stats_dashboard->max_source ? (($this->stats_dashboard->social_count/$this->stats_dashboard->max_source)*100) : '0' ). '%;">&nbsp;</div></div>';
+                $sources_postbox .= '</td>';
+            $sources_postbox .= '</tr>';
+            $sources_postbox .= '<tr>';
+                $sources_postbox .= '<td class="">Email Marketing</td>';
+                $sources_postbox .= '<td class="">' . $this->stats_dashboard->email_count . '</td>';
+                $sources_postbox .= '<td>';
+                    $sources_postbox .= '<div style="background: #f0f0f0; padding: 0px; height: 20px !important;"><div style="background: #f16b18; height: 100%; width: ' . ( $this->stats_dashboard->max_source ? (($this->stats_dashboard->email_count/$this->stats_dashboard->max_source)*100) : '0' ) . '%;">&nbsp;</div></div>';
+                $sources_postbox .= '</td>';
+            $sources_postbox .= '</tr>';
+            $sources_postbox .= '<tr>';
+                $sources_postbox .= '<td class="">Paid Search</td>';
+                $sources_postbox .= '<td class="">' . $this->stats_dashboard->paid_count . '</td>';
+                $sources_postbox .= '<td>';
+                    $sources_postbox .= '<div style="background: #f0f0f0; padding: 0px; height: 20px !important;"><div style="background: #f16b18; height: 100%; width: ' . ( $this->stats_dashboard->max_source ? (($this->stats_dashboard->paid_count/$this->stats_dashboard->max_source)*100) : '0' ) . '%;">&nbsp;</div></div>';
+                $sources_postbox .= '</td>';
+            $sources_postbox .= '</tr>';
+        $sources_postbox .= '</tbody></table>';
+
+        return $sources_postbox;
     }
 
     /**
@@ -366,12 +582,25 @@ class WPLeadInAdmin {
             
             <ul class="powerup-list">
 
+                <?php $power_up_count = 0; ?>
                 <?php foreach ( $this->admin_power_ups as $power_up ) : ?>
                     <?php 
                         // Skip displaying the power-up on the power-ups page if it's hidden
                         if ( $power_up->hidden )
                             continue;
                     ?>
+
+                    <?php if ( $power_up_count == 1 ) : ?>
+                        <!-- static content stats power-up - not a real powerup and this is a hack to put it second in the order -->
+                        <li class="powerup activated">
+                            <h2>Content Stats</h2>
+                            <img src="<?php echo LEADIN_PATH; ?>/images/powerup-icon-analytics@2x.png" height="80px" width="80px">
+                            <p>See where all your conversions are coming from.</p>
+                            <p><a href="http://leadin.com/content-analytics-plugin-wordpress/" target="_blank">Learn more</a></p>
+                            <a href="<?php echo get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_stats'; ?>" class="button button-large">View Stats</a>
+                        </li>
+                        <?php $power_up_count++; ?>
+                    <?php endif; ?>
 
                     <li class="powerup <?php echo ( $power_up->activated ? 'activated' : ''); ?>">
                         <h2><?php echo $power_up->power_up_name; ?></h2>
@@ -399,16 +628,9 @@ class WPLeadInAdmin {
                             <?php endif; ?>
                         <?php endif; ?>
                     </li>
+                    <?php $power_up_count++; ?>
                 <?php endforeach; ?>
 
-                <!-- static power-ups -->
-                <li class="powerup">
-                    <h2>Content Analytics</h2>
-                    <img src="<?php echo LEADIN_PATH; ?>/images/powerup-icon-analytics@2x.png" height="80px" width="80px">
-                    <p>See where all your conversions are coming from.</p>
-                    <p><a href="http://leadin.com/content-analytics-plugin-wordpress/">Learn more</a></p>
-                    <a disabled="true" class="button button-primary button-large">Coming soon</a>
-                </li>
                 <li class="powerup">
                     <h2>Your Idea</h2>
                     <img src="<?php echo LEADIN_PATH; ?>/images/powerup-icon-ideas@2x.png" height="80px" width="80px">
@@ -416,6 +638,7 @@ class WPLeadInAdmin {
                     <p>&nbsp;</p>
                     <a href="mailto:team@leadin.com" target="_blank" class="button button-primary button-large">Suggest an idea</a>
                 </li>
+
             </ul>
 
         <?php
@@ -471,6 +694,9 @@ class WPLeadInAdmin {
     {
         wp_register_style('leadin-admin-css', LEADIN_PATH . '/assets/css/build/leadin-admin.css');
         wp_enqueue_style('leadin-admin-css');
+
+        wp_register_style('select2', LEADIN_PATH . '/assets/css/select2.css');
+        wp_enqueue_style('select2');
     }
 
     //=============================================
@@ -479,32 +705,35 @@ class WPLeadInAdmin {
 
     /**
      * Creates postbox for admin
+     *
      * @param string
      * @param string
      * @param string
      * @param bool
      * @return string   HTML for postbox
      */
-    function leadin_postbox ( $id, $title, $content, $handle = TRUE )
+    function leadin_postbox ( $css_class, $title, $content, $handle = TRUE )
     {
         $postbox_wrap = "";
-        $postbox_wrap .= '<div id="' . $id . '" class="postbox leadin-admin-postbox">';
-        $postbox_wrap .= ( $handle ? '<div class="handlediv" title="Click to toggle"><br /></div>' : '' );
-        $postbox_wrap .= '<h3 class="hndle"><span>' . $title . '</span></h3>';
-        $postbox_wrap .= '<div class="inside">' . $content . '</div>';
+        
+        $postbox_wrap .= '<div class="' . $css_class . ' leadin-postbox">';
+            $postbox_wrap .= '<h3 class="leadin-postbox__header">' . $title . '</h3>';
+            $postbox_wrap .= '<div class="leadin-postbox__content">' . $content . '</div>';
         $postbox_wrap .= '</div>';
+
         return $postbox_wrap;
     }
 
     /**
      * Prints the admin page title, icon and help notification
+     *
      * @param string
      */
-    function leadin_header ( $page_title = '' )
+    function leadin_header ( $page_title = '', $css_class = '' )
     {
         ?>
         <?php screen_icon('leadin'); ?>
-        <h2><?php echo $page_title; ?></h2>
+        <h2 class="<?php echo $css_class ?>"><?php echo $page_title; ?></h2>
 
         <?php if ( isset($_GET['settings-updated']) ) : ?>
             <div id="message" class="updated">
@@ -625,7 +854,200 @@ class WPLeadInAdmin {
                 </tr>
             </tbody></table>
         <?php
-    } 
+    }
+
+
+    function build_contacts_chart ( )
+    {
+        ?>
+        <script type="text/javascript">
+            
+            function create_weekends ( $ )
+            {
+                var $ = jQuery;
+
+                series = chart.get('contacts');
+                var in_between = Math.floor(series.data[1].barX - (Math.floor(series.data[0].barX) + Math.floor(series.data[0].pointWidth)))*2;
+
+                $series = $('.highcharts-series').first();
+                $series.find('rect').each ( function ( e ) {
+                    var $this = $(this);
+                    $this.attr('width', (Math.floor(series.data[0].pointWidth) + Math.floor(in_between/2)));
+                    $this.attr('x', $this.attr('x') - Math.floor(in_between/4));
+                    $this.css('opacity', 100);
+                });
+            }
+
+            function hide_weekends ( $ )
+            {
+                var $ = jQuery;
+
+                series = chart.get('contacts');
+
+                $series = $('.highcharts-series').first();
+                $series.find('rect').each ( function ( e ) {
+                    var $this = $(this);
+                    $this.css('opacity', 0);
+                });
+            }
+
+            function create_chart ( $ )
+            {
+                var $ = jQuery;
+
+                $('#contacts_chart').highcharts({
+                    chart: {
+                        type: 'column',
+                        style: {
+                            fontFamily: "Open-Sans"
+                        }
+                    },
+                    credits: {
+                        enabled: false
+                    },
+                    title: {
+                        text: ''
+                    },
+                    xAxis: {
+                        categories: [ <?php echo $x_axis_labels; ?> ],
+                        tickInterval: 2,
+                        tickmarkPlacement: 'on',
+                        labels: {
+                            style: {
+                                color: '#aaa',
+                                fontFamily: 'Open Sans'
+                            }
+                        }
+                    },
+                    yAxis: {
+                        min: 0,
+                        title: {
+                            text: ''
+                        },
+                        gridLineColor: '#ddd',
+                        labels: {
+                            
+                            style: {
+                                color: '#aaa',
+                                fontFamily: 'Open Sans'
+                            }
+                        },
+                        minRange: 4
+                    },
+                    tooltip: {
+                        enabled: true,
+                        headerFormat: '<span style="font-size: 11px; font-weight: normal; text-transform: capitalize; font-family: \'Open Sans\'; color: #555;">{point.key}</span><br/>',
+                        pointFormat: '<span style="font-size: 11px; font-weight: normal; font-family: \'Open Sans\'; color: #888;">Contacts: {point.y}</span>',
+                        valueDecimals: 0,
+                        borderColor: '#ccc',
+                        borderRadius: 0,
+                        shadow: false
+                    },
+                    plotOptions: {
+                        column: {
+                            borderWidth: 0, 
+                            borderColor: 'rgba(0,0,0,0)',
+                            showInLegend: false,
+                            colorByPoint: true,
+                            states: {
+                                brightness: 0
+                            }
+                        },
+                        line: {
+                            enableMouseTracking: false,
+                            linkedTo: ':previous',
+                            dashStyle: 'ShortDash',
+                            dataLabels: {
+                                enabled: false
+                            },
+                            marker: {
+                                enabled: false
+                            },
+                            color: '#4CA6CF',
+                            tooltip: {
+                                enabled: false
+                            },
+                            showInLegend: false
+                        }
+                    },
+                    colors: [
+                        <?php echo $this->stats_dashboard->column_colors; ?>
+                    ],
+                    series: [{
+                        type: 'column',
+                        name: 'Contacts',
+                        id: 'contacts',
+                        data: [ <?php echo $this->stats_dashboard->column_data; ?> ],
+                        zIndex: 3,
+                        index: 3
+                    }, {
+                        type: 'line',
+                        name: 'Average',
+                        animation: false,
+                        data: [ <?php echo $this->stats_dashboard->average_data; ?> ],
+                        zIndex: 2,
+                        index: 2
+                    },
+                    {
+                        type: 'column',
+                        name: 'Weekends',
+                        animation: false,
+                        minPointLength: 500,
+                        grouping: false,
+                        tooltip: {
+                            enabled: true
+                        },
+                        data: [ <?php echo $this->stats_dashboard->weekend_column_data; ?> ],
+                        zIndex: 1,
+                        index: 1,
+                        id: 'weekends',
+                        events: {
+                            mouseOut: function ( event ) { event.preventDefault(); },
+                            halo: false
+                        },
+                        states: {
+                            hover: {
+                                enabled: false
+                            }
+                        }
+                    }]
+            });
+        }
+
+        var $series;
+        var chart;
+        var $ = jQuery;
+
+        $(document).ready( function ( e ) {
+            
+            create_chart();
+
+            chart = $('#contacts_chart').highcharts();
+            create_weekends();
+        });
+
+        var delay = (function(){
+          var timer = 0;
+          return function(callback, ms){
+            clearTimeout (timer);
+            timer = setTimeout(callback, ms);
+          };
+        })();
+
+        // Takes care of figuring out the weekend widths based on the new column widths
+        $(window).resize(function() {
+            hide_weekends();
+            height = chart.height
+            width = $("#contacts_chart").width();
+            chart.setSize(width, height);
+            delay(function(){
+                create_weekends();
+            }, 500);
+        });
+        
+        </script>
+        <?php
+    }
 }
 
 ?>

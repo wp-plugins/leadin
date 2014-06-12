@@ -57,8 +57,6 @@ class WPLeadInContacts extends WPLeadIn {
 
 		global $leadin_contacts;
 		$leadin_contacts = $this;
-
-		add_action('admin_print_scripts', array(&$this, 'add_leadin_contacts_admin_scripts'));
 	}
 
 	public function admin_init ( )
@@ -71,24 +69,6 @@ class WPLeadInContacts extends WPLeadIn {
 	{
 		$this->admin->power_up_setup_callback();
 	}
-
-	//=============================================
-	// Scripts & Styles
-	//=============================================
-
-	/**
-     * Adds admin javascript
-     */
-    function add_leadin_contacts_admin_scripts ()
-    {
-        global $pagenow;
-
-        if ( $pagenow == 'admin.php' && isset($_GET['page']) && strstr($_GET['page'], "leadin") ) 
-        {
-        	wp_register_script('leadin-contacts-admin-js', LEADIN_CONTACTS_PATH . '/admin/js/leadin-contacts-admin.js', array ( 'jquery' ), FALSE, TRUE);
-            wp_enqueue_script('leadin-contacts-admin-js');
-        }
-    }
 }
 
 //=============================================

@@ -200,8 +200,8 @@ function leadin_track_plugin_registration_hook ( $activated )
  *
  * @return  array
  */
-function leadin_track_plugin_activity ( $activity_desc )
-{
+function leadin_track_plugin_activity ( $activity_desc, $custom_properties = array() )
+{   
     $leadin_user = leadin_get_current_user();
 
     global $wp_version;
@@ -209,8 +209,17 @@ function leadin_track_plugin_activity ( $activity_desc )
     get_currentuserinfo();
     $user_id = md5(get_bloginfo('wpurl'));
 
+    $default_properties = array(
+        "distinct_id" => $user_id,
+        '$wp-url' => get_bloginfo('wpurl'),
+        '$wp-version' => $wp_version,
+        '$li-version' => LEADIN_PLUGIN_VERSION
+    );
+
+    $properties = array_merge((array)$default_properties, (array)$custom_properties);
+
     $mp = new LI_Mixpanel(MIXPANEL_PROJECT_TOKEN);
-    $mp->track($activity_desc, array("distinct_id" => $user_id, '$wp-url' => get_bloginfo('wpurl'), '$wp-version' => $wp_version, '$li-version' => LEADIN_PLUGIN_VERSION));
+    $mp->track($activity_desc, $properties);
 
     return true;
 }
@@ -443,8 +452,50 @@ function leadin_encode_quotes ( $string )
  */
 function leadin_strip_params_from_url ( $url ) 
 { 
+    /*$url_parts = parse_url($url);
+    $base_url .= ( isset($url_parts['host']) ? : rtrim($url_parts['host'] . '/' . ltrim($url_parts['path'], '/'), '/'));
+    $base_url = urldecode($base_url);*/
+
     $url_parts = parse_url($url);
-    $base_url = urldecode(rtrim($url_parts['host'] . '/' . ltrim($url_parts['path'], '/'), '/'));
+    $base_url = ( isset($url_parts['host']) ? 'http://' . rtrim($url_parts['host'], '/') : '' ); 
+    $base_url .= ( isset($url_parts['path']) ? '/' . ltrim($url_parts['path'], '/') : '' ); 
+
+        ltrim($url_parts['path'], '/');
+    $base_url = urldecode(ltrim($base_url, '/'));
+
+
     return $base_url;
 }
+
+/**
+ * Search an object by for a value and return the associated index key
+ *
+ * @param   object 
+ * @param   string
+ * @param   string
+ * @return  key for array index if present, false otherwise
+ */
+function leadin_search_object_by_value ( $haystack, $needle, $search_key )
+{
+   foreach ( $haystack as $key => $value )
+   {
+      if ( $value->$search_key === $needle )
+         return $key;
+   }
+
+   return FALSE;
+}
+
+/**
+ * Check if date is a weekend day
+ *
+ * @param   string
+ * @return  bool
+ */
+function leadin_is_weekend ( $date )
+{
+    return (date('N', strtotime($date)) >= 6);
+}
+
+
 ?>
