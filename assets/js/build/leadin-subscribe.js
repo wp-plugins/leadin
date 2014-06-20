@@ -356,7 +356,6 @@ jQuery(document).ready( function ( $ ) {
                 }
                 else
                 {
-                    alert('ignore ' + ignore_date);
                     $.cookie("li_subscribe", 'ignore', {path: "/", domain: "", expires: ignore_date});
                 }
             });

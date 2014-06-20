@@ -497,5 +497,26 @@ function leadin_is_weekend ( $date )
     return (date('N', strtotime($date)) >= 6);
 }
 
+/**
+ * Get the lead_status types from the leads table
+ *
+ * @return  array
+ */
+function leadin_get_contact_types ( $date )
+{
+    global $wpdb;
+
+    $q = $wpdb->prepare("SELECT `COLUMN_TYPE` FROM `information_schema`.`COLUMNS`
+    WHERE `TABLE_SCHEMA` = %s
+    AND `TABLE_NAME`   = 'li_leads'
+    AND `COLUMN_NAME`  = 'lead_status';", DB_NAME);
+
+    $row = $wpdb->get_row($q);
+    $set = $row->COLUMN_TYPE;
+    $set  = substr($set,5,strlen($set)-7);
+
+    return preg_split("/','/",$set);
+}
+
 
 ?>
