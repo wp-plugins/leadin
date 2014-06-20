@@ -169,8 +169,16 @@ class LI_List_Table extends WP_List_Table {
     function get_bulk_actions ()
     {
         $actions = array(
+            'change_status_to_contact' => 'Change status to contact',
+            'change_status_to_comment' => 'Change status to commenter',
+            'change_status_to_subscribe' => 'Change status to subscriber',
+            'change_status_to_lead' => 'Change status to lead',
+            'change_status_to_contacted' => 'Change status to contacted',
+            'change_status_to_customer' => 'Change status to customer',
             'delete'    => 'Delete'
+
         );
+
         return $actions;
     }
     
@@ -180,43 +188,50 @@ class LI_List_Table extends WP_List_Table {
     function process_bulk_action ()
     {
         global $wpdb;
-        $ids_to_delete = '';
-        $hashes_to_delete = '';
+        $ids_for_action = '';
+        $hashes_for_action = '';
 
         if ( isset ($_GET['contact']) )
         {
             for ( $i = 0; $i < count($_GET['contact']); $i++ )
             {
-               $ids_to_delete .= $_GET['contact'][$i];;
+               $ids_for_action .= $_GET['contact'][$i];;
 
                if ( $i != (count($_GET['contact'])-1) )
-                    $ids_to_delete .= ',';
+                    $ids_for_action .= ',';
             }
 
-            $q = $wpdb->prepare("SELECT hashkey FROM li_leads WHERE lead_id IN ( " . $ids_to_delete . " )", "");
+            $q = $wpdb->prepare("SELECT hashkey FROM li_leads WHERE lead_id IN ( " . $ids_for_action . " )", "");
             $hashes = $wpdb->get_results($q);
 
             if ( count($hashes) )
             {
                 for ( $i = 0; $i < count($hashes); $i++ )
                 {
-                     $hashes_to_delete .= "'". $hashes[$i]->hashkey. "'";
+                     $hashes_for_action .= "'". $hashes[$i]->hashkey. "'";
 
                    if ( $i != (count($hashes)-1) )
-                        $hashes_to_delete .= ",";
+                        $hashes_for_action .= ",";
                 }
 
                 //Detect when a bulk action is being triggered...
                 if( 'delete' === $this->current_action() )
                 {
-                    $q = $wpdb->prepare("UPDATE li_pageviews SET pageview_deleted  = 1 WHERE lead_hashkey IN (" . $hashes_to_delete . ")", "");
+                    $q = $wpdb->prepare("UPDATE li_pageviews SET pageview_deleted  = 1 WHERE lead_hashkey IN (" . $hashes_for_action . ")", "");
                     $delete_pageviews = $wpdb->query($q);
 
-                    $q = $wpdb->prepare("UPDATE li_submissions SET form_deleted  = 1 WHERE lead_hashkey IN (" . $hashes_to_delete . ")", "");
+                    $q = $wpdb->prepare("UPDATE li_submissions SET form_deleted  = 1 WHERE lead_hashkey IN (" . $hashes_for_action . ")", "");
                     $delete_submissions = $wpdb->query($q);
 
-                    $q = $wpdb->prepare("UPDATE li_leads SET lead_deleted  = 1 WHERE lead_id IN (" . $ids_to_delete . ")", "");
+                    $q = $wpdb->prepare("UPDATE li_leads SET lead_deleted  = 1 WHERE lead_id IN (" . $ids_for_action . ")", "");
                     $delete_leads = $wpdb->query($q);
+                }
+                else if ( strstr($this->current_action(), 'change_status_to_') )
+                {
+                    $new_status = str_replace('change_status_to_', '', $this->current_action());
+
+                    $q = $wpdb->prepare("UPDATE li_leads SET lead_status = %s WHERE lead_id IN (" . $ids_for_action . ")", $new_status);
+                    $wpdb->query($q);
                 }
             }
         }
@@ -227,7 +242,7 @@ class LI_List_Table extends WP_List_Table {
      *
      * @return  array           associative array of all contacts
      */
-    function get_leads ()
+    function get_contacts ()
     {
         /*** 
             == FILTER ARGS ==
@@ -254,7 +269,7 @@ class LI_List_Table extends WP_List_Table {
         }
         else 
         {
-            $mysql_contact_type_filter = " AND ( l.lead_status = 'lead' OR l.lead_status = 'comment' OR l.lead_status = 'subscribe') ";
+            $mysql_contact_type_filter = " AND ( l.lead_status = 'comment' OR l.lead_status = 'subscribe' OR l.lead_status = 'lead' OR l.lead_status = 'contacted' OR l.lead_status = 'customer' ) ";
         }
 
         // filter for visiting a specific page
@@ -325,12 +340,18 @@ class LI_List_Table extends WP_List_Table {
         {
             foreach ( $leads as $key => $lead ) 
             {
-                $lead_status = 'Lead';
+                $lead_status = 'Contact';
 
                 if ( $lead->lead_status == 'subscribe' )
                     $lead_status = 'Subscriber';
                 else if ( $lead->lead_status == 'comment' )
                     $lead_status = 'Commenter';
+                else if ( $lead->lead_status == 'lead' )
+                    $lead_status = 'Lead';
+                else if ( $lead->lead_status == 'contacted' )
+                    $lead_status = 'Contacted';
+                else if ( $lead->lead_status == 'customer' )
+                    $lead_status = 'Customer';
 
                 // filter for number of page views and skipping lead if it doesn't meet the minimum
                 if ( isset($_GET['filter_action']) && $_GET['filter_action'] == 'num_pageviews' )
@@ -377,14 +398,15 @@ class LI_List_Table extends WP_List_Table {
                 COUNT(DISTINCT lead_email) AS total_contacts,
                 ( SELECT COUNT(DISTINCT lead_email) FROM li_leads WHERE lead_status = 'lead' AND lead_email != '' AND lead_deleted = 0 ) AS total_leads,
                 ( SELECT COUNT(DISTINCT lead_email) FROM li_leads WHERE lead_status = 'comment' AND lead_email != '' AND lead_deleted = 0 ) AS total_comments,
-                ( SELECT COUNT(DISTINCT lead_email) FROM li_leads WHERE lead_status = 'subscribe' AND lead_email != '' AND lead_deleted = 0 ) AS total_subscribes
+                ( SELECT COUNT(DISTINCT lead_email) FROM li_leads WHERE lead_status = 'subscribe' AND lead_email != '' AND lead_deleted = 0 ) AS total_subscribes,
+                ( SELECT COUNT(DISTINCT lead_email) FROM li_leads WHERE lead_status = 'contacted' AND lead_email != '' AND lead_deleted = 0 ) AS total_contacted,
+                ( SELECT COUNT(DISTINCT lead_email) FROM li_leads WHERE lead_status = 'customer' AND lead_email != '' AND lead_deleted = 0 ) AS total_customers
             FROM 
                 li_leads
             WHERE
                 lead_email != '' AND lead_deleted = 0";
 
         $totals = $wpdb->get_row($q);
-
         return $totals;
     }
 
@@ -422,34 +444,44 @@ class LI_List_Table extends WP_List_Table {
      */
     function get_views ()
     {
-       $views = array();
-       $this->totals = $this->get_contact_type_totals();
+        $views = array();
+        $this->totals = $this->get_contact_type_totals();
 
-       $current = ( !empty($_GET['contact_type']) ? html_entity_decode($_GET['contact_type']) : 'all' );
-       $all_params = array( 'contact_type', 's', 'paged', '_wpnonce', '_wpreferrer', '_wp_http_referer', 'action', 'action2', 'filter_action', 'filter_content');
-       $all_url = remove_query_arg($all_params);
+        $current = ( !empty($_GET['contact_type']) ? html_entity_decode($_GET['contact_type']) : 'all' );
+        $all_params = array( 'contact_type', 's', 'paged', '_wpnonce', '_wpreferrer', '_wp_http_referer', 'action', 'action2', 'filter_action', 'filter_content', 'contact');
+        $all_url = remove_query_arg($all_params);
 
-       // All link
-       $class = ( $current == 'all' ? ' class="current"' :'' );
-       $views['all'] = "<a href='{$all_url }' {$class} >" . ( $this->totals->total_leads + $this->totals->total_comments + $this->totals->total_subscribes ) .  " total contacts</a>";
+        // All link
+        $class = ( $current == 'all' ? ' class="current"' :'' );
+        $views['all'] = "<a href='{$all_url }' {$class} >" . ( $this->totals->total_leads + $this->totals->total_comments + $this->totals->total_subscribes + $this->totals->total_contacted + $this->totals->total_customers ) .  " total contacts</a>";
 
-       // Leads link
-       $leads_url = add_query_arg('contact_type','lead', $all_url);
-       $class = ( $current == 'lead' ? ' class="current"' :'' );
-       $views['contacts'] = "<a href='{$leads_url}' {$class} >" . leadin_single_plural_label($this->totals->total_leads, 'lead', 'leads') .  "</a>";
+        // Commenters link
+        $comments_url = add_query_arg('contact_type','comment', $all_url);
+        $class = ( $current == 'comment' ? ' class="current"' :'' );
+        $views['commenters'] = "<a href='{$comments_url}' {$class} >" . leadin_single_plural_label($this->totals->total_comments, 'commenter', 'commenters') .  "</a>";
 
-       // Commenters link
-       
-       $comments_url = add_query_arg('contact_type','comment', $all_url);
-       $class = ( $current == 'comment' ? ' class="current"' :'' );
-       $views['commenters'] = "<a href='{$comments_url}' {$class} >" . leadin_single_plural_label($this->totals->total_comments, 'commenter', 'commenters') .  "</a>";
+        // Subscribers link
+        $subscribers_url = add_query_arg('contact_type','subscribe', $all_url);
+        $class = ( $current == 'subscribe' ? ' class="current"' :'' );
+        $views['subscribe'] = "<a href='{$subscribers_url}' {$class} >" . leadin_single_plural_label($this->totals->total_subscribes, 'subscriber', 'subscribers') .  "</a>";
 
-       // Commenters link
-       $subscribers_url = add_query_arg('contact_type','subscribe', $all_url);
-       $class = ( $current == 'subscribe' ? ' class="current"' :'' );
-       $views['subscribe'] = "<a href='{$subscribers_url}' {$class} >" . leadin_single_plural_label($this->totals->total_subscribes, 'subscriber', 'subscribers') .  "</a>";
+        // Leads link
+        $leads_url = add_query_arg('contact_type','lead', $all_url);
+        $class = ( $current == 'lead' ? ' class="current"' :'' );
+        $views['contacts'] = "<a href='{$leads_url}' {$class} >" . leadin_single_plural_label($this->totals->total_leads, 'lead', 'leads') .  "</a>";
 
-       return $views;
+        // Contacted link
+        $contacted_url = add_query_arg('contact_type','contacted', $all_url);
+        $class = ( $current == 'contacted' ? ' class="current"' :'' );
+        $views['contacted'] = "<a href='{$contacted_url}' {$class} >" . leadin_single_plural_label($this->totals->total_contacted, 'contacted', 'contacted') .  "</a>";
+
+        // Customers link
+        $customers_url = add_query_arg('contact_type','customer', $all_url);
+        $class = ( $current == 'customer' ? ' class="current"' :'' );
+        $views['customer'] = "<a href='{$customers_url}' {$class} >" . leadin_single_plural_label($this->totals->total_customers, 'customer', 'customers') .  "</a>";
+
+
+        return $views;
     }
 
     /**
@@ -459,28 +491,39 @@ class LI_List_Table extends WP_List_Table {
     {
         $this->views = $this->get_views();
         $this->views = apply_filters( 'views_' . $this->screen->id, $this->views );
-
         $this->current_view = $this->get_view();
 
-        if ( $this->current_view == 'lead' )
+        switch ( $this->current_view )
         {
-            $this->view_label = 'Leads';
-            $this->view_count = $this->totals->total_leads;
-        }
-        else if ( $this->current_view == 'comment' )
-        {
-            $this->view_label = 'Commenters';
-            $this->view_count = $this->totals->total_comments;
-        }
-        else if ( $this->current_view == 'subscribe' )
-        {
-            $this->view_label = 'Subscribers';
-            $this->view_count = $this->totals->total_subscribes;
-        }
-        else
-        {
-            $this->view_label = 'Contacts';
-            $this->view_count = $this->totals->total_leads + $this->totals->total_comments + $this->totals->total_subscribes;
+            case 'comment' : 
+                $this->view_label = 'Commenters';
+                $this->view_count = $this->totals->total_comments;
+            break;
+
+            case 'subscribe' : 
+                $this->view_label = 'Subscribers';
+                $this->view_count = $this->totals->total_subscribes;
+            break;
+
+            case 'lead' : 
+                $this->view_label = 'Leads';
+                $this->view_count = $this->totals->total_leads;
+            break;
+
+            case 'contacted' : 
+                $this->view_label = 'Contacted';
+                $this->view_count = $this->totals->total_contacted;
+            break;
+
+            case 'customer' : 
+                $this->view_label = 'Customers';
+                $this->view_count = $this->totals->total_customers;
+            break;
+
+            default:
+                $this->view_label = 'Contacts';
+                $this->view_count = $this->totals->total_leads + $this->totals->total_comments + $this->totals->total_subscribes + $this->totals->total_contacted + $this->totals->total_customers;
+            break;
         }
 
         if ( empty( $this->views ) )
@@ -507,7 +550,6 @@ class LI_List_Table extends WP_List_Table {
 
         ?>
             <form id="leadin-contacts-filter" class="leadin-contacts__filter" method="GET">
-
                 <h3 class="leadin-contacts__filter-text">
                     Viewing <span class="leadin-contacts__filter-count"> <?php echo ( $this->total_filtered != $this->view_count ? $this->total_filtered . '/' : '' ) . strtolower(leadin_single_plural_label($this->view_count, rtrim($this->view_label, 's'), $this->view_label)); ?></span> who 
                     <select class="select2" name="filter_action" id="filter_action" style="width:200px">
@@ -516,6 +558,7 @@ class LI_List_Table extends WP_List_Table {
                     </select>
 
                     <input type="hidden" name="filter_content" class="bigdrop" id="filter_content" style="width:300px" value="<?php echo ( isset($_GET['filter_content']) ? stripslashes($_GET['filter_content']) : '' ); ?>"/>
+                    
                     <input type="submit" name="" id="leadin-contacts-filter-button" class="button action" value="Apply">
 
                     <?php if ( isset($_GET['filter_action']) || isset($_GET['filter_content']) ) : ?>
@@ -528,7 +571,6 @@ class LI_List_Table extends WP_List_Table {
                 <?php endif; ?>
 
                 <input type="hidden" name="page" value="leadin_contacts"/>
-
             </form>
         <?php
     }
@@ -546,7 +588,7 @@ class LI_List_Table extends WP_List_Table {
         $hidden = array();
         $sortable = $this->get_sortable_columns();
         $this->_column_headers = array($columns, $hidden, $sortable);
-        $this->process_bulk_action();
+        
         
         $orderby = ( !empty($_REQUEST['orderby']) ? $_REQUEST['orderby'] : 'last_visit' );
         $order = ( !empty($_REQUEST['order']) ? $_REQUEST['order'] : 'desc' );

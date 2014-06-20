@@ -13,7 +13,8 @@ class LI_Contact {
 	/**
 	 * Class constructor
 	 */
-	function __construct () {
+	function __construct () 
+	{
 
 	}
 
@@ -23,7 +24,8 @@ class LI_Contact {
 	 * @param	int
 	 * @return	string
 	 */
-	function set_hashkey_by_id ( $lead_id ) {
+	function set_hashkey_by_id ( $lead_id ) 
+	{
 		global $wpdb;
 		$q = $wpdb->prepare("SELECT hashkey FROM li_leads WHERE lead_id = %d", $lead_id);
 		$this->hashkey = $wpdb->get_var($q);
@@ -37,7 +39,8 @@ class LI_Contact {
 	 * @param	string
 	 * @return	object 	$history (pageviews_by_session, submission, lead)
 	 */
-	function get_contact_history () {
+	function get_contact_history () 
+	{
 		global $wpdb;
 
 		// Get the contact details
@@ -175,6 +178,7 @@ class LI_Contact {
 		$lead->total_submissions 	= $total_submissions;
 
 		$this->history = (object)NULL;
+		$this->history->submission = $submissions[0];
 		$this->history->sessions = $sessions;
 		$this->history->lead = $lead;
 
@@ -187,7 +191,8 @@ class LI_Contact {
 	 * @param	string
 	 * @return	array
 	 */
-	function sort_by_event_date ( $a, $b ) {
+	function sort_by_event_date ( $a, $b ) 
+	{
 		return $a['event_date'] < $b['event_date'];
 	}
 
@@ -197,13 +202,20 @@ class LI_Contact {
 	 * @param	string
 	 * @return	string
 	 */
-	function frontend_lead_status ( $lead_status = 'lead' ) {
-		if ( $lead_status == 'lead' )
-			return 'Lead';
-		else if ( $lead_status == 'comment' )
+	function frontend_lead_status ( $lead_status = 'contact' ) 
+	{
+		if ( $lead_status == 'comment' )
 			return 'Commenter';
-		else
+		else if ( $lead_status == 'subscribe' )
 			return 'Subscriber';
+		else if ( $lead_status == 'lead' )
+			return 'Lead';
+		else if ( $lead_status == 'contacted' )
+			return 'Contacted';
+		else if ( $lead_status == 'customer' )
+			return 'Customer';
+		else
+			return 'Contact';
 	}
 }
 ?>

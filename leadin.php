@@ -3,7 +3,7 @@
 Plugin Name: LeadIn
 Plugin URI: http://leadin.com
 Description: LeadIn is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
-Version: 1.0.0
+Version: 1.1.0
 Author: Andy Cook, Nelson Joyce
 Author URI: http://leadin.com
 License: GPL2
@@ -23,10 +23,10 @@ if ( !defined('LEADIN_PLUGIN_SLUG') )
 	define('LEADIN_PLUGIN_SLUG', basename(dirname(__FILE__)));
 
 if ( !defined('LEADIN_DB_VERSION') )
-	define('LEADIN_DB_VERSION', '0.8.3');
+	define('LEADIN_DB_VERSION', '1.1.0');
 
 if ( !defined('LEADIN_PLUGIN_VERSION') )
-	define('LEADIN_PLUGIN_VERSION', '1.0.0');
+	define('LEADIN_PLUGIN_VERSION', '1.1.0');
 
 if ( !defined('MIXPANEL_PROJECT_TOKEN') )
     define('MIXPANEL_PROJECT_TOKEN', 'a9615503ec58a6bce2c646a58390eac1');
@@ -121,17 +121,6 @@ class WPLeadIn {
 			update_option('leadin_active_power_ups', serialize($auto_activate));
 		}
 
-		// 0.4.0 upgrade - Delete legacy db option version 0.4.0 (remove after beta testers upgrade)
-        if ( get_option('leadin_db_version') )
-            delete_option('leadin_db_version');
-
-		// 0.4.0 upgrade - Delete legacy options version 0.4.0 (remove after beta testers upgrade)
-        if ( $li_legacy_options = get_option('leadin_plugin_options') )
-        {
-        	leadin_update_option('leadin_options', 'li_email', $li_legacy_options['li_email']);
-            delete_option('leadin_plugin_options');
-        }
-
         leadin_track_plugin_registration_hook(TRUE);
 	}
 
@@ -162,12 +151,12 @@ class WPLeadIn {
 			  `lead_ip` varchar(40) DEFAULT NULL,
 			  `lead_source` text,
 			  `lead_email` varchar(255) DEFAULT NULL,
-			  `lead_status` set('lead','comment','subscribe') NOT NULL DEFAULT 'lead',
+			  `lead_status` set('contact','lead','comment','subscribe','contacted','customer') NOT NULL DEFAULT 'contact',
 			  `merged_hashkeys` text,
 			  `lead_deleted` int(1) NOT NULL DEFAULT '0',
 			  PRIMARY KEY (`lead_id`),
 			  KEY `hashkey` (`hashkey`)
-			) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=1;
+			) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1;
 
 			CREATE TABLE `li_pageviews` (
 			  `pageview_id` int(11) unsigned NOT NULL AUTO_INCREMENT,
@@ -189,12 +178,14 @@ class WPLeadIn {
 			  `form_page_title` varchar(255) NOT NULL,
 			  `form_page_url` text NOT NULL,
 			  `form_fields` text NOT NULL,
-			  `form_type` set('lead','comment','subscribe') NOT NULL DEFAULT 'lead',
+			  `form_type` set('contact','comment','subscribe') NOT NULL DEFAULT 'contact',
+			  `form_selector_id` mediumtext NOT NULL,
+			  `form_selector_classes` mediumtext NOT NULL,
 			  `form_hashkey` varchar(16) NOT NULL,
 			  `form_deleted` int(1) NOT NULL DEFAULT '0',
 			  PRIMARY KEY (`form_id`),
 			  KEY `lead_hashkey` (`lead_hashkey`)
-			) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=1;";
+			) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;";
 
 		dbDelta($sql);
 
@@ -212,17 +203,6 @@ class WPLeadIn {
 	    // If the plugin version matches the latest version escape the update function
 	    if ( isset ($options['leadin_version']) && $options['leadin_version'] == LEADIN_PLUGIN_VERSION )
 	    	return FALSE;
-	    
-	    // 0.4.0 upgrade - Delete legacy db option version 0.4.0 (remove after beta is launched)
-        if ( get_option('leadin_db_version') )
-            delete_option('leadin_db_version');
-
-		// 0.4.0 upgrade - Delete legacy options version 0.4.0 (remove after beta is launched)
-        if ( $li_legacy_options = get_option('leadin_plugin_options') )
-        {
-        	leadin_update_option('leadin_options', 'li_email', $li_legacy_options['li_email']);
-            delete_option('leadin_plugin_options');
-        }
 
         // 0.5.1 upgrade - Create active power-ups option if it doesn't exist
         $leadin_active_power_ups = get_option('leadin_active_power_ups');
@@ -271,15 +251,12 @@ class WPLeadIn {
 		// Set the database version if it doesn't exist
 	    if ( isset($options['li_db_version']) )
 	    {
-	    	if ( $options['li_db_version'] != LEADIN_DB_VERSION ) {
+	    	if ( $options['li_db_version'] != LEADIN_DB_VERSION ) 
+	    	{
 	        	$this->leadin_db_install();
 
-	        	// 0.4.2 upgrade - After the DB installation converts the set structure from contact to lead, update all the blank contacts = leads
-		    	$q = $wpdb->prepare("UPDATE li_leads SET lead_status = 'lead' WHERE lead_status = 'contact' OR lead_status = ''", "");
-		    	$wpdb->query($q);
-
-		    	// 0.4.2 upgrade - After the DB installation converts the set structure from contact to lead, update all the blank form_type = leads
-		    	$q = $wpdb->prepare("UPDATE li_submissions SET form_type = 'lead' WHERE form_type = 'contact' OR form_type = ''", "");
+		    	// 1.1.0 upgrade - After the DB installation converts the set structure from contact to lead, update all the blank form_type = leads
+		    	$q = $wpdb->prepare("UPDATE li_submissions SET form_type = 'contact' WHERE form_type = 'lead' OR form_type = ''", "");
 		    	$wpdb->query($q);
 	    	}
 	    }
@@ -309,7 +286,7 @@ class WPLeadIn {
 	{
 		if ( !is_admin() )
 		{
-			wp_register_script('leadin-tracking', LEADIN_PATH . '/assets/js/build/leadin-tracking.min.js', array ('jquery'), false, true);
+			wp_register_script('leadin-tracking', LEADIN_PATH . '/assets/js/build/leadin-tracking.min.js', array ('jquery'), FALSE, TRUE);
 			wp_enqueue_script('leadin-tracking');
 			wp_localize_script('leadin-tracking', 'li_ajax', array('ajax_url' => admin_url('admin-ajax.php')));
 		}
@@ -324,7 +301,7 @@ class WPLeadIn {
 		$args = array(
 			'id'     => 'leadin-admin-menu',     // id of the existing child node (New > Post)
 			'title'  => '<span class="ab-icon" '. ( $wp_version < 3.8 && !is_plugin_active('mp6/mp6.php') ? ' style="margin-top: 3px;"' : ''). '><img src="/wp-content/plugins/leadin/images/leadin-svg-icon.svg" style="height:16px; width:16px;"></span><span class="ab-label">LeadIn</span>', // alter the title of existing node
-			'parent' => false,	 // set parent to false to make it a top level (parent) node
+			'parent' => FALSE,	 // set parent to false to make it a top level (parent) node
 			'href' => get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts',
 			'meta' => array('title' => 'LeadIn')
 		);
@@ -335,7 +312,7 @@ class WPLeadIn {
 	/**
      * List available power-ups
      */
-    public static function get_available_power_ups( $min_version = false, $max_version = false ) {
+    public static function get_available_power_ups( $min_version = FALSE, $max_version = FALSE ) {
         static $power_ups = null;
 
         if ( ! isset( $power_ups ) ) {
@@ -418,12 +395,12 @@ class WPLeadIn {
 
 		$file = WPLeadIn::get_power_up_path( WPLeadIn::get_power_up_slug( $power_up ) );
 		if ( ! file_exists( $file ) )
-			return false;
+			return FALSE;
 
 		$pu = get_file_data( $file, $headers );
 
 		if ( empty( $pu['name'] ) )
-			return false;
+			return FALSE;
 
 		$pu['activated'] = self::is_power_up_active($pu['slug']);
 
@@ -444,7 +421,7 @@ class WPLeadIn {
             return $files;
         }
 
-        while ( false !== $file = readdir( $dir ) ) {
+        while ( FALSE !== $file = readdir( $dir ) ) {
             if ( '.' == substr( $file, 0, 1 ) || '.php' != substr( $file, -4 ) ) {
                 continue;
             }
@@ -503,6 +480,64 @@ class WPLeadIn {
 
 		// If it's already active, then don't do it again
 		$active = self::is_power_up_active($power_up_slug);
+		if ( $active )
+			return TRUE;
+
+		$activated_power_ups = get_option('leadin_active_power_ups');
+		
+		if ( $activated_power_ups )
+		{
+			$activated_power_ups = unserialize($activated_power_ups);
+			$activated_power_ups[] = $power_up_slug;
+		}
+		else
+		{
+			$activated_power_ups = array($power_up_slug);
+		}
+
+		update_option('leadin_active_power_ups', serialize($activated_power_ups));
+
+
+		if ( $exit )
+		{
+			exit;
+		}
+
+	}
+
+	public static function deactivate_power_up( $power_up_slug, $exit = TRUE )
+	{
+		if ( ! strlen( $power_up_slug ) )
+			return FALSE;
+
+		// If it's already active, then don't do it again
+		$active = self::is_power_up_active($power_up_slug);
+		if ( ! $active )
+			return TRUE;
+
+		$activated_power_ups = get_option('leadin_active_power_ups');
+		
+		$power_ups_left = leadin_array_delete(unserialize($activated_power_ups), $power_up_slug);
+		update_option('leadin_active_power_ups', serialize($power_ups_left));
+		
+		if ( $exit )
+		{
+			exit;
+		}
+
+	}
+}
+
+//=============================================
+// LeadIn Init
+//=============================================
+
+global $leadin_wp;
+global $li_wp_admin;
+$leadin_wp = new WPLeadIn();
+
+
+?>wer_up_active($power_up_slug);
 		if ( $active )
 			return TRUE;
 

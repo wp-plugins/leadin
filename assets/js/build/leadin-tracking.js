@@ -136,6 +136,8 @@ jQuery(document).ready( function ( $ ) {
 			submission_data.lead_last_name, 
 			submission_data.lead_phone, 
 			submission_data.form_submission_type, 
+			submission_data.form_selector_id, 
+			submission_data.form_selector_classes, 
 			function ( data ) {
 				// Form was submitted successfully before page reload. Delete cookie for this submission
 				$.removeCookie('li_submission', {path: "/", domain: ""});
@@ -193,8 +195,10 @@ function leadin_submit_form ( $form, $, form_type )
 	var lead_first_name = '';
 	var lead_last_name 	= '';
 	var lead_phone 		= '';
-	var form_submission_type = ( form_type ? form_type : 'lead' );
-	var ignore_form = false;
+	var form_submission_type 	= ( form_type ? form_type : 'contact' );
+	var ignore_form 			= false;
+	var form_selector_id 		= ( $form.attr('id') ? $form.attr('id') : '' );
+	var form_selector_classes 	= ( $form.classes() ? $form.classes().join(',') : '' );
 
 	// Excludes hidden input fields + submit inputs
 	$this.find('input[type!="submit"], textarea').not('input[type="hidden"], input[type="radio"], input[type="password"]').each( function ( index ) { 
@@ -405,18 +409,21 @@ function leadin_submit_form ( $form, $, form_type )
 		var hashkey = $.cookie("li_hash");
 		var json_form_fields = JSON.stringify(form_fields);
 
+
 		var form_submission = {};
 		form_submission = {
-			"submission_hash": submission_hash,
-			"hashkey": hashkey,
-			"lead_email": lead_email,
-			"lead_first_name": lead_first_name,
-			"lead_last_name": lead_last_name,
-			"lead_phone": lead_phone,
-			"page_title": page_title,
-			"page_url": page_url,
-			"json_form_fields": json_form_fields,
-			"form_submission_type": form_submission_type,
+			"submission_hash": 	submission_hash,
+			"hashkey": 			hashkey,
+			"lead_email": 		lead_email,
+			"lead_first_name": 	lead_first_name,
+			"lead_last_name": 	lead_last_name,
+			"lead_phone": 		lead_phone,
+			"page_title": 		page_title,
+			"page_url": 		page_url,
+			"json_form_fields": 		json_form_fields,
+			"form_submission_type": 	form_submission_type,
+			"form_selector_id": 		form_selector_id,
+			"form_selector_classes": 	form_selector_classes
 		};
 
 		$.cookie("li_submission", JSON.stringify(form_submission), {path: "/", domain: ""});
@@ -431,7 +438,9 @@ function leadin_submit_form ( $form, $, form_type )
 			lead_first_name, 
 			lead_last_name, 
 			lead_phone, 
-			form_submission_type, 
+			form_submission_type,
+			form_selector_id,
+			form_selector_classes, 
 			function ( data ) {
 				// Form was executed 100% successfully before page reload. Delete cookie for this submission
 				$.removeCookie('li_submission', {path: "/", domain: ""});
@@ -525,23 +534,25 @@ function leadin_insert_lead ( hashkey, page_referrer ) {
 	});
 }
 
-function leadin_insert_form_submission ( submission_haskey, hashkey, page_title, page_url, json_fields, lead_email, lead_first_name, lead_last_name, lead_phone, form_submission_type, Callback )
+function leadin_insert_form_submission ( submission_haskey, hashkey, page_title, page_url, json_fields, lead_email, lead_first_name, lead_last_name, lead_phone, form_submission_type, form_selector_id, form_selector_classes, Callback )
 {
 	jQuery.ajax({
 		type: 'POST',
 		url: li_ajax.ajax_url,
 		data: {
-			"action": "leadin_insert_form_submission", 
+			"action": 			"leadin_insert_form_submission", 
 			"li_submission_id": submission_haskey,
-			"li_id": hashkey,
-			"li_title": page_title,
-			"li_url": page_url,
-			"li_fields": json_fields,
-			"li_email": lead_email,
-			"li_first_name": lead_first_name,
-			"li_last_name": lead_last_name,
-			"li_phone": lead_phone,
-			"li_submission_type": form_submission_type
+			"li_id": 			hashkey,
+			"li_title": 		page_title,
+			"li_url": 			page_url,
+			"li_fields": 		json_fields,
+			"li_email": 		lead_email,
+			"li_first_name": 	lead_first_name,
+			"li_last_name": 	lead_last_name,
+			"li_phone": 		lead_phone,
+			"li_submission_type": 	form_submission_type,
+			"li_form_selector_id": 	form_selector_id,
+			"li_form_selector_classes": form_selector_classes
 		},
 		success: function(data){
 			if ( Callback )
@@ -612,3 +623,25 @@ String.prototype.replaceArray = function(find, replace) {
     });
   }
 }(jQuery));
+
+
+(function ($) {
+    $.fn.classes = function (callback) {
+        var classes = [];
+        $.each(this, function (i, v) {
+            var splitClassName = v.className.split(/\s+/);
+            for (var j in splitClassName) {
+                var className = splitClassName[j];
+                if (-1 === classes.indexOf(className)) {
+                    classes.push(className);
+                }
+            }
+        });
+        if ('function' === typeof callback) {
+            for (var i in classes) {
+                callback(classes[i]);
+            }
+        }
+        return classes;
+    };
+})(jQuery);

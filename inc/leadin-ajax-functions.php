@@ -128,18 +128,20 @@ function leadin_insert_form_submission ()
 {
 	global $wpdb;
 
-	$submission_hash 	= $_POST['li_submission_id'];
-	$hashkey 			= $_POST['li_id'];
-	$page_title 		= $_POST['li_title'];
-	$page_url 			= $_POST['li_url'];
-	$form_json 			= $_POST['li_fields'];
-	$email 				= $_POST['li_email'];
-	$first_name 		= $_POST['li_first_name'];
-	$last_name 			= $_POST['li_last_name'];
-	$phone 				= $_POST['li_phone'];
-	$submission_type 	= $_POST['li_submission_type'];
-	$options 			= get_option('leadin_options');
-	$li_admin_email 	= ( isset($options['li_email']) ) ? $options['li_email'] : '';
+	$submission_hash 		= $_POST['li_submission_id'];
+	$hashkey 				= $_POST['li_id'];
+	$page_title 			= $_POST['li_title'];
+	$page_url 				= $_POST['li_url'];
+	$form_json 				= $_POST['li_fields'];
+	$email 					= $_POST['li_email'];
+	$first_name 			= $_POST['li_first_name'];
+	$last_name 				= $_POST['li_last_name'];
+	$phone 					= $_POST['li_phone'];
+	$submission_type 		= $_POST['li_submission_type'];
+	$form_selector_id 		= $_POST['li_form_selector_id'];
+	$form_selector_classes 	= $_POST['li_form_selector_classes'];
+	$options 				= get_option('leadin_options');
+	$li_admin_email 		= ( isset($options['li_email']) ) ? $options['li_email'] : '';
 
 	// Check to see if the form_hashkey exists, and if it does, don't run the insert or send the email
 	$q = $wpdb->prepare("SELECT form_hashkey FROM li_submissions WHERE form_hashkey = %s AND form_deleted = 0", $submission_hash);
@@ -211,8 +213,7 @@ function leadin_insert_form_submission ()
 			$wpdb->query($q);
 
 			// "Delete" all the old leads from the leads table
-			$q = $wpdb->prepare("UPDATE li_leads SET lead_deleted = 1 WHERE hashkey IN ( $existing_contact_hashkeys )", "");
-			$wpdb->query($q);
+			$wpdb->query("UPDATE li_leads SET lead_deleted = 1 WHERE hashkey IN ( $existing_contact_hashkeys )");
 		}
 
 		// Prevent duplicate form submission entries by deleting existing submissions if it didn't finish the process before the web page refreshed
@@ -223,32 +224,40 @@ function leadin_insert_form_submission ()
 		$result = $wpdb->insert(
 		    'li_submissions',
 		    array(
-		        'form_hashkey' 		=> $submission_hash,
-		        'lead_hashkey' 		=> $hashkey,
-		        'form_page_title' 	=> $page_title,
-		        'form_page_url' 	=> $page_url,
-		        'form_fields' 		=> $form_json,
-		        'form_type' 		=> $submission_type
+		        'form_hashkey' 			=> $submission_hash,
+		        'lead_hashkey' 			=> $hashkey,
+		        'form_page_title' 		=> $page_title,
+		        'form_page_url' 		=> $page_url,
+		        'form_fields' 			=> $form_json,
+		        'form_type' 			=> $submission_type,
+		        'form_selector_id' 		=> $form_selector_id,
+		        'form_selector_classes' => $form_selector_classes
 		    ),
 		    array(
-		        '%s', '%s', '%s', '%s', '%s', '%s'
+		        '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
 		    )
 		);
 
 		$contact_status = $submission_type;
 
-		// Override the status because comment is further down the funnel than lead
-		if ( $contact->lead_status == 'comment' && $submission_type == 'lead' )
-			$contact_status = 'comment';
-		// Override the status because subscribe is further down the funnel than lead and comment
-		else if ( $contact->lead_status == 'subscribe' && ($submission_type == 'lead' || $submission_type == 'comment') )
-			$contact_status = 'subscribe';
+		// If a contact was manually set to a stage in the funnel, don't change it with smart rules
+		if ( $contact->lead_status != 'lead' && $contact->lead_status != 'contacted' && $contact->lead_status != 'customer' )
+		{
+			// Override the status because comment is further down the funnel than contact
+			if ( $contact->lead_status == 'comment' && $submission_type == 'general' )
+				$contact_status = 'comment';
+			// Override the status because subscribe is further down the funnel than contact and comment
+			else if ( $contact->lead_status == 'subscribe' && ($submission_type == 'general' || $submission_type == 'comment') )
+				$contact_status = 'subscribe';
 
-		// Override the status with the merged contacts status if the children have a status further down the funnel
-		if ( $existing_contact_status == 'comment' && $submission_type == 'lead' )
-			$contact_status = 'comment';
-		else if ( $existing_contact_status == 'subscribe' && ($submission_type == 'lead' || $submission_type == 'comment') )
-			$contact_status = 'subscribe';
+			// Override the status with the merged contacts status if the children have a status further down the funnel
+			if ( $existing_contact_status == 'comment' && $submission_type == 'general' )
+				$contact_status = 'comment';
+			else if ( $existing_contact_status == 'subscribe' && ($submission_type == 'general' || $submission_type == 'comment') )
+				$contact_status = 'subscribe';
+		}
+		else
+			$contact_status = $contact->lead_status;
 
 		// Update the contact with the new email, status and merged hashkeys
 		$q = $wpdb->prepare("UPDATE li_leads SET lead_email = %s, lead_status = %s, merged_hashkeys = %s WHERE hashkey = %s", $email, $contact_status, $existing_contact_hashkeys, $hashkey);
@@ -280,15 +289,15 @@ function leadin_insert_form_submission ()
 			$li_emailer->send_new_lead_email($hashkey);
 		}
 
-		if ( $contact_status == "subscribe" )
+		if ( $submission_type == "subscribe" )
 		{
 			// Send the subscription confirmation kickback email
 			$leadin_subscribe_settings = get_option('leadin_subscribe_options');
 			if ( !isset($leadin_subscribe_settings['li_subscribe_confirmation']) || $leadin_subscribe_settings['li_subscribe_confirmation'] )
-				$li_emailer->send_subscriber_confirmation_email($li_emailer->history);
+				$li_emailer->send_subscriber_confirmation_email($hashkey);
 		}
 
-		leadin_track_plugin_activity("New lead", array("contact_type" => $contact_status));
+		leadin_track_plugin_activity("New lead", array("contact_type" => $submission_type));
 
 		return $rows_updated;
 	}

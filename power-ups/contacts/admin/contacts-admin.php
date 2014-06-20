@@ -123,9 +123,12 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                     echo '<input type="hidden" name="lead" value="' . $_GET['lead'] . '">';
                     echo '<label>contact status </label>';
                     echo '<select id="leadin-contact-status" name="contact_status">';
-                        echo '<option value="lead" ' . ( $li_contact->history->lead->lead_status == 'Lead' ? 'selected="selected"' : '' ) . '>lead</option>';
+                        echo '<option value="contact" ' . ( $li_contact->history->lead->lead_status == 'Contact' ? 'selected="selected"' : '' ) . '>contact</option>';
                         echo '<option value="comment" ' . ( $li_contact->history->lead->lead_status == 'Commenter' ? 'selected="selected"' : '' ) . '>commenter</option>';
                         echo '<option value="subscribe" ' . ( $li_contact->history->lead->lead_status == 'Subscriber' ? 'selected="selected"' : '' ) . '>subscriber</option>';
+                        echo '<option value="lead" ' . ( $li_contact->history->lead->lead_status == 'Lead' ? 'selected="selected"' : '' ) . '>lead</option>';
+                        echo '<option value="contacted" ' . ( $li_contact->history->lead->lead_status == 'Contacted' ? 'selected="selected"' : '' ) . '>contacted</option>';
+                        echo '<option value="customer" ' . ( $li_contact->history->lead->lead_status == 'Customer' ? 'selected="selected"' : '' ) . '>customer</option>';
                     echo '</select>';
                     echo '<input type="submit" name="" id="leadin-contact-status-button" class="button action" style="margin-left: 5px;" value="Apply">';
                 echo '</form>';
@@ -244,11 +247,16 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
     {
         global $wp_version;
 
+
+
         //Create an instance of our package class...
         $leadinListTable = new LI_List_table();
+
+        // Process any bulk actions before the contacts are grabbed from the database
+        $leadinListTable->process_bulk_action();
         
         //Fetch, prepare, sort, and filter our data...
-        $leadinListTable->data = $leadinListTable->get_leads();
+        $leadinListTable->data = $leadinListTable->get_contacts();
         $leadinListTable->prepare_items();
 
         ?>
@@ -287,7 +295,17 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                         <!-- Now we can render the completed list table -->
                         <?php $leadinListTable->display() ?>
                     </div>
-                
+
+                    <input type="hidden" name="contact_type" value="<?php echo ( isset($_GET['contact_type']) ? $_GET['contact_type'] : '' ); ?>"/>
+                   
+                    <?php if ( isset($_GET['filter_content']) ) : ?>
+                        <input type="hidden" name="filter_content" value="<?php echo ( isset($_GET['filter_content']) ? stripslashes($_GET['filter_content']) : '' ); ?>"/>
+                    <?php endif; ?>
+
+                    <?php if ( isset($_GET['filter_action']) ) : ?>
+                        <input type="hidden" name="filter_action" value="<?php echo ( isset($_GET['filter_action']) ? $_GET['filter_action'] : '' ); ?>"/>
+                    <?php endif; ?>
+
                 </form>
                 
             </div>
