@@ -4,9 +4,9 @@
 // Include Needed Files
 //=============================================
 
-include_once(LEADIN_PLUGIN_DIR . '/admin/inc/sources/Snowplow/RefererParser/Parser.php');
-include_once(LEADIN_PLUGIN_DIR . '/admin/inc/sources/Snowplow/RefererParser/Referer.php');
-include_once(LEADIN_PLUGIN_DIR . '/admin/inc/sources/Snowplow/RefererParser/Medium.php');
+include_once(LEADIN_PLUGIN_DIR . '/admin/inc/sources/Snowplow/RefererParser/LI_Parser.php');
+include_once(LEADIN_PLUGIN_DIR . '/admin/inc/sources/Snowplow/RefererParser/LI_Referer.php');
+include_once(LEADIN_PLUGIN_DIR . '/admin/inc/sources/Snowplow/RefererParser/LI_Medium.php');
 
 //=============================================
 // WPStatsDashboard Class
@@ -51,7 +51,7 @@ class LI_StatsDashboard {
 
 	function __construct ()
 	{
-		$this->parser = new Parser();
+		$this->parser = new LI_Parser();
 		$this->get_data_last_30_days_graph();
 		$this->get_sources();
 		

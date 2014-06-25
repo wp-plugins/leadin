@@ -269,7 +269,7 @@ class LI_List_Table extends WP_List_Table {
         }
         else 
         {
-            $mysql_contact_type_filter = " AND ( l.lead_status = 'comment' OR l.lead_status = 'subscribe' OR l.lead_status = 'lead' OR l.lead_status = 'contacted' OR l.lead_status = 'customer' ) ";
+            $mysql_contact_type_filter = " AND ( l.lead_status = 'contact' OR l.lead_status = 'comment' OR l.lead_status = 'subscribe' OR l.lead_status = 'lead' OR l.lead_status = 'contacted' OR l.lead_status = 'customer' ) ";
         }
 
         // filter for visiting a specific page
@@ -453,7 +453,7 @@ class LI_List_Table extends WP_List_Table {
 
         // All link
         $class = ( $current == 'all' ? ' class="current"' :'' );
-        $views['all'] = "<a href='{$all_url }' {$class} >" . ( $this->totals->total_leads + $this->totals->total_comments + $this->totals->total_subscribes + $this->totals->total_contacted + $this->totals->total_customers ) .  " total contacts</a>";
+        $views['all'] = "<a href='{$all_url }' {$class} >" . ( $this->totals->total_contacts ) .  " total contacts</a>";
 
         // Commenters link
         $comments_url = add_query_arg('contact_type','comment', $all_url);
@@ -522,7 +522,7 @@ class LI_List_Table extends WP_List_Table {
 
             default:
                 $this->view_label = 'Contacts';
-                $this->view_count = $this->totals->total_leads + $this->totals->total_comments + $this->totals->total_subscribes + $this->totals->total_contacted + $this->totals->total_customers;
+                $this->view_count = $this->totals->total_contacts;
             break;
         }
 
