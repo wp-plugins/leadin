@@ -639,6 +639,14 @@ class WPLeadInAdmin {
                     <a href="mailto:team@leadin.com" target="_blank" class="button button-primary button-large">Suggest an idea</a>
                 </li>
 
+                <li class="powerup">
+                    <h2>LeadIn VIP Program</h2>
+                    <img src="<?php echo LEADIN_PATH; ?>/images/powerup-icon-vip@2x.png" height="80px" width="80px">
+                    <p>Get access to exclusive features and offers for consultants and agencies.</p>
+                    <p><a href="http://leadin.com/vip/" target="_blank">Learn more</a></p>
+                    <a href="http://leadin.com/vip" target="_blank" class="button button-primary button-large">Become a VIP</a>
+                </li>
+
             </ul>
 
         <?php

@@ -1,0 +1,27 @@
+.powerup-list
+    margin: 0
+
+    .powerup
+        border: 2px solid
+        width: 20%
+        min-width: 250px
+        float: left
+        margin: $grid-padding
+        padding: 15px
+        background-color: #f9f9f9
+        border-color: #ccc
+        text-align: center
+        @include border-radius(10px)
+
+        h2, p, img
+            margin: 0
+            padding: 0
+            color: #666
+            margin-bottom: 15px
+
+        &.activated
+            background-color: $teal-background
+            border-color: $teal-dark
+            
+            h2, p
+                color: $teal-dark
