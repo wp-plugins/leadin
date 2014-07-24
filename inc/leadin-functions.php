@@ -281,7 +281,7 @@ function leadin_recover_contact_data ()
 {
     global $wpdb;
 
-    $q = $wpdb->prepare("SELECT * FROM li_submissions AS s LEFT JOIN li_leads AS l ON s.lead_hashkey = l.hashkey WHERE l.hashkey IS NULL AND s.form_fields LIKE '%%%s%%' AND s.form_fields LIKE '%%%s%%' AND form_deleted = 0", '@', '.');
+    $q = $wpdb->prepare("SELECT * FROM li_submissions AS s LEFT JOIN li_leads AS l ON s.lead_hashkey = l.hashkey WHERE l.hashkey IS NULL AND s.form_fields LIKE '%%%s%%' AND s.form_fields LIKE '%%%s%%' AND form_deleted = 0 " . $wpdb->multisite_query, '@', '.');
     $submissions = $wpdb->get_results($q);
 
     if ( count($submissions) )
@@ -297,23 +297,24 @@ function leadin_recover_contact_data ()
                     if ( strstr($object['value'], '@') && strstr($object['value'], '@') && strlen($object['value']) <= 254 )
                     {
                         // check to see if the contact exists and if it does, skip the data recovery
-                        $q = $wpdb->prepare("SELECT lead_email FROM li_leads WHERE lead_email = %s AND lead_deleted = 0", $object['value']);
+                        $q = $wpdb->prepare("SELECT lead_email FROM li_leads WHERE lead_email = %s AND lead_deleted = 0 " . $wpdb->multisite_query, $object['value']);
                         $exists = $wpdb->get_var($q);
 
                         if ( $exists )
                             continue;
 
                         // get the original data
-                        $q = $wpdb->prepare("SELECT pageview_date, pageview_source FROM li_pageviews WHERE lead_hashkey = %s AND pageview_deleted = 0 ORDER BY pageview_date ASC LIMIT 1", $submission->lead_hashkey);
+                        $q = $wpdb->prepare("SELECT pageview_date, pageview_source FROM li_pageviews WHERE lead_hashkey = %s AND pageview_deleted = 0 " . $wpdb->multisite_query . " ORDER BY pageview_date ASC LIMIT 1", $submission->lead_hashkey);
                         $first_pageview = $wpdb->get_row($q);
 
                         // recreate the contact
-                        $q = $wpdb->prepare("INSERT INTO li_leads ( lead_date, hashkey, lead_source, lead_email, lead_status ) VALUES ( %s, %s, %s, %s, %s )",
+                        $q = $wpdb->prepare("INSERT INTO li_leads ( lead_date, hashkey, lead_source, lead_email, lead_status, blog_id ) VALUES ( %s, %s, %s, %s, %s, %d )",
                             ( $first_pageview->pageview_date ? $first_pageview->pageview_date : $submission->form_date), 
                             $submission->lead_hashkey,
                             ( $first_pageview->pageview_source ? $first_pageview->pageview_source : ''),
                             $object['value'], 
-                            $submission->form_type
+                            $submission->form_type,
+                            $wpdb->blogid
                         );
 
                         $wpdb->query($q);
@@ -334,7 +335,7 @@ function leadin_delete_flag_fix ()
 {
     global $wpdb;
 
-    $q = $wpdb->prepare("SELECT lead_email, COUNT(hashkey) c FROM li_leads WHERE lead_email != '' AND lead_deleted = 0 GROUP BY lead_email HAVING c > 1", '');
+    $q = $wpdb->prepare("SELECT lead_email, COUNT(hashkey) c FROM li_leads WHERE lead_email != '' AND lead_deleted = 0 " . $wpdb->multisite_query . " GROUP BY lead_email HAVING c > 1", '');
     $duplicates = $wpdb->get_results($q);
 
     if ( count($duplicates) )
@@ -343,7 +344,7 @@ function leadin_delete_flag_fix ()
         {
             $existing_contact_status = 'lead';
 
-            $q = $wpdb->prepare("SELECT lead_email, hashkey, merged_hashkeys, lead_status FROM li_leads WHERE lead_email = %s AND lead_deleted = 0 ORDER BY lead_date DESC", $duplicate->lead_email);
+            $q = $wpdb->prepare("SELECT lead_email, hashkey, merged_hashkeys, lead_status FROM li_leads WHERE lead_email = %s AND lead_deleted = 0 " . $wpdb->multisite_query . " ORDER BY lead_date DESC", $duplicate->lead_email);
             $existing_contacts = $wpdb->get_results($q);
 
             $newest = $existing_contacts[0];
@@ -388,19 +389,19 @@ function leadin_delete_flag_fix ()
             if ( $existing_contact_hashkey_string )
             {
                 // Set the merged hashkeys with the fixed merged hashkey values
-                $q = $wpdb->prepare("UPDATE li_leads SET merged_hashkeys = %s, lead_status = %s WHERE hashkey = %s", $existing_contact_hashkey_string, $existing_contact_status, $newest->hashkey);
+                $q = $wpdb->prepare("UPDATE li_leads SET merged_hashkeys = %s, lead_status = %s WHERE hashkey = %s " . $wpdb->multisite_query, $existing_contact_hashkey_string, $existing_contact_status, $newest->hashkey);
                 $wpdb->query($q);
 
                 // "Delete" all the old contacts
-                $q = $wpdb->prepare("UPDATE li_leads SET merged_hashkeys = '', lead_deleted = 1 WHERE hashkey IN ( $existing_contact_hashkey_string )", '');
+                $q = $wpdb->prepare("UPDATE li_leads SET merged_hashkeys = '', lead_deleted = 1 WHERE hashkey IN ( $existing_contact_hashkey_string ) " . $wpdb->multisite_query, '');
                 $wpdb->query($q);
 
                 // Set all the pageviews and submissions to the new hashkey just in case
-                $q = $wpdb->prepare("UPDATE li_pageviews SET lead_hashkey = %s WHERE lead_hashkey IN ( $existing_contact_hashkey_string )", $newest->hashkey);
+                $q = $wpdb->prepare("UPDATE li_pageviews SET lead_hashkey = %s WHERE lead_hashkey IN ( $existing_contact_hashkey_string ) " . $wpdb->multisite_query, $newest->hashkey);
                 $wpdb->query($q);
 
                 // Update all the previous submissions to the new hashkey just in case
-                $q = $wpdb->prepare("UPDATE li_submissions SET lead_hashkey = %s WHERE lead_hashkey IN ( $existing_contact_hashkey_string )", $newest->hashkey);
+                $q = $wpdb->prepare("UPDATE li_submissions SET lead_hashkey = %s WHERE lead_hashkey IN ( $existing_contact_hashkey_string ) " . $wpdb->multisite_query, $newest->hashkey);
                 $wpdb->query($q);
             }
         }
@@ -509,7 +510,7 @@ function leadin_get_contact_types ( $date )
     $q = $wpdb->prepare("SELECT `COLUMN_TYPE` FROM `information_schema`.`COLUMNS`
     WHERE `TABLE_SCHEMA` = %s
     AND `TABLE_NAME`   = 'li_leads'
-    AND `COLUMN_NAME`  = 'lead_status';", DB_NAME);
+    AND `COLUMN_NAME`  = 'lead_status' " . $wpdb->multisite_query, DB_NAME);
 
     $row = $wpdb->get_row($q);
     $set = $row->COLUMN_TYPE;

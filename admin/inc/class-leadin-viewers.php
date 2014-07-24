@@ -35,8 +35,8 @@ class LI_Viewers {
 				li_pageviews.pageview_url = %s AND 
 				li_pageviews.lead_hashkey = li_leads.hashkey AND 
 				li_leads.lead_deleted = 0 AND 
-				li_leads.lead_email != '' 
-			GROUP BY 
+				li_leads.lead_email != '' " . $wpdb->prepare(" AND blog_id = %d ", $wpdb->blogid) . 
+			"GROUP BY 
 				li_leads.lead_id
 			ORDER BY 
 				pageview_date DESC", $pageview_url);
@@ -61,8 +61,8 @@ class LI_Viewers {
 				li_submissions.form_page_url = %s AND 
 				li_submissions.lead_hashkey = li_leads.hashkey AND 
 				li_leads.lead_deleted = 0 AND 
-				li_submissions.form_deleted = 0 
-			GROUP BY 
+				li_submissions.form_deleted = 0  " . $wpdb->prepare(" AND blog_id = %d ", $wpdb->blogid) . 
+			"GROUP BY 
 				li_leads.lead_id
 			ORDER BY 
 				form_date DESC", $pageview_url);

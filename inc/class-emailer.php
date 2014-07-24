@@ -169,10 +169,13 @@ class LI_Emailer {
     function build_form_fields ( $form_fields ) {
         $built_form_fields = "";
 
-        foreach ( $form_fields as $field )
+        if ( count($form_fields) )
         {
-            $format = '<p class="lead-timeline__submission-field" style="margin: 0;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;padding: 0;text-align: left;line-height: 19px;font-size: 14px;margin-bottom: 10px;"><label class="lead-timeline__submission-label" style="text-transform: uppercase;font-size: 12px;color: #999;letter-spacing: 0.05em;">%s</label><br/>%s </p>';
-            $built_form_fields .= sprintf($format, $field->label, $field->value);
+            foreach ( $form_fields as $field )
+            {
+                $format = '<p class="lead-timeline__submission-field" style="margin: 0;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;padding: 0;text-align: left;line-height: 19px;font-size: 14px;margin-bottom: 10px;"><label class="lead-timeline__submission-label" style="text-transform: uppercase;font-size: 12px;color: #999;letter-spacing: 0.05em;">%s</label><br/>%s </p>';
+                $built_form_fields .= sprintf($format, $field->label, $field->value);
+            }
         }
         
         return $built_form_fields;

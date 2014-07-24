@@ -188,6 +188,7 @@ class LI_List_Table extends WP_List_Table {
     function process_bulk_action ()
     {
         global $wpdb;
+
         $ids_for_action = '';
         $hashes_for_action = '';
 
@@ -201,7 +202,7 @@ class LI_List_Table extends WP_List_Table {
                     $ids_for_action .= ',';
             }
 
-            $q = $wpdb->prepare("SELECT hashkey FROM li_leads WHERE lead_id IN ( " . $ids_for_action . " )", "");
+            $q = $wpdb->prepare("SELECT hashkey FROM li_leads WHERE lead_id IN ( " . $ids_for_action . " ) " . $wpdb->multisite_query, "");
             $hashes = $wpdb->get_results($q);
 
             if ( count($hashes) )
@@ -217,20 +218,20 @@ class LI_List_Table extends WP_List_Table {
                 //Detect when a bulk action is being triggered...
                 if( 'delete' === $this->current_action() )
                 {
-                    $q = $wpdb->prepare("UPDATE li_pageviews SET pageview_deleted  = 1 WHERE lead_hashkey IN (" . $hashes_for_action . ")", "");
+                    $q = $wpdb->prepare("UPDATE li_pageviews SET pageview_deleted  = 1 WHERE lead_hashkey IN (" . $hashes_for_action . ") " . $wpdb->multisite_query, "");
                     $delete_pageviews = $wpdb->query($q);
 
-                    $q = $wpdb->prepare("UPDATE li_submissions SET form_deleted  = 1 WHERE lead_hashkey IN (" . $hashes_for_action . ")", "");
+                    $q = $wpdb->prepare("UPDATE li_submissions SET form_deleted  = 1 WHERE lead_hashkey IN (" . $hashes_for_action . ") " . $wpdb->multisite_query, "");
                     $delete_submissions = $wpdb->query($q);
 
-                    $q = $wpdb->prepare("UPDATE li_leads SET lead_deleted  = 1 WHERE lead_id IN (" . $ids_for_action . ")", "");
+                    $q = $wpdb->prepare("UPDATE li_leads SET lead_deleted  = 1 WHERE lead_id IN (" . $ids_for_action . ") " . $wpdb->multisite_query, "");
                     $delete_leads = $wpdb->query($q);
                 }
                 else if ( strstr($this->current_action(), 'change_status_to_') )
                 {
                     $new_status = str_replace('change_status_to_', '', $this->current_action());
 
-                    $q = $wpdb->prepare("UPDATE li_leads SET lead_status = %s WHERE lead_id IN (" . $ids_for_action . ")", $new_status);
+                    $q = $wpdb->prepare("UPDATE li_leads SET lead_status = %s WHERE lead_id IN (" . $ids_for_action . ")" . $wpdb->multisite_query, $new_status);
                     $wpdb->query($q);
                 }
             }
@@ -275,7 +276,7 @@ class LI_List_Table extends WP_List_Table {
         // filter for visiting a specific page
         if ( isset($_GET['filter_action']) && $_GET['filter_action'] == 'visited' )
         {
-            $q = $wpdb->prepare("SELECT lead_hashkey FROM li_pageviews WHERE pageview_title LIKE '%%%s%%' GROUP BY lead_hashkey",  htmlspecialchars(urldecode($_GET['filter_content'])));
+            $q = $wpdb->prepare("SELECT lead_hashkey FROM li_pageviews WHERE pageview_title LIKE '%%%s%%' " . $wpdb->multisite_query . " GROUP BY lead_hashkey",  htmlspecialchars(urldecode($_GET['filter_content'])));
             $filtered_contacts = $wpdb->get_results($q);
 
             if ( count($filtered_contacts) )
@@ -291,7 +292,7 @@ class LI_List_Table extends WP_List_Table {
         // filter for a form submitted on a specific page
         if ( isset($_GET['filter_action']) && $_GET['filter_action'] == 'submitted' )
         {
-            $q = $wpdb->prepare("SELECT lead_hashkey FROM li_submissions WHERE form_page_title LIKE '%%%s%%' GROUP BY lead_hashkey", htmlspecialchars(urldecode($_GET['filter_content'])));
+            $q = $wpdb->prepare("SELECT lead_hashkey FROM li_submissions WHERE form_page_title LIKE '%%%s%%' " . $wpdb->multisite_query . " GROUP BY lead_hashkey", htmlspecialchars(urldecode($_GET['filter_content'])));
             $filtered_contacts = $wpdb->get_results($q);
 
             if ( count($filtered_contacts) )
@@ -313,8 +314,8 @@ class LI_List_Table extends WP_List_Table {
                     COUNT(DISTINCT s.form_id) AS lead_form_submissions,
                     COUNT(DISTINCT p.pageview_id) AS lead_pageviews,
                     LOWER(DATE_FORMAT(MAX(p.pageview_date), %s)) AS last_visit,
-                    ( SELECT COUNT(DISTINCT pageview_id) FROM li_pageviews WHERE lead_hashkey = l.hashkey AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS visits,
-                    ( SELECT MAX(pageview_source) AS pageview_source FROM li_pageviews WHERE lead_hashkey = l.hashkey AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS pageview_source 
+                    ( SELECT COUNT(DISTINCT pageview_id) FROM li_pageviews WHERE lead_hashkey = l.hashkey AND pageview_session_start = 1 AND pageview_deleted = 0 " . $wpdb->multisite_query . " ) AS visits,
+                    ( SELECT MAX(pageview_source) AS pageview_source FROM li_pageviews WHERE lead_hashkey = l.hashkey AND pageview_session_start = 1 AND pageview_deleted = 0 " . $wpdb->multisite_query . " ) AS pageview_source 
                 FROM 
                     li_leads l
                 LEFT JOIN li_submissions s ON l.hashkey = s.lead_hashkey
@@ -323,6 +324,7 @@ class LI_List_Table extends WP_List_Table {
 
             $q .= $mysql_contact_type_filter;
             $q .= ( $mysql_search_filter ? $mysql_search_filter : "" );
+            $q .= $wpdb->prepare(" AND l.blog_id = %d ", $wpdb->blogid);
             $q .=  " GROUP BY l.lead_email";
 
             $leads = $wpdb->get_results($q);
@@ -396,15 +398,15 @@ class LI_List_Table extends WP_List_Table {
         $q = "
             SELECT 
                 COUNT(DISTINCT lead_email) AS total_contacts,
-                ( SELECT COUNT(DISTINCT lead_email) FROM li_leads WHERE lead_status = 'lead' AND lead_email != '' AND lead_deleted = 0 ) AS total_leads,
-                ( SELECT COUNT(DISTINCT lead_email) FROM li_leads WHERE lead_status = 'comment' AND lead_email != '' AND lead_deleted = 0 ) AS total_comments,
-                ( SELECT COUNT(DISTINCT lead_email) FROM li_leads WHERE lead_status = 'subscribe' AND lead_email != '' AND lead_deleted = 0 ) AS total_subscribes,
-                ( SELECT COUNT(DISTINCT lead_email) FROM li_leads WHERE lead_status = 'contacted' AND lead_email != '' AND lead_deleted = 0 ) AS total_contacted,
-                ( SELECT COUNT(DISTINCT lead_email) FROM li_leads WHERE lead_status = 'customer' AND lead_email != '' AND lead_deleted = 0 ) AS total_customers
+                ( SELECT COUNT(DISTINCT lead_email) FROM li_leads WHERE lead_status = 'lead' AND lead_email != '' AND lead_deleted = 0 " . $wpdb->multisite_query . " ) AS total_leads,
+                ( SELECT COUNT(DISTINCT lead_email) FROM li_leads WHERE lead_status = 'comment' AND lead_email != '' AND lead_deleted = 0 " . $wpdb->multisite_query . " ) AS total_comments,
+                ( SELECT COUNT(DISTINCT lead_email) FROM li_leads WHERE lead_status = 'subscribe' AND lead_email != '' AND lead_deleted = 0 " . $wpdb->multisite_query . " ) AS total_subscribes,
+                ( SELECT COUNT(DISTINCT lead_email) FROM li_leads WHERE lead_status = 'contacted' AND lead_email != '' AND lead_deleted = 0 " . $wpdb->multisite_query . " ) AS total_contacted,
+                ( SELECT COUNT(DISTINCT lead_email) FROM li_leads WHERE lead_status = 'customer' AND lead_email != '' AND lead_deleted = 0 " . $wpdb->multisite_query . " ) AS total_customers
             FROM 
                 li_leads
             WHERE
-                lead_email != '' AND lead_deleted = 0";
+                lead_email != '' AND lead_deleted = 0 " . $wpdb->multisite_query;
 
         $totals = $wpdb->get_row($q);
         return $totals;
@@ -497,32 +499,32 @@ class LI_List_Table extends WP_List_Table {
         {
             case 'comment' : 
                 $this->view_label = 'Commenters';
-                $this->view_count = $this->totals->total_comments;
+                $this->view_count = number_format($this->totals->total_comments);
             break;
 
             case 'subscribe' : 
                 $this->view_label = 'Subscribers';
-                $this->view_count = $this->totals->total_subscribes;
+                $this->view_count = number_format($this->totals->total_subscribes);
             break;
 
             case 'lead' : 
                 $this->view_label = 'Leads';
-                $this->view_count = $this->totals->total_leads;
+                $this->view_count = number_format($this->totals->total_leads);
             break;
 
             case 'contacted' : 
                 $this->view_label = 'Contacted';
-                $this->view_count = $this->totals->total_contacted;
+                $this->view_count = number_format($this->totals->total_contacted);
             break;
 
             case 'customer' : 
                 $this->view_label = 'Customers';
-                $this->view_count = $this->totals->total_customers;
+                $this->view_count = number_format($this->totals->total_customers);
             break;
 
             default:
                 $this->view_label = 'Contacts';
-                $this->view_count = $this->totals->total_contacts;
+                $this->view_count = number_format($this->totals->total_contacts);
             break;
         }
 
@@ -544,8 +546,6 @@ class LI_List_Table extends WP_List_Table {
      */
     function filters ()
     {
-        global $wpdb;
-
         $filters = $this->get_filters();
 
         ?>
@@ -580,8 +580,6 @@ class LI_List_Table extends WP_List_Table {
      */
     function prepare_items ()
     {
-        global $wpdb;
-
         $per_page = 10;
 
         $columns = $this->get_columns();

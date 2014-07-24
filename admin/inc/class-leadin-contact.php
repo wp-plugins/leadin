@@ -27,7 +27,8 @@ class LI_Contact {
 	function set_hashkey_by_id ( $lead_id ) 
 	{
 		global $wpdb;
-		$q = $wpdb->prepare("SELECT hashkey FROM li_leads WHERE lead_id = %d", $lead_id);
+
+		$q = $wpdb->prepare("SELECT hashkey FROM li_leads WHERE lead_id = %d " . $wpdb->multisite_query, $lead_id);
 		$this->hashkey = $wpdb->get_var($q);
 		
 		return $this->hashkey;
@@ -53,8 +54,8 @@ class LI_Contact {
 				lead_status 
 			FROM 
 				li_leads 
-			WHERE hashkey LIKE %s", '%b %D %l:%i%p', $this->hashkey);
-		
+			WHERE hashkey LIKE %s " . $wpdb->multisite_query, '%b %D %l:%i%p', $this->hashkey);
+
 		$lead = $wpdb->get_row($q);
 
 		// Get all page views for the contact
@@ -69,7 +70,7 @@ class LI_Contact {
 				li_pageviews 
 			WHERE 
 				pageview_deleted = 0 AND
-				lead_hashkey LIKE %s ORDER BY event_date DESC", '%b %D', '%b %D %l:%i%p', $this->hashkey);
+				lead_hashkey LIKE %s " . $wpdb->multisite_query . " ORDER BY event_date DESC", '%b %D', '%b %D %l:%i%p', $this->hashkey);
 
 		$pageviews = $wpdb->get_results($q, ARRAY_A);
 
@@ -86,7 +87,7 @@ class LI_Contact {
 				li_submissions 
 			WHERE 
 				form_deleted = 0 AND 
-				lead_hashkey = '%s' ORDER BY event_date DESC", '%b %D %l:%i%p', $this->hashkey);
+				lead_hashkey = %s " . $wpdb->multisite_query . " ORDER BY event_date DESC", '%b %D %l:%i%p', $this->hashkey);
 		
 		$submissions = $wpdb->get_results($q, ARRAY_A);
 
