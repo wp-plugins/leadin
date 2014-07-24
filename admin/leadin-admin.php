@@ -917,7 +917,7 @@ class WPLeadInAdmin {
                         text: ''
                     },
                     xAxis: {
-                        categories: [ <?php echo $x_axis_labels; ?> ],
+                        categories: [ <?php echo $this->stats_dashboard->x_axis_labels; ?> ],
                         tickInterval: 2,
                         tickmarkPlacement: 'on',
                         labels: {

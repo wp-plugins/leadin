@@ -65,10 +65,10 @@ class LI_StatsDashboard {
 	function get_data_last_30_days_graph ()
 	{
 		global $wpdb;
-		$q = "SELECT DATE(lead_date) as lead_date, COUNT(DISTINCT hashkey) contacts FROM li_leads WHERE lead_email != '' GROUP BY DATE(lead_date)";
+		$q = "SELECT DATE(lead_date) as lead_date, COUNT(DISTINCT hashkey) contacts FROM li_leads WHERE lead_email != '' " . $wpdb->multisite_query . " GROUP BY DATE(lead_date)";
 		$contacts = $wpdb->get_results($q);
 
-		for ( $i = count($contacts); $i >= 0; $i-- )
+		for ( $i = count($contacts)-1; $i >= 0; $i-- )
 		{
 			$this->total_contacts += ( $contacts[$i]->contacts ? $contacts[$i]->contacts : 0);
 			$this->best_day_ever = ( $contacts[$i]->contacts && $contacts[$i]->contacts > $this->best_day_ever ? $contacts[$i]->contacts : $this->best_day_ever);
@@ -120,14 +120,14 @@ class LI_StatsDashboard {
 				DISTINCT lead_hashkey lh,
 				lead_id, 
 				lead_email, 
-				( SELECT COUNT(*) FROM li_pageviews WHERE lead_hashkey = lh ) as pageviews,
-				( SELECT MAX(pageview_source) AS pageview_source FROM li_pageviews WHERE lead_hashkey = lh AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS lead_source 
+				( SELECT COUNT(*) FROM li_pageviews WHERE lead_hashkey = lh " . $wpdb->multisite_query . " ) as pageviews,
+				( SELECT MAX(pageview_source) AS pageview_source FROM li_pageviews WHERE lead_hashkey = lh AND pageview_session_start = 1 AND pageview_deleted = 0 " . $wpdb->multisite_query . " ) AS lead_source 
 			FROM 
 				li_leads, li_pageviews 
 			WHERE 
 				pageview_date >= CURRENT_DATE() AND 
 				li_leads.hashkey = li_pageviews.lead_hashkey AND 
-				pageview_deleted = 0 AND lead_email != '' AND lead_deleted = 0";
+				pageview_deleted = 0 AND lead_email != '' AND lead_deleted = 0 " . $wpdb->prepare(" AND li_leads.blog_id = %d ", $wpdb->blogid);
 
 		return $wpdb->get_results($q);
 	}
@@ -147,7 +147,7 @@ class LI_StatsDashboard {
 			WHERE 
 				lead_date >= CURRENT_DATE() AND 
 				li_leads.hashkey = li_pageviews.lead_hashkey AND 
-				pageview_deleted = 0 AND lead_email != '' AND lead_deleted = 0";
+				pageview_deleted = 0 AND lead_email != '' AND lead_deleted = 0 " . $wpdb->prepare(" AND li_leads.blog_id = %d ", $wpdb->blogid);
 
 		return $wpdb->get_results($q);
 	}
@@ -157,11 +157,11 @@ class LI_StatsDashboard {
 		global $wpdb;
 
 		$q = "SELECT hashkey lh,
-			( SELECT MAX(pageview_source) AS pageview_source FROM li_pageviews WHERE lead_hashkey = lh AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS lead_source 
+			( SELECT MAX(pageview_source) AS pageview_source FROM li_pageviews WHERE lead_hashkey = lh AND pageview_session_start = 1 AND pageview_deleted = 0 " . $wpdb->multisite_query . " ) AS lead_source 
 		 FROM 
 		 	li_leads
 		 WHERE 
-		 	lead_date BETWEEN CURDATE() - INTERVAL 30 DAY AND CURDATE() AND lead_email != ''";
+		 	lead_date BETWEEN CURDATE() - INTERVAL 30 DAY AND CURDATE() AND lead_email != '' " . $wpdb->multisite_query;
 
 		$contacts = $wpdb->get_results($q);
 

@@ -3,7 +3,7 @@
 Plugin Name: LeadIn
 Plugin URI: http://leadin.com
 Description: LeadIn is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
-Version: 1.2.0
+Version: 1.3.0
 Author: Andy Cook, Nelson Joyce
 Author URI: http://leadin.com
 License: GPL2
@@ -23,10 +23,10 @@ if ( !defined('LEADIN_PLUGIN_SLUG') )
 	define('LEADIN_PLUGIN_SLUG', basename(dirname(__FILE__)));
 
 if ( !defined('LEADIN_DB_VERSION') )
-	define('LEADIN_DB_VERSION', '1.1.0');
+	define('LEADIN_DB_VERSION', '1.3.0');
 
 if ( !defined('LEADIN_PLUGIN_VERSION') )
-	define('LEADIN_PLUGIN_VERSION', '1.2.0');
+	define('LEADIN_PLUGIN_VERSION', '1.3.0');
 
 if ( !defined('MIXPANEL_PROJECT_TOKEN') )
     define('MIXPANEL_PROJECT_TOKEN', 'a9615503ec58a6bce2c646a58390eac1');
@@ -83,6 +83,9 @@ class WPLeadIn {
 
 		if ( isset($this->options['beta_tester']) && $this->options['beta_tester'] )
 			$li_wp_updater = new WPLeadInUpdater();
+
+		global $wpdb;
+		$wpdb->multisite_query = ( is_multisite() ? $wpdb->prepare(" AND blog_id = %d ", $wpdb->blogid) : "" );
 	}
 
 	/**
@@ -154,6 +157,7 @@ class WPLeadIn {
 			  `lead_status` set('contact','lead','comment','subscribe','contacted','customer') NOT NULL DEFAULT 'contact',
 			  `merged_hashkeys` text,
 			  `lead_deleted` int(1) NOT NULL DEFAULT '0',
+			  `blog_id` int(11) unsigned NOT NULL,
 			  PRIMARY KEY (`lead_id`),
 			  KEY `hashkey` (`hashkey`)
 			) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1;
@@ -167,6 +171,7 @@ class WPLeadIn {
 			  `pageview_source` text NOT NULL,
 			  `pageview_session_start` int(1) NOT NULL,
 			  `pageview_deleted` int(1) NOT NULL DEFAULT '0',
+			  `blog_id` int(11) unsigned NOT NULL,
 			  PRIMARY KEY (`pageview_id`),
 			  KEY `lead_hashkey` (`lead_hashkey`)
 			) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=1;
@@ -183,9 +188,10 @@ class WPLeadIn {
 			  `form_selector_classes` mediumtext NOT NULL,
 			  `form_hashkey` varchar(16) NOT NULL,
 			  `form_deleted` int(1) NOT NULL DEFAULT '0',
+			  `blog_id` int(11) unsigned NOT NULL,
 			  PRIMARY KEY (`form_id`),
 			  KEY `lead_hashkey` (`lead_hashkey`)
-			) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;";
+			) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1;";
 
 		dbDelta($sql);
 
@@ -256,7 +262,7 @@ class WPLeadIn {
 	        	$this->leadin_db_install();
 
 		    	// 1.1.0 upgrade - After the DB installation converts the set structure from contact to lead, update all the blank form_type = leads
-		    	$q = $wpdb->prepare("UPDATE li_submissions SET form_type = 'contact' WHERE form_type = 'lead' OR form_type = ''", "");
+		    	$q = $wpdb->prepare("UPDATE li_submissions SET form_type = 'contact' WHERE form_type = 'lead' OR form_type = ''" . $wpdb->multisite_query, "");
 		    	$wpdb->query($q);
 	    	}
 	    }
@@ -536,6 +542,7 @@ class WPLeadIn {
 
 global $leadin_wp;
 global $li_wp_admin;
+global $multisite_query;
 $leadin_wp = new WPLeadIn();
 
 ?>

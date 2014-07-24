@@ -338,16 +338,16 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
     {
         global $wpdb;
 
-        $q = $wpdb->prepare("SELECT hashkey FROM li_leads WHERE lead_id = %d", $lead_id);
+        $q = $wpdb->prepare("SELECT hashkey FROM li_leads WHERE lead_id = %d " . $wpdb->multisite_query, $lead_id);
         $lead_hash = $wpdb->get_var($q);
 
-        $q = $wpdb->prepare("UPDATE li_pageviews SET pageview_deleted = 1 WHERE lead_hashkey = %s AND pageview_deleted = 0", $lead_hash);
+        $q = $wpdb->prepare("UPDATE li_pageviews SET pageview_deleted = 1 WHERE lead_hashkey = %s AND pageview_deleted = 0 " . $wpdb->multisite_query, $lead_hash);
         $delete_pageviews = $wpdb->query($q);
 
-        $q = $wpdb->prepare("UPDATE li_submissions SET form_deleted = 1  WHERE lead_hashkey = %s AND form_deleted = 0", $lead_hash);
+        $q = $wpdb->prepare("UPDATE li_submissions SET form_deleted = 1  WHERE lead_hashkey = %s AND form_deleted = 0 " . $wpdb->multisite_query, $lead_hash);
         $delete_submissions = $wpdb->query($q);
 
-        $q = $wpdb->prepare("UPDATE li_leads SET lead_deleted = 1 WHERE lead_id = %d AND lead_deleted = 0", $lead_id);
+        $q = $wpdb->prepare("UPDATE li_leads SET lead_deleted = 1 WHERE lead_id = %d AND lead_deleted = 0 " . $wpdb->multisite_query, $lead_id);
         $delete_lead = $wpdb->query($q);
 
         return $delete_lead;
@@ -364,7 +364,7 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
     {
         global $wpdb;
         
-        $q = $wpdb->prepare("UPDATE li_leads SET lead_status = %s WHERE lead_id = %d", $contact_status, $lead_id);
+        $q = $wpdb->prepare("UPDATE li_leads SET lead_status = %s WHERE lead_id = %d " . $wpdb->multisite_query, $contact_status, $lead_id);
         $result = $wpdb->query($q);
 
         return $result;
@@ -461,7 +461,7 @@ if ( isset($_POST['export-all']) || isset($_POST['export-selected']) )
     // filter for visiting a specific page
     if ( isset($_GET['filter_action']) && $_GET['filter_action'] == 'visited' )
     {
-        $q = $wpdb->prepare("SELECT lead_hashkey FROM li_pageviews WHERE pageview_title LIKE '%%%s%%' GROUP BY lead_hashkey",  htmlspecialchars(urldecode($_GET['filter_content'])));
+        $q = $wpdb->prepare("SELECT lead_hashkey FROM li_pageviews WHERE pageview_title LIKE '%%%s%%' GROUP BY lead_hashkey " . $wpdb->multisite_query,  htmlspecialchars(urldecode($_GET['filter_content'])));
         $filtered_contacts = $wpdb->get_results($q);
 
         if ( count($filtered_contacts) )
@@ -477,7 +477,7 @@ if ( isset($_POST['export-all']) || isset($_POST['export-selected']) )
     // filter for a form submitted on a specific page
     if ( isset($_GET['filter_action']) && $_GET['filter_action'] == 'submitted' )
     {
-        $q = $wpdb->prepare("SELECT lead_hashkey FROM li_submissions WHERE form_page_title LIKE '%%%s%%' GROUP BY lead_hashkey", htmlspecialchars(urldecode($_GET['filter_content'])));
+        $q = $wpdb->prepare("SELECT lead_hashkey FROM li_submissions WHERE form_page_title LIKE '%%%s%%' " . $wpdb->multisite_query . " GROUP BY lead_hashkey", htmlspecialchars(urldecode($_GET['filter_content'])));
         $filtered_contacts = $wpdb->get_results($q);
 
         $filtered_hashkeys = '';
@@ -505,6 +505,7 @@ if ( isset($_POST['export-all']) || isset($_POST['export-selected']) )
 
     $q .= $mysql_contact_type_filter;
     $q .= ( $mysql_search_filter ? $mysql_search_filter : "" );
+    $q .= $wpdb->multisite_query;
     $q .=  " GROUP BY l.lead_email";
 
     $leads = $wpdb->get_results($q);
