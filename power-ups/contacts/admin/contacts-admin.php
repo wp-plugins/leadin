@@ -12,6 +12,8 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
     /**
      * Class constructor
      */
+    var $action;
+
     function __construct ()
     {
         //=============================================
@@ -48,16 +50,100 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
     {
         global  $wp_version;
 
-        $action = $this->leadin_current_action();
-        if ( $action == 'delete' )
+        $this->action = $this->leadin_current_action();
+        if ( $this->action == 'delete' )
         {
             $lead_id = ( isset($_GET['lead']) ? absint($_GET['lead']) : FALSE );
             $this->delete_lead($lead_id);
         }
 
+        if ( isset($_POST['tag_name']) )
+        {
+            $tag_id = ( isset($_POST['tag_id']) ? $_POST['tag_id'] : FALSE );
+            $tagger = new LI_Tag_Editor($tag_id);
+
+            $tag_name           = $_POST['tag_name'];
+            $tag_form_selectors = '';
+            $tag_synced_lists   = array();
+
+            foreach ( $_POST as $name => $value )
+            {
+                if ( strstr($name, 'email_form_tags_') )
+                {
+                    $tag_selector = '';
+                    if ( strstr($name, '_class') )
+                        $tag_selector = str_replace('email_form_tags_class_', '.', $name);
+                    else if ( strstr($name, '_id') )
+                        $tag_selector = str_replace('email_form_tags_id_', '#', $name);
+
+                    if ( $tag_selector )
+                    {
+                        if ( ! strstr($tag_form_selectors, $tag_selector) )
+                            $tag_form_selectors .= $tag_selector . ',';
+                    }
+                }
+                else if ( strstr($name, 'email_list_sync_') )
+                {
+                    $synced_list = '';
+                    if ( strstr($name, '_mailchimp') )
+                        $synced_list = array('esp' => 'mailchimp', 'list_id' => str_replace('email_list_sync_mailchimp_', '', $name), 'list_name' => $value);
+                    else if ( strstr($name, '_constant_contact') )
+                        $synced_list = array('esp' => 'constant_contact', 'list_id' => str_replace('email_list_sync_constant_contact_', '', $name), 'list_name' => $value);
+
+                    array_push($tag_synced_lists, $synced_list);
+                }
+            }
+
+            if ( $_POST['email_form_tags_custom'] )
+            {
+                if ( strstr($_POST['email_form_tags_custom'], ',') )
+                {
+                    foreach ( explode(',', $_POST['email_form_tags_custom']) as $tag )
+                    {
+                        if ( ! strstr($tag_form_selectors, $tag) )
+                            $tag_form_selectors .= $tag . ',';
+                    }
+                }
+                else
+                {
+                    if ( ! strstr($tag_form_selectors, $_POST['email_form_tags_custom']) )
+                        $tag_form_selectors .= $_POST['email_form_tags_custom'] . ',';
+                }
+            }
+
+            // Sanitize the selectors by removing any spaces and any trailing commas
+            $tag_form_selectors = rtrim(str_replace(' ', '', $tag_form_selectors), ',');
+
+            if ( $tag_id )
+            {
+                $tagger->save_tag(
+                    $tag_id,
+                    $tag_name,
+                    $tag_form_selectors,
+                    serialize($tag_synced_lists)
+                );
+            }
+            else
+            {
+                $tagger->tag_id = $tagger->add_tag(
+                    $tag_name,
+                    $tag_form_selectors,
+                    serialize($tag_synced_lists)
+                );
+            }
+        }
+
         echo '<div id="leadin" class="wrap '. ( $wp_version < 3.8 && !is_plugin_active('mp6/mp6.php')  ? 'pre-mp6' : ''). '">';
 
-            if ( $action != 'view' ) {
+            if ( $this->action == 'manage_tags' || $this->action == 'delete_tag' ) {
+                leadin_track_plugin_activity("Loaded Tag List");
+                $this->leadin_render_tag_list_page();
+            }
+            else if ( $this->action == 'edit_tag' || $this->action == 'add_tag' ) {
+                leadin_track_plugin_activity("Loaded Tag Editor");
+                $this->leadin_render_tag_editor();
+            }
+            else if ( $this->action != 'view' ) {
                 leadin_track_plugin_activity("Loaded Contact List Page");
                 $this->leadin_render_list_page();
             }
@@ -65,6 +151,7 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                 leadin_track_plugin_activity("Loaded Contact Detail Page");
                 $this->leadin_render_contact_detail($_GET['lead']);
             }
+
 
             $this->leadin_footer();
 
@@ -93,18 +180,27 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
      */
     function leadin_render_contact_detail ( $lead_id )
     {
-        if ( isset($_GET['contact_status']) )
-        {
-            $this->update_contact_status($lead_id, $_GET['contact_status']);
-        }
-
         $li_contact = new LI_Contact();
         $li_contact->set_hashkey_by_id($lead_id);
         $li_contact->get_contact_history();
-        
         $lead_email = $li_contact->history->lead->lead_email;
-
         $lead_source = leadin_strip_params_from_url($li_contact->history->lead->lead_source);
+
+        if ( isset($_POST['edit_tags']) )
+        {
+            $updated_tags = array();
+
+            foreach ( $_POST as $name => $value )
+            {
+                if ( strstr($name, 'tag_slug_') ) 
+                {
+                    array_push($updated_tags, $value);
+                }
+            }
+
+            $li_contact->update_contact_tags($lead_id, $updated_tags);
+            $li_contact->history->tags = $li_contact->get_contact_tags($li_contact->hashkey);
+        }
 
         if ( isset($_GET['post_id']) )
             echo '<a href="' . get_bloginfo('wpurl') . '/wp-admin/post.php?post=' . $_GET['post_id'] . '&action=edit#li_analytics-meta">&larr; All Viewers</a>';
@@ -112,26 +208,47 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
             echo '<a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_stats">&larr; Stat Dashboard</a>';
         else
             echo '<a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts">&larr; All Contacts</a>';
-
+        
         echo '<div class="contact-header-wrap">';
             echo '<img class="contact-header-avatar leadin-dynamic-avatar_' . substr($lead_id, -1) . '" height="76px" width="76px" src="https://app.getsignals.com/avatar/image/?emails=' . $lead_email . '"/>';
             echo '<div class="contact-header-info">';
                 echo '<h1 class="contact-name">' . $lead_email . '</h1>';
-                echo '<form id="contact-status" class="contact-status">';
-                    echo '<input type="hidden" name="page" value="leadin_contacts">';
-                    echo '<input type="hidden" name="action" value="view">';
-                    echo '<input type="hidden" name="lead" value="' . $_GET['lead'] . '">';
-                    echo '<label>contact status </label>';
-                    echo '<select id="leadin-contact-status" name="contact_status">';
-                        echo '<option value="contact" ' . ( $li_contact->history->lead->lead_status == 'Contact' ? 'selected="selected"' : '' ) . '>contact</option>';
-                        echo '<option value="comment" ' . ( $li_contact->history->lead->lead_status == 'Commenter' ? 'selected="selected"' : '' ) . '>commenter</option>';
-                        echo '<option value="subscribe" ' . ( $li_contact->history->lead->lead_status == 'Subscriber' ? 'selected="selected"' : '' ) . '>subscriber</option>';
-                        echo '<option value="lead" ' . ( $li_contact->history->lead->lead_status == 'Lead' ? 'selected="selected"' : '' ) . '>lead</option>';
-                        echo '<option value="contacted" ' . ( $li_contact->history->lead->lead_status == 'Contacted' ? 'selected="selected"' : '' ) . '>contacted</option>';
-                        echo '<option value="customer" ' . ( $li_contact->history->lead->lead_status == 'Customer' ? 'selected="selected"' : '' ) . '>customer</option>';
-                    echo '</select>';
-                    echo '<input type="submit" name="" id="leadin-contact-status-button" class="button action" style="margin-left: 5px;" value="Apply">';
-                echo '</form>';
+                echo '<div class="contact-tags">';
+                    foreach( $li_contact->history->tags as $tag ) {
+                        if ($tag->tag_set)
+                            echo '<a class="contact-tag" href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts&contact_type=' . $tag->tag_slug . '"><span class="icon-tag"></span>' . $tag->tag_text . '</a>';
+                    }
+                    ?>
+
+                    <?php add_thickbox(); ?>
+                    <div id="edit-contact-tags" style="display:none;">
+                        <h2>Edit Tags - <?php echo $li_contact->history->lead->lead_email; ?></h2>
+                        <form id="edit_tags" action="" method="POST">
+
+                            <?php
+                            
+                            foreach( $li_contact->history->tags as $tag ) 
+                            {
+                                echo '<p>';
+                                    echo '<label for="tag_slug_' . $tag->tag_slug . '">';
+                                    echo '<input name="tag_slug_' . $tag->tag_slug . '" type="checkbox" id="tag_slug_' . $tag->tag_slug . '" value="' . $tag->tag_id . '" ' . ( $tag->tag_set ? ' checked' : '' ) . '>' . $tag->tag_text . '</label>';
+                                echo '</p>';
+                            }
+
+                            ?>
+
+                            <input type="hidden" name="edit_tags" value="1"/>
+                            <p class="submit">
+                                <input type="submit" name="submit" id="submit" class="button button-primary" value="Save Tags">
+                            </p>
+                        </form>
+                    </div>
+
+                    <a class="thickbox contact-edit-tags" href="#TB_inline?width=400&height=400&inlineId=edit-contact-tags">edit tags</a>
+
+                    <?php
+
+                echo '</div>';
             echo '</div>';
         echo '</div>';
         
@@ -185,10 +302,9 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                         else if ( $event['event_type'] == 'form' )
                         {
                             $submission = $event['activities'][0];
-
-                            $form_fields = json_decode(stripslashes($submission['form_fields']));
+                            $form_fields = json_decode($submission['form_fields']);
                             $num_form_fieds = count($form_fields);
-                            
+
                             echo '<li class="event form-submission">';
                                 echo '<div class="event-time">' . date('g:ia', strtotime($submission['event_date'])) . '</div>';
                                 echo '<div class="event-content">';
@@ -200,7 +316,7 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                                         {
                                             echo '<li class="field">';
                                                 echo '<label class="field-label">' . $field->label . ':</label>';
-                                                echo '<p class="field-value">' . $field->value . '</p>';
+                                                echo '<p class="field-value">' . nl2br($field->value) . '</p>';
                                             echo '</li>';
                                         }
                                     }
@@ -221,7 +337,6 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                 echo '<div class="contact-info leadin-postbox">';
                     echo '<div class="leadin-postbox__content">';
                         echo '<p><b>Email:</b> <a href="mailto:' . $lead_email . '">' . $lead_email . '</a></p>';
-                        echo '<p><b>Status:</b> ' . $li_contact->history->lead->lead_status . '</p>';
                         echo '<p><b>Original referrer:</b> ' . ( $li_contact->history->lead->lead_source ? '<a href="' . $li_contact->history->lead->lead_source . '">' . $lead_source . '</a></p>' : 'Direct' );
                         echo '<p><b>First visit:</b> ' . self::date_format_contact_stat($li_contact->history->lead->first_visit) . '</p>';
                         echo '<p><b>Last Visit:</b> ' . self::date_format_contact_stat($li_contact->history->lead->last_visit) . '</p>';
@@ -238,6 +353,240 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
         echo '</div>';
     }
 
+    /**
+     * Creates list table for Contacts page
+     *
+     */
+    function leadin_render_tag_editor ()
+    {
+        ?>
+        <div class="leadin-contacts">
+            <?php
+
+                if ( $this->action == 'edit_tag' || $this->action == 'add_tag' )
+                {
+                    $tag_id = ( isset($_GET['tag']) ? $_GET['tag'] : FALSE);
+                    $tagger = new LI_Tag_Editor($tag_id);
+                }
+
+                if ( $tagger->tag_id )
+                    $tagger->get_tag_details($tagger->tag_id);
+                
+                echo '<a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts&action=manage_tags">&larr; Manage tags</a>';
+                $this->leadin_header(( $this->action == 'edit_tag' ? 'Edit a tag' : 'Add a tag' ), 'leadin-contacts__header');
+            ?>
+
+            <div class="">
+                <form id="leadin-tag-settings" action="<?php echo get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts&action=manage_tags'; ?>" method="POST">
+
+                    <table class="form-table"><tbody>
+                        <tr>
+                            <th scope="row"><label for="tag_name">Tag name</label></th>
+                            <td><input name="tag_name" type="text" id="tag_name" value="<?php echo ( isset($tagger->details->tag_text) ? $tagger->details->tag_text : '' ); ?>" class="regular-text" placeholder="Tag Name"></td>
+                        </tr>
+                        
+                        <tr>
+                            <th scope="row">Automatically tag contacts who fill out any of these forms</th>
+                            <td>
+                                <fieldset>
+                                    <legend class="screen-reader-text"><span>Automatically tag contacts who fill out any of these forms</span></legend>
+                                    <?php 
+                                        $tag_form_selectors = ( isset($tagger->details->tag_form_selectors) ? explode(',', str_replace(' ', '', $tagger->details->tag_form_selectors)) : '');
+                                        
+                                        foreach ( $tagger->selectors as $selector )
+                                        {
+                                            $html_id = 'email_form_tags_' . str_replace(array('#', '.'), array('id_', 'class_'), $selector); 
+                                            $selector_set = FALSE;
+                                            
+                                            if ( isset($tagger->details->tag_form_selectors) && strstr($tagger->details->tag_form_selectors, $selector) )
+                                            {
+                                                $selector_set = TRUE;
+                                                $key = array_search($selector, $tag_form_selectors);
+                                                if ( $key !== FALSE )
+                                                    unset($tag_form_selectors[$key]);
+                                            }
+                                            
+                                            echo '<label for="' . $html_id . '">';
+                                                echo '<input name="' . $html_id . '" type="checkbox" id="' . $html_id . '" value="" ' . ( $selector_set ? 'checked' : '' ) . '>';
+                                                echo $selector;
+                                            echo '</label><br>';
+                                        }
+                                    ?>
+                                </fieldset>
+                                <br>
+                                <input name="email_form_tags_custom" type="text" value="<?php echo ( $tag_form_selectors ? implode(', ', $tag_form_selectors) : ''); ?>" class="regular-text" placeholder="#form-id, .form-class">
+                                <p class="description">Include additional form's css selectors.</p>
+                            </td>
+                        </tr>
+
+                        
+                        <?php
+                            $esp_power_ups = array(
+                                'MailChimp'         => 'mailchimp_list_sync', 
+                                'Constant Contact'  => 'constant_contact_list_sync', 
+                                'AWeber'            => 'aweber_list_sync', 
+                                'GetResponse'       => 'getresponse_list_sync', 
+                                'MailPoet'          => 'mailpoet_list_sync', 
+                                'Campaign Monitor'  => 'campaign_monitor_list_sync'
+                            );
+
+                            foreach ( $esp_power_ups as $power_up_name => $power_up_slug )
+                            {
+                                if ( WPLeadIn::is_power_up_active($power_up_slug) )
+                                {
+                                    global ${'leadin_' . $power_up_slug . '_wp'}; // e.g leadin_mailchimp_list_sync_wp
+                                    $esp_name = strtolower(str_replace('_list_sync', '', $power_up_slug)); // e.g. mailchimp
+                                    $lists = ${'leadin_' . $power_up_slug . '_wp'}->admin->li_get_lists();
+                                    $synced_lists = ( isset($tagger->details->tag_synced_lists) ? unserialize($tagger->details->tag_synced_lists) : '' );
+
+                                    echo '<tr>';
+                                        echo '<th scope="row">Sync tagged contacts with these ' . $power_up_name . ' lists</th>';
+                                        echo '<td>';
+                                            echo '<fieldset>';
+                                                echo '<legend class="screen-reader-text"><span>Sync tagged contacts to with these ' . $power_up_name . ' email lists</span></legend>';
+                                                //
+                                                $esp_name_readable = ucwords(str_replace('_', ' ', $esp_name));
+                                                $esp_url = str_replace('_', '', $esp_name) . '.com';
+
+                                                switch ( $esp_name ) 
+                                                {
+                                                    case 'mailchimp' :
+                                                        $esp_list_url = 'http://admin.mailchimp.com/lists/new-list/';
+                                                        $settings_page_anchor_id = '#li_mls_api_key';
+                                                    break;
+
+                                                    case 'constant_contact' :
+                                                        $esp_list_url = 'https://login.constantcontact.com/login/login.sdo?goto=https://ui.constantcontact.com/rnavmap/distui/contacts';
+                                                        $settings_page_anchor_id = '#li_cc_email';
+                                                    break;
+
+                                                    default:
+                                                        $esp_list_url = '';
+                                                        $settings_page_anchor_id = '';
+                                                    break;
+                                                }
+
+                                                if ( ! ${'leadin_' . $power_up_slug . '_wp'}->admin->authed )
+                                                {
+                                                    echo 'It looks like you haven\'t setup your ' . $esp_name_readable . ' integration yet...<br/><br/>';
+                                                    echo '<a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_settings' . $settings_page_anchor_id . '">Setup your ' . $esp_name_readable . ' integration</a>';
+                                                }
+                                                else if ( count($lists) )
+                                                {
+                                                    foreach ( $lists as $list )
+                                                    {
+                                                        $list_id = $list->id;
+
+                                                        // Hack for constant contact's list id string (e.g. http://api.constantcontact.com/ws/customers/name%40website.com/lists/1234567890) 
+                                                        if ( $power_up_name == 'Constant Contact' )
+                                                            $list_id = end(explode('/', $list_id));
+
+                                                        $html_id = 'email_list_sync_' . $esp_name . '_' . $list_id;
+                                                        $synced = FALSE;
+
+                                                        if ( $synced_lists )
+                                                        {
+                                                            $key = leadin_array_search_deep($list_id, $synced_lists, 'list_id');
+
+                                                            if ( isset($key) )
+                                                            {
+                                                                if ( $synced_lists[$key]['esp'] == $esp_name )
+                                                                    $synced = TRUE;
+                                                            }
+                                                        }
+                                                        
+                                                        echo '<label for="' . $html_id  . '">';
+                                                            echo '<input name="' . $html_id  . '" type="checkbox" id="' . $html_id  . '" value="' . $list->name . '" ' . ( $synced ? 'checked' : '' ) . '>';
+                                                            echo $list->name;
+                                                        echo '</label><br>';
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    echo 'It looks like you don\'t have any ' . $esp_name_readable . 'lists yet...<br/><br/>';
+                                                    echo '<a href="' . $esp_list_url . '" target="_blank">Create a list on ' . $esp_url . '.com</a>';
+                                                }
+                                            echo '</fieldset>';
+                                        echo '</td>';
+                                    echo '</tr>';
+                                }
+                            }
+                        ?>
+                        
+                    </tbody></table>
+                    <input type="hidden" name="tag_id" value="<?php echo $tag_id; ?>"/>
+                    <p class="submit">
+                        <input type="submit" name="submit" id="submit" class="button button-primary" value="Save Changes">
+                    </p>
+                </form>
+            </div>
+
+        </div>
+
+        <?php
+    }
+
+    /**
+     * Creates list table for Contacts page
+     *
+     */
+    function leadin_render_tag_list_page ()
+    {
+        global $wp_version;
+
+        if ( $this->action == 'delete_tag')
+        {
+            $tag_id = ( isset($_GET['tag']) ? $_GET['tag'] : FALSE);
+            $tagger = new LI_Tag_Editor($tag_id);
+            $tagger->delete_tag($tag_id);
+        }
+
+        //Create an instance of our package class...
+        $leadinTagsTable = new LI_Tags_Table();
+
+        // Process any bulk actions before the contacts are grabbed from the database
+        $leadinTagsTable->process_bulk_action();
+        
+        //Fetch, prepare, sort, and filter our data...
+        $leadinTagsTable->data = $leadinTagsTable->get_tags();
+        $leadinTagsTable->prepare_items();
+
+        ?>
+        <div class="leadin-contacts">
+
+            <?php
+                $this->leadin_header('Manage LeadIn Tags <a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts&action=add_tag" class="add-new-h2">Add New</a>', 'leadin-contacts__header');
+            ?>
+            
+            <div class="">
+
+                <!-- Forms are NOT created automatically, so you need to wrap the table in one to use features like bulk actions -->
+                <form id="" method="GET">
+                    <input type="hidden" name="page" value="<?php echo $_REQUEST['page'] ?>" />
+                    
+                    <div class="leadin-contacts__table">
+                        <?php $leadinTagsTable->display();  ?>
+                    </div>
+
+                    <input type="hidden" name="contact_type" value="<?php echo ( isset($_GET['contact_type']) ? $_GET['contact_type'] : '' ); ?>"/>
+                   
+                    <?php if ( isset($_GET['filter_content']) ) : ?>
+                        <input type="hidden" name="filter_content" value="<?php echo ( isset($_GET['filter_content']) ? stripslashes($_GET['filter_content']) : '' ); ?>"/>
+                    <?php endif; ?>
+
+                    <?php if ( isset($_GET['filter_action']) ) : ?>
+                        <input type="hidden" name="filter_action" value="<?php echo ( isset($_GET['filter_action']) ? $_GET['filter_action'] : '' ); ?>"/>
+                    <?php endif; ?>
+
+                </form>
+                
+            </div>
+
+        </div>
+
+        <?php
+    }
+
 
     /**
      * Creates list table for Contacts page
@@ -246,8 +595,6 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
     function leadin_render_list_page ()
     {
         global $wp_version;
-
-
 
         //Create an instance of our package class...
         $leadinListTable = new LI_List_table();
@@ -310,6 +657,30 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                 
             </div>
 
+            <?php add_thickbox(); ?>
+            <div id="bulk-edit-tags" style="display:none;">
+                <h2>Select a tag to add to <span class="selected-contacts-count"></span> <?php echo strtolower($leadinListTable->view_label); ?></h2>
+                <form id="bulk-edit-tags-form" action="" method="POST">
+                    <?php
+                    if ( count($leadinListTable->tags) ) 
+                    {
+                        echo '<select name="bulk_selected_tag">';
+                            foreach( $leadinListTable->tags as $tag )
+                                echo '<option value="' . $tag->tag_slug . '">' . $tag->tag_text . '</option>';
+                        echo '</select>';
+                    }
+                    ?>
+
+                    <input type="hidden" name="bulk_edit_tags" value="1"/>
+                    <input type="hidden" id="bulk-edit-tag-action" name="bulk_edit_tag_action" value=""/>
+                    <input type="hidden" class="leadin-selected-contacts"  name="leadin_selected_contacts" value=""/>
+
+                    <p class="submit">
+                        <input id="bulk-edit-button" type="submit" name="submit" id="submit" class="button button-primary" value="Add Tag">
+                    </p>
+                </form>
+            </div>
+
             <?php
                 $export_button_labels = $leadinListTable->view_label;
 
@@ -320,7 +691,7 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
             <form id="export-form" class="leadin-contacts__export-form" name="export-form" method="POST">
                 <input type="submit" value="<?php esc_attr_e('Export All ' . $export_button_labels ); ?>" name="export-all" id="leadin-export-leads" class="button" <?php echo ( ! count($leadinListTable->data) ? 'disabled' : '' ); ?>>
                 <input type="submit" value="<?php esc_attr_e('Export Selected ' . $export_button_labels ); ?>" name="export-selected" id="leadin-export-selected-leads" class="button" disabled>
-                <input type="hidden" id="leadin-selected-contacts" name="leadin-selected-contacts" value=""/>
+                <input type="hidden" class="leadin-selected-contacts"  name="leadin_selected_contacts" value=""/>
             </form>
 
         </div>
@@ -338,38 +709,20 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
     {
         global $wpdb;
 
-        $q = $wpdb->prepare("SELECT hashkey FROM li_leads WHERE lead_id = %d " . $wpdb->multisite_query, $lead_id);
+        $q = $wpdb->prepare("SELECT hashkey FROM $wpdb->li_leads WHERE lead_id = %d", $lead_id);
         $lead_hash = $wpdb->get_var($q);
 
-        $q = $wpdb->prepare("UPDATE li_pageviews SET pageview_deleted = 1 WHERE lead_hashkey = %s AND pageview_deleted = 0 " . $wpdb->multisite_query, $lead_hash);
+        $q = $wpdb->prepare("UPDATE $wpdb->li_pageviews SET pageview_deleted = 1 WHERE lead_hashkey = %s AND pageview_deleted = 0", $lead_hash);
         $delete_pageviews = $wpdb->query($q);
 
-        $q = $wpdb->prepare("UPDATE li_submissions SET form_deleted = 1  WHERE lead_hashkey = %s AND form_deleted = 0 " . $wpdb->multisite_query, $lead_hash);
+        $q = $wpdb->prepare("UPDATE $wpdb->li_submissions SET form_deleted = 1  WHERE lead_hashkey = %s AND form_deleted = 0", $lead_hash);
         $delete_submissions = $wpdb->query($q);
 
-        $q = $wpdb->prepare("UPDATE li_leads SET lead_deleted = 1 WHERE lead_id = %d AND lead_deleted = 0 " . $wpdb->multisite_query, $lead_id);
+        $q = $wpdb->prepare("UPDATE $wpdb->li_leads SET lead_deleted = 1 WHERE lead_id = %d AND lead_deleted = 0", $lead_id);
         $delete_lead = $wpdb->query($q);
 
         return $delete_lead;
     }
-
-    /**
-     * Updates the contact status
-     *
-     * @param   int
-     * @param   string
-     * @return  bool
-     */
-    function update_contact_status ( $lead_id, $contact_status )
-    {
-        global $wpdb;
-        
-        $q = $wpdb->prepare("UPDATE li_leads SET lead_status = %s WHERE lead_id = %d " . $wpdb->multisite_query, $contact_status, $lead_id);
-        $result = $wpdb->query($q);
-
-        return $result;
-    }
-
 
     //=============================================
     // Admin Styles & Scripts
@@ -429,7 +782,7 @@ if ( isset($_POST['export-all']) || isset($_POST['export-selected']) )
     );
 
     $fields = array(
-        'lead_email', 'lead_source', 'lead_status', 'visits', 'lead_pageviews', 'lead_form_submissions', 'last_visit', 'lead_date'
+        'lead_email', 'lead_source', 'visits', 'lead_pageviews', 'lead_form_submissions', 'last_visit', 'lead_date'
     );
 
     $headers = array();
@@ -439,7 +792,10 @@ if ( isset($_POST['export-all']) || isset($_POST['export-selected']) )
     }
     echo implode(',', $headers) . "\n";
 
-    $mysql_search_filter = '';
+    $mysql_search_filter        = '';
+    $mysql_contact_type_filter  = '';
+    $mysql_action_filter        = '';
+    $filter_action_set          = FALSE;
 
     // search filter
     if ( isset($_GET['s']) )
@@ -448,67 +804,93 @@ if ( isset($_POST['export-all']) || isset($_POST['export-selected']) )
         $mysql_search_filter = $wpdb->prepare(" AND ( l.lead_email LIKE '%%%s%%' OR l.lead_source LIKE '%%%s%%' ) ", like_escape($search_query), like_escape($search_query));
     }
 
+    // @TODO - need to modify the filters to pull down the form ID types
+    
+    $filtered_contacts = array();
+
     // contact type filter
     if ( isset($_GET['contact_type']) )
     {
-        $mysql_contact_type_filter = $wpdb->prepare("AND l.lead_status = %s ", $_GET['contact_type']);
-    }
-    else 
-    {
-        $mysql_contact_type_filter = " AND ( l.lead_status = 'lead' OR l.lead_status = 'comment' OR l.lead_status = 'subscribe') ";
+        // Query for the tag_id, then find all hashkeys with that tag ID tied to them. Use those hashkeys to modify the query
+        $q = $wpdb->prepare("
+            SELECT 
+                DISTINCT ltr.contact_hashkey as lead_hashkey 
+            FROM 
+                $wpdb->li_tag_relationships ltr, $wpdb->li_tags lt 
+            WHERE 
+                lt.tag_id = ltr.tag_id AND 
+                ltr.tag_relationship_deleted = 0 AND  
+                lt.tag_slug = %s GROUP BY ltr.contact_hashkey",  $_GET['contact_type']);
+
+        $filtered_contacts = $wpdb->get_results($q, 'ARRAY_A');
+        $num_contacts = count($filtered_contacts);
     }
 
-    // filter for visiting a specific page
     if ( isset($_GET['filter_action']) && $_GET['filter_action'] == 'visited' )
     {
-        $q = $wpdb->prepare("SELECT lead_hashkey FROM li_pageviews WHERE pageview_title LIKE '%%%s%%' GROUP BY lead_hashkey " . $wpdb->multisite_query,  htmlspecialchars(urldecode($_GET['filter_content'])));
-        $filtered_contacts = $wpdb->get_results($q);
-
-        if ( count($filtered_contacts) )
+        if ( isset($_GET['filter_content']) && $_GET['filter_content'] != 'any page' )
         {
-            $filtered_hashkeys = '';
-            for ( $i = 0; $i < count($filtered_contacts); $i++ )
-                $filtered_hashkeys .= "'" . $filtered_contacts[$i]->lead_hashkey . "'" . ( $i != (count($filtered_contacts) - 1) ? ', ' : '' );
-        
-            $mysql_search_filter = " AND l.hashkey IN ( " . $filtered_hashkeys . " ) ";
+            $q = $wpdb->prepare("SELECT lead_hashkey FROM $wpdb->li_pageviews WHERE pageview_title LIKE '%%%s%%' GROUP BY lead_hashkey",  htmlspecialchars(urldecode($_GET['filter_content'])));
+            $filtered_contacts = leadin_merge_filtered_contacts($wpdb->get_results($q, 'ARRAY_A'), $filtered_contacts);
+            $filter_action_set = TRUE;
         }
     }
     
     // filter for a form submitted on a specific page
     if ( isset($_GET['filter_action']) && $_GET['filter_action'] == 'submitted' )
     {
-        $q = $wpdb->prepare("SELECT lead_hashkey FROM li_submissions WHERE form_page_title LIKE '%%%s%%' " . $wpdb->multisite_query . " GROUP BY lead_hashkey", htmlspecialchars(urldecode($_GET['filter_content'])));
-        $filtered_contacts = $wpdb->get_results($q);
+        $filter_form = '';
+        if ( isset($_GET['filter_form']) && $_GET['filter_form'] && $_GET['filter_form'] != 'any form' )
+        {
+            $filter_form = str_replace(array('#', '.'), '', htmlspecialchars(urldecode($_GET['filter_form'])));
+            $filter_form_query = $wpdb->prepare(" AND ( form_selector_id LIKE '%%%s%%' OR form_selector_classes LIKE '%%%s%%' )", $filter_form, $filter_form);
+        }
 
-        $filtered_hashkeys = '';
-        for ( $i = 0; $i < count($filtered_contacts); $i++ )
-            $filtered_hashkeys .= "'" . $filtered_contacts[$i]->lead_hashkey . "'" . ( $i != (count($filtered_contacts) - 1) ? ', ' : '' );
-    
-        $mysql_search_filter = " AND l.hashkey IN ( " . $filtered_hashkeys . " ) ";
+        $q = $wpdb->prepare("SELECT lead_hashkey FROM $wpdb->li_submissions WHERE form_page_title LIKE '%%%s%%' ", ( $_GET['filter_content'] != 'any page' ? htmlspecialchars(urldecode($_GET['filter_content'])): '' ));
+        $q .= ( $filter_form_query ? $filter_form_query : '' );
+        $q .= " GROUP BY lead_hashkey";
+        $filtered_contacts = leadin_merge_filtered_contacts($wpdb->get_results($q, 'ARRAY_A'), $filtered_contacts);
+        $filter_action_set = TRUE;
+    }        
+
+    $filtered_hashkeys = leadin_explode_filtered_contacts($filtered_contacts);
+
+    $mysql_action_filter = '';
+    if ( $filter_action_set ) // If a filter action is set and there are no contacts, do a blank
+        $mysql_action_filter = " AND l.hashkey IN ( " . ( $filtered_hashkeys ? $filtered_hashkeys : "''" ) . " ) ";
+    else
+        $mysql_action_filter = ( $filtered_hashkeys ? " AND l.hashkey IN ( " . $filtered_hashkeys . " ) " : '' ); // If a filter action isn't set, use the filtered hashkeys if they exist, else, don't include the statement
+
+    // There's a filter and leads are in it
+    if ( ( isset($_GET['contact_type']) && $num_contacts ) || ! isset($_GET['contact_type']) )
+    {
+        $q =  $wpdb->prepare("
+            SELECT 
+                l.lead_id AS lead_id, 
+                LOWER(DATE_FORMAT(l.lead_date, %s)) AS lead_date, l.lead_ip, l.lead_source, l.lead_email, l.hashkey,
+                COUNT(DISTINCT s.form_id) AS lead_form_submissions,
+                COUNT(DISTINCT p.pageview_id) AS lead_pageviews,
+                LOWER(DATE_FORMAT(MAX(p.pageview_date), %s)) AS last_visit,
+                ( SELECT COUNT(DISTINCT pageview_id) FROM $wpdb->li_pageviews WHERE lead_hashkey = l.hashkey AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS visits,
+                ( SELECT MAX(pageview_source) AS pageview_source FROM $wpdb->li_pageviews WHERE lead_hashkey = l.hashkey AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS pageview_source 
+            FROM 
+                $wpdb->li_leads l
+            LEFT JOIN $wpdb->li_submissions s ON l.hashkey = s.lead_hashkey
+            LEFT JOIN $wpdb->li_pageviews p ON l.hashkey = p.lead_hashkey 
+            WHERE l.lead_email != '' AND l.lead_deleted = 0 " .
+            ( isset ($_POST['export-selected']) ? " AND l.lead_id IN ( " . $_POST['leadin_selected_contacts'] . " ) " : "" ) . 
+            " AND l.hashkey != '' ", '%Y/%m/%d %l:%i%p', '%Y/%m/%d %l:%i%p');
+
+        $q .= $mysql_contact_type_filter;
+        $q .= ( $mysql_search_filter ? $mysql_search_filter : "" );
+        $q .= ( $mysql_action_filter ? $mysql_action_filter : "" );
+        $q .=  " GROUP BY l.hashkey";
+        $leads = $wpdb->get_results($q);
     }
-
-    $q =  $wpdb->prepare("
-        SELECT 
-            l.lead_id AS lead_id, 
-            LOWER(DATE_FORMAT(l.lead_date, %s)) AS lead_date, l.lead_ip, l.lead_source, l.lead_email, l.lead_status, l.hashkey,
-            COUNT(DISTINCT s.form_id) AS lead_form_submissions,
-            COUNT(DISTINCT p.pageview_id) AS lead_pageviews,
-            LOWER(DATE_FORMAT(MAX(p.pageview_date), %s)) AS last_visit,
-            ( SELECT COUNT(DISTINCT pageview_id) FROM li_pageviews WHERE lead_hashkey = l.hashkey AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS visits,
-            ( SELECT MAX(pageview_source) AS pageview_source FROM li_pageviews WHERE lead_hashkey = l.hashkey AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS pageview_source 
-        FROM 
-            li_leads l
-        LEFT JOIN li_submissions s ON l.hashkey = s.lead_hashkey
-        LEFT JOIN li_pageviews p ON l.hashkey = p.lead_hashkey 
-        WHERE l.lead_email != '' AND l.lead_deleted = 0 " .
-        ( isset ($_POST['export-selected']) ? " AND l.lead_id IN ( " . $_POST['leadin-selected-contacts'] . " ) " : "" ), '%Y/%m/%d %l:%i%p', '%Y/%m/%d %l:%i%p');
-
-    $q .= $mysql_contact_type_filter;
-    $q .= ( $mysql_search_filter ? $mysql_search_filter : "" );
-    $q .= $wpdb->multisite_query;
-    $q .=  " GROUP BY l.lead_email";
-
-    $leads = $wpdb->get_results($q);
+    else
+    {
+        $leads = array();
+    }
 
     foreach ( $leads as $contacts )
     {

@@ -42,8 +42,6 @@ class WPLeadInBetaAdmin extends WPLeadInAdmin {
     function leadin_beta_program_build_settings_page ()
     {
         // Need to use the santize function from the main admin class because that is where leadin_options is set
-        global $li_wp_admin;
-
         add_settings_section(
             $this->power_up_settings_section,
             $this->power_up_icon . 'LeadIn Beta Program',

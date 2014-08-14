@@ -79,6 +79,8 @@ class WPLeadInSubscribe extends WPLeadIn {
 	 */
 	function add_defaults ()
 	{
+		global $wpdb;
+
 		$options = $this->options;
 
 		if ( ($options['li_susbscibe_installed'] != 1) || (!is_array($options)) )
@@ -99,6 +101,16 @@ class WPLeadInSubscribe extends WPLeadIn {
 			);
 
 			update_option('leadin_subscribe_options', $opt);
+
+			// Create smart list for subscribe pop-up
+			$q = $wpdb->prepare("SELECT tag_id FROM $wpdb->li_tags WHERE tag_synced_lists LIKE '%%%s%'", ".vex-dialog-form");
+			$subscriber_list_exists = $wpdb->get_var($q);
+
+			if ( ! $subscriber_list_exists )
+			{
+				$tagger = new LI_Tag_Editor();
+				$tagger->add_tag('Subscribers', '.vex-dialog-form', '');
+			}
 		}
 	}
 

@@ -349,7 +349,7 @@ jQuery(document).ready( function ( $ ) {
         if ( !li_subscribe_flag )
         {
             leadin_check_visitor_status($.cookie("li_hash"), function ( data ) {
-                if ( data != 'subscribe' )
+                if ( data != 'vex_set' )
                 {
                     $.cookie("li_subscribe", 'show', {path: "/", domain: ""});
                     bind_leadin_subscribe_widget();
@@ -428,7 +428,7 @@ function bind_leadin_subscribe_widget ()
                         ).css('text-align', 'center').fadeIn(250);
                     });
 
-                    leadin_submit_form($('.leadin-subscribe form'), $, 'subscribe');
+                    leadin_submit_form($('.leadin-subscribe form'), $);
                     $.cookie("li_subscribe", 'ignore', {path: "/", domain: "", expires: ignore_date});
                     return false;
                 },

@@ -52,7 +52,7 @@ class LI_MailChimp
      * @return array          Assoc array of decoded result
      */
     private function makeRequest($method, $args=array())
-    {      
+    { 
         $args['apikey'] = $this->api_key;
 
         $url = $this->api_endpoint.'/'.$method.'.json';
@@ -67,8 +67,11 @@ class LI_MailChimp
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $this->verify_ssl);
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($args));
+            curl_setopt($ch, CURLOPT_HEADER, false);
             $result = curl_exec($ch);
             curl_close($ch);
+
+
         } else {
             $json_data = json_encode($args);
             $result    = file_get_contents($url, null, stream_context_create(array(

@@ -28,16 +28,16 @@ class LI_Viewers {
 		global $wpdb;
 		$q = $wpdb->prepare(
 			"SELECT 
-				li_leads.lead_email, li_leads.lead_id, MAX(li_pageviews.pageview_date) AS pageview_date
+				ll.lead_email, ll.lead_id, MAX(lpv.pageview_date) AS pageview_date
 			FROM 
-				li_leads, li_pageviews 
+				$wpdb->li_leads ll, $wpdb->li_pageviews lpv
 			WHERE 
-				li_pageviews.pageview_url = %s AND 
-				li_pageviews.lead_hashkey = li_leads.hashkey AND 
-				li_leads.lead_deleted = 0 AND 
-				li_leads.lead_email != '' " . $wpdb->prepare(" AND blog_id = %d ", $wpdb->blogid) . 
-			"GROUP BY 
-				li_leads.lead_id
+				lpv.pageview_url = %s AND 
+				lpv.lead_hashkey = ll.hashkey AND 
+				ll.lead_deleted = 0 AND 
+				ll.lead_email != '' 
+			GROUP BY 
+				ll.lead_id
 			ORDER BY 
 				pageview_date DESC", $pageview_url);
 		$this->viewers = $wpdb->get_results($q);
@@ -54,16 +54,16 @@ class LI_Viewers {
 		global $wpdb;
 		$q = $wpdb->prepare(
 			"SELECT
-				li_leads.lead_email, li_leads.lead_id, MAX(li_submissions.form_date) AS form_date
+				ll.lead_email, ll.lead_id, MAX(ls.form_date) AS form_date
 			FROM 
-				li_leads, li_submissions
+				$wpdb->li_leads ll, $wpdb->li_submissions ls
 			WHERE 
-				li_submissions.form_page_url = %s AND 
-				li_submissions.lead_hashkey = li_leads.hashkey AND 
-				li_leads.lead_deleted = 0 AND 
-				li_submissions.form_deleted = 0  " . $wpdb->prepare(" AND blog_id = %d ", $wpdb->blogid) . 
-			"GROUP BY 
-				li_leads.lead_id
+				ls.form_page_url = %s AND 
+				ls.lead_hashkey = ll.hashkey AND 
+				ll.lead_deleted = 0 AND 
+				ls.form_deleted = 0 
+			GROUP BY 
+				ll.lead_id
 			ORDER BY 
 				form_date DESC", $pageview_url);
 		$this->submissions = $wpdb->get_results($q);

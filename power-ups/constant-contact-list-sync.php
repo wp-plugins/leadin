@@ -47,6 +47,8 @@ class WPConstantContactListSync extends WPLeadIn {
 	
 	var $admin;
 	var $options;
+	var $constant_contact;
+	var $cc_id;
 
 	/**
 	 * Class constructor
@@ -84,34 +86,76 @@ class WPConstantContactListSync extends WPLeadIn {
 
 	}
 
-	function push_constant_contact_subscriber_to_list ( $email = '', $first_name = '', $last_name = '', $phone = '' ) 
+	/**
+     * Adds a subcsriber to a specific list
+     *
+     * @param   string
+     * @param   string
+     * @param   string
+     * @param   string
+     * @param   string
+     * @return  int 		ContactID for the new entry
+     */
+	function push_contact_to_list ( $list_id = '', $email = '', $first_name = '', $last_name = '', $phone = '' ) 
 	{
-		$options = $this->options;
-
-        $li_cc_subscribers_to_list = ( isset($options['li_cc_subscribers_to_list']) ? $options['li_cc_subscribers_to_list'] : '' );
-        
-        if ( isset($options['li_cc_email']) && isset($options['li_cc_password']) && $options['li_cc_email'] && $options['li_cc_password'] && $li_cc_subscribers_to_list )
+		if ( isset($this->options['li_cc_email']) && isset($this->options['li_cc_password']) && $this->options['li_cc_email'] && $this->options['li_cc_password'] )
 		{
-			$this->constant_contact = new LI_ConstantContact($options['li_cc_email'], $options['li_cc_password'], LEADIN_CONSTANT_CONTACT_API_KEY, TRUE);
+			// Convert the stored list id integer into the accepted constant contact list id format
+			$list_id = 'http://api.constantcontact.com/ws/customers/' . str_replace('@', '%40', $this->options['li_cc_email']) . '/lists/' . $list_id;
 
-			$contact = array();
+			$this->constant_contact = new LI_ConstantContact($this->options['li_cc_email'], $this->options['li_cc_password'], LEADIN_CONSTANT_CONTACT_API_KEY, FALSE);
 
-			if ( $email )
-				$contact['EmailAddress'] = $email;
+			if ( ! isset($this->cc_id) )
+			{
+				$this->cc_id = $this->constant_contact->search_contact_by_email($email);
+			}
 
-			if ( $first_name )
-				$contact['FirstName'] = $first_name;
+			if ( $this->cc_id )
+				return $this->constant_contact->add_subscription($this->cc_id, $list_id, 'ACTION_BY_CLIENT');
+			else
+			{
+				$contact = array();
+				if ( $email )
+					$contact['EmailAddress'] = $email;
 
-			if ( $last_name )
-				$contact['LastName'] = $last_name;
+				if ( $first_name )
+					$contact['FirstName'] = $first_name;
 
-			if ( $phone )
-				$contact['HomePhone'] = $phone;
+				if ( $last_name )
+					$contact['LastName'] = $last_name;
 
-			if ( $phone )
-				$contact['WorkPhone'] = $phone;
+				if ( $phone )
+					$contact['HomePhone'] = $phone;
 
-			$this->constant_contact->add_contact($contact, array($li_cc_subscribers_to_list));
+				if ( $phone )
+					$contact['WorkPhone'] = $phone;
+
+				return $this->constant_contact->add_contact($contact, array($list_id));
+			}
+	    }
+	}
+
+	/**
+     * Removes an email address from a specific list
+     *
+     * @param   string
+     * @param   string
+     * @return  bool
+     */
+	function remove_contact_from_list ( $list_id = '', $email = '' ) 
+	{
+		if ( isset($this->options['li_cc_email']) && isset($this->options['li_cc_password']) && $this->options['li_cc_email'] && $this->options['li_cc_password'] )
+		{
+			// Convert the stored list id integer into the accepted constant contact list id format
+			$list_id = 'http://api.constantcontact.com/ws/customers/' . str_replace('@', '%40', $this->options['li_cc_email']) . '/lists/' . $list_id;
+
+			$this->constant_contact = new LI_ConstantContact($this->options['li_cc_email'], $this->options['li_cc_password'], LEADIN_CONSTANT_CONTACT_API_KEY, FALSE);
+			$cc_id = $this->constant_contact->search_contact_by_email($email);
+
+			if ( $cc_id )
+				return $this->constant_contact->remove_subscription($cc_id, $list_id);
+			else
+				return FALSE;
 	    }
 	}
 }
