@@ -305,7 +305,23 @@ b!==!1&&d.redraw();D(c,f)},setTooltipPoints:function(a){var b=[],c,d,e=this.xAxi
 hasBidiBug:Nb,isTouchDevice:Jb,numberFormat:Ga,seriesTypes:F,setOptions:function(a){E=w(!0,E,a);Cb();return E},addEvent:K,removeEvent:W,createElement:Y,discardElement:Pa,css:G,each:p,extend:q,map:Ua,merge:w,pick:m,splat:qa,extendClass:ka,pInt:z,wrap:Ma,svg:aa,canvas:fa,vml:!aa&&!fa,product:"Highcharts",version:"4.0.1"})})();
 jQuery(document).ready( function ( $ ) {
 	
-	$("#filter_action").select2();
+	$("#filter_action").select2(
+		
+	);
+
+	$('#filter_action').change( function ( e ) {
+		var $this = $(this);
+
+		if ( $this.val() == 'submitted' )
+		{
+			$('#form-filter-input').show();
+		}
+		else
+		{
+			$('#form-filter-input').hide();
+			$('#filter_form').select2("val", "any form");
+		}
+	});
 
 	$("#filter_content").select2({
 	    query: function( query ) {
@@ -339,7 +355,44 @@ jQuery(document).ready( function ( $ ) {
 	    	}
 	    	else
 	    	{
-	    		$('#filter_content').select2("data", {id: '', text: 'Any Page'});
+	    		$('#filter_content').select2("data", {id: '', text: 'any page'});
+	    	}
+	    }
+	});
+
+	$("#filter_form").select2({
+	    query: function( query ) {
+	    	var key = query.term;
+	    	
+	    	$.ajax({
+				type: 'POST',
+				url: li_admin_ajax.ajax_url,
+				data: {
+					"action": "leadin_get_form_selectors", 
+					"search_term": key
+				},
+				success: function(data){
+					// Force override the current tracking with the merged value
+					var json_data = jQuery.parseJSON(data);
+                    var data_test = {results: []}, i, j, s;
+                    for ( i = 0; i < json_data.length; i++ ) 
+			        {
+			            data_test.results.push({id: json_data[i], text: json_data[i]});
+			        }
+
+			        query.callback(data_test);
+				}
+			})
+	    
+	    },
+	    initSelection: function(element, callback) {
+	    	if ( $('#filter_form').val() )
+	    	{
+	    		$('#filter_form').select2("data", {id: $('#filter_form').val(), text: $('#filter_form').val()});
+	    	}
+	    	else
+	    	{
+	    		$('#filter_form').select2("data", {id: '', text: 'any form'});
 	    	}
 	    }
 	});
@@ -349,20 +402,27 @@ jQuery(document).ready( function ( $ ) {
 	});
 });
 jQuery(document).ready( function ( $ ) {
+	
+	var $bulk_opt_selected = $('.bulkactions select option[value="add_tag_to_selected"], .bulkactions select option[value="remove_tag_from_selected"], .bulkactions select option[value="delete_selected"]');
+
 	$('#leadin-contacts input:checkbox').not('thead input:checkbox, tfoot input:checkbox').bind('change', function ( e  ){
 		var cb_count = 0;
 		var selected_vals = '';
 		var $btn_selected = $('#leadin-export-selected-leads');
-		var $input_selected_vals = $('#leadin-selected-contacts');
+		
+		var $input_selected_vals = $('.leadin-selected-contacts');
 		var $cb_selected = $('#leadin-contacts input:checkbox:checked').not('thead input:checkbox, tfoot input:checkbox');
 
 		if ( $cb_selected.length > 0 )
 		{
 			$btn_selected.attr('disabled', false);
+			$bulk_opt_selected.attr('disabled', false);
+
 		}
 		else
 		{
 			$btn_selected.attr('disabled', true);
+			$bulk_opt_selected.attr('disabled', true);
 		}
 
 		$cb_selected.each( function ( e ) {
@@ -375,6 +435,7 @@ jQuery(document).ready( function ( $ ) {
 		});
 
 		$input_selected_vals.val(selected_vals);
+		$('.selected-contacts-count').text(cb_count);
 	});
 
 	$('#cb-select-all-1, #cb-select-all-2').bind('change', function ( e ) { 
@@ -383,7 +444,7 @@ jQuery(document).ready( function ( $ ) {
 		var $this = $(this);
 		var $btn_selected = $('#leadin-export-selected-leads');
 		var $cb_selected = $('#leadin-contacts input:checkbox').not('thead input:checkbox, tfoot input:checkbox');
-		var $input_selected_vals = $('#leadin-selected-contacts');
+		var $input_selected_vals = $('.leadin-selected-contacts');
 
 		$cb_selected.each( function ( e ) {
 			selected_vals += $(this).val();
@@ -399,11 +460,18 @@ jQuery(document).ready( function ( $ ) {
 		if ( !$this.is(':checked') )
 		{
 			$btn_selected.attr('disabled', true);
+			$bulk_opt_selected.attr('disabled', true);
+			$('.selected-contacts-count').text($('#contact-count').text());
 		}
 		else
 		{
 			$btn_selected.attr('disabled', false);
+			$bulk_opt_selected.attr('disabled', false);
 		}
+
+		$('.selected-contacts-count').text(cb_count);
+
+
 	});
 
 	$('.postbox .handlediv').bind('click', function ( e  ) {
@@ -417,7 +485,35 @@ jQuery(document).ready( function ( $ ) {
 		{
 			$postbox.addClass('closed');
 		}
+	});
 
+	$('.selected-contacts-count').text($('#contact-count').text());
+	$bulk_opt_selected.attr('disabled', true);
+
+	$('.bulkactions select').change(function ( e ) {
+		var $this = $(this);
+		var $contact_count = $('#contact-count').text();
+
+		if ( $this.val() == 'add_tag_to_all' || $this.val() == 'add_tag_to_selected' )
+		{
+			$('#bulk-edit-tags h2').html($('#bulk-edit-tags h2').html().replace('remove from', 'add to'));
+			$('#bulk-edit-button').val('Add Tag');
+			$('#bulk-edit-tag-action').val('add_tag');
+			tb_show("", "#TB_inline?width=400&height=175&inlineId=bulk-edit-tags");
+			
+			// Reset the bulk actions so if the user closes the box it resets the values and nulls the apply button
+			$('.bulkactions select').val('-1');
+		}
+		else if ( $this.val() == 'remove_tag_from_all' || $this.val() == 'remove_tag_from_selected' )
+		{
+			$('#bulk-edit-tags h2').html($('#bulk-edit-tags h2').html().replace('add to', 'remove from'));
+			$('#bulk-edit-button').val('Remove Tag');
+			$('#bulk-edit-tag-action').val('remove_tag');
+			tb_show("", "#TB_inline?width=400&height=175&inlineId=bulk-edit-tags");
+
+			// Reset the bulk actions so if the user closes the box it resets the values and nulls the apply button
+			$('.bulkactions select').val('-1');
+		}
 	});
 });
 /*
@@ -3870,7 +3966,7 @@ the specific language governing permissions and limitations under the Apache Lic
 }(jQuery));
 
 jQuery(document).ready( function ( $ ) {
-	$('#filter_action, #filter_content').change(function() {
+	$('#filter_action, #filter_content, #filter_form').change(function() {
 		$('#leadin-contacts-filter-button').addClass('button-primary');
 	});
 });

@@ -281,7 +281,7 @@ function leadin_recover_contact_data ()
 {
     global $wpdb;
 
-    $q = $wpdb->prepare("SELECT * FROM li_submissions AS s LEFT JOIN li_leads AS l ON s.lead_hashkey = l.hashkey WHERE l.hashkey IS NULL AND s.form_fields LIKE '%%%s%%' AND s.form_fields LIKE '%%%s%%' AND form_deleted = 0 " . $wpdb->multisite_query, '@', '.');
+    $q = $wpdb->prepare("SELECT * FROM $wpdb->li_submissions AS s LEFT JOIN $wpdb->li_leads AS l ON s.lead_hashkey = l.hashkey WHERE l.hashkey IS NULL AND s.form_fields LIKE '%%%s%%' AND s.form_fields LIKE '%%%s%%' AND form_deleted = 0", '@', '.');
     $submissions = $wpdb->get_results($q);
 
     if ( count($submissions) )
@@ -297,24 +297,22 @@ function leadin_recover_contact_data ()
                     if ( strstr($object['value'], '@') && strstr($object['value'], '@') && strlen($object['value']) <= 254 )
                     {
                         // check to see if the contact exists and if it does, skip the data recovery
-                        $q = $wpdb->prepare("SELECT lead_email FROM li_leads WHERE lead_email = %s AND lead_deleted = 0 " . $wpdb->multisite_query, $object['value']);
+                        $q = $wpdb->prepare("SELECT lead_email FROM $wpdb->li_leads WHERE lead_email = %s AND lead_deleted = 0", $object['value']); // @HERE
                         $exists = $wpdb->get_var($q);
 
                         if ( $exists )
                             continue;
 
                         // get the original data
-                        $q = $wpdb->prepare("SELECT pageview_date, pageview_source FROM li_pageviews WHERE lead_hashkey = %s AND pageview_deleted = 0 " . $wpdb->multisite_query . " ORDER BY pageview_date ASC LIMIT 1", $submission->lead_hashkey);
+                        $q = $wpdb->prepare("SELECT pageview_date, pageview_source FROM $wpdb->li_pageviews WHERE lead_hashkey = %s AND pageview_deleted = 0 ORDER BY pageview_date ASC LIMIT 1", $submission->lead_hashkey);
                         $first_pageview = $wpdb->get_row($q);
 
                         // recreate the contact
-                        $q = $wpdb->prepare("INSERT INTO li_leads ( lead_date, hashkey, lead_source, lead_email, lead_status, blog_id ) VALUES ( %s, %s, %s, %s, %s, %d )",
+                        $q = $wpdb->prepare("INSERT INTO $wpdb->li_leads ( lead_date, hashkey, lead_source, lead_email ) VALUES ( %s, %s, %s, %s )",
                             ( $first_pageview->pageview_date ? $first_pageview->pageview_date : $submission->form_date), 
                             $submission->lead_hashkey,
                             ( $first_pageview->pageview_source ? $first_pageview->pageview_source : ''),
-                            $object['value'], 
-                            $submission->form_type,
-                            $wpdb->blogid
+                            $object['value']
                         );
 
                         $wpdb->query($q);
@@ -335,16 +333,14 @@ function leadin_delete_flag_fix ()
 {
     global $wpdb;
 
-    $q = $wpdb->prepare("SELECT lead_email, COUNT(hashkey) c FROM li_leads WHERE lead_email != '' AND lead_deleted = 0 " . $wpdb->multisite_query . " GROUP BY lead_email HAVING c > 1", '');
+    $q = $wpdb->prepare("SELECT lead_email, COUNT(hashkey) c FROM $wpdb->li_leads WHERE lead_email != '' AND lead_deleted = 0 GROUP BY lead_email HAVING c > 1", '');
     $duplicates = $wpdb->get_results($q);
 
     if ( count($duplicates) )
     {
         foreach ( $duplicates as $duplicate )
         {
-            $existing_contact_status = 'lead';
-
-            $q = $wpdb->prepare("SELECT lead_email, hashkey, merged_hashkeys, lead_status FROM li_leads WHERE lead_email = %s AND lead_deleted = 0 " . $wpdb->multisite_query . " ORDER BY lead_date DESC", $duplicate->lead_email);
+            $q = $wpdb->prepare("SELECT lead_email, hashkey, merged_hashkeys FROM $wpdb->li_leads WHERE lead_email = %s AND lead_deleted = 0 ORDER BY lead_date DESC", $duplicate->lead_email);
             $existing_contacts = $wpdb->get_results($q);
 
             $newest = $existing_contacts[0];
@@ -369,14 +365,6 @@ function leadin_delete_flag_fix ()
                     // Add a comma delimiter 
                     if ( $i != count($existing_contacts)-1 )
                         $existing_contact_hashkeys .= ",";
-
-                    // Check on each existing lead if the lead_status is comment. If it is, save the status to override the new lead's status
-                    if ( $existing_contacts[$i]->lead_status == 'comment' && $existing_contact_status == 'lead' )
-                        $existing_contact_status = 'comment';
-
-                    // Check on each existing lead if the lead_status is subscribe. If it is, save the status to override the new lead's status
-                    if ( $existing_contacts[$i]->lead_status == 'subscribe' && ($existing_contact_status == 'lead' || $existing_contact_status == 'comment') )
-                        $existing_contact_status = 'subscribe';
                 }
             }
 
@@ -389,25 +377,208 @@ function leadin_delete_flag_fix ()
             if ( $existing_contact_hashkey_string )
             {
                 // Set the merged hashkeys with the fixed merged hashkey values
-                $q = $wpdb->prepare("UPDATE li_leads SET merged_hashkeys = %s, lead_status = %s WHERE hashkey = %s " . $wpdb->multisite_query, $existing_contact_hashkey_string, $existing_contact_status, $newest->hashkey);
+                $q = $wpdb->prepare("UPDATE $wpdb->li_leads SET merged_hashkeys = %s WHERE hashkey = %s", $existing_contact_hashkey_string, $newest->hashkey);
                 $wpdb->query($q);
 
                 // "Delete" all the old contacts
-                $q = $wpdb->prepare("UPDATE li_leads SET merged_hashkeys = '', lead_deleted = 1 WHERE hashkey IN ( $existing_contact_hashkey_string ) " . $wpdb->multisite_query, '');
+                $q = $wpdb->prepare("UPDATE $wpdb->li_leads SET merged_hashkeys = '', lead_deleted = 1 WHERE hashkey IN ( $existing_contact_hashkey_string )", '');
                 $wpdb->query($q);
 
                 // Set all the pageviews and submissions to the new hashkey just in case
-                $q = $wpdb->prepare("UPDATE li_pageviews SET lead_hashkey = %s WHERE lead_hashkey IN ( $existing_contact_hashkey_string ) " . $wpdb->multisite_query, $newest->hashkey);
+                $q = $wpdb->prepare("UPDATE $wpdb->li_pageviews SET lead_hashkey = %s WHERE lead_hashkey IN ( $existing_contact_hashkey_string )", $newest->hashkey);
                 $wpdb->query($q);
 
                 // Update all the previous submissions to the new hashkey just in case
-                $q = $wpdb->prepare("UPDATE li_submissions SET lead_hashkey = %s WHERE lead_hashkey IN ( $existing_contact_hashkey_string ) " . $wpdb->multisite_query, $newest->hashkey);
+                $q = $wpdb->prepare("UPDATE $wpdb->li_submissions SET lead_hashkey = %s WHERE lead_hashkey IN ( $existing_contact_hashkey_string )", $newest->hashkey);
                 $wpdb->query($q);
             }
         }
     }
 
     leadin_update_option('leadin_options', 'delete_flags_fixed', 1);
+}
+
+/** 
+ * Sets the default lists for V2.0.0 and converts all existing statuses to tag format
+ *
+ */
+function leadin_convert_statuses_to_tags ( )
+{
+    global $wpdb;
+
+    $blog_ids = array();
+    if ( is_multisite() )
+    {       
+        $blog_id = (Object)Null;
+        $blog_id->blog_id = $wpdb->blogid;
+        array_push($blog_ids, $blog_id);
+    }
+    else
+    {
+        $blog_id = (Object)Null;
+        $blog_id->blog_id = 0;
+        array_push($blog_ids, $blog_id);
+    }
+
+    foreach ( $blog_ids as $blog )
+    {
+        if ( is_multisite() )
+        {
+            $q = $wpdb->prepare("SELECT COUNT(TABLE_NAME) FROM information_schema.tables WHERE TABLE_NAME = $wpdb->li_leads LIMIT 1");
+            $leadin_tables_exist = $wpdb->get_var($q);
+
+            if ( ! $leadin_tables_exist )
+            {
+                leadin_db_install();
+            }
+        }
+
+        // Get all the contacts from li_leads
+        $q = $wpdb->prepare("SELECT lead_id, lead_status, hashkey FROM li_leads WHERE lead_status != 'contact' AND lead_email != '' AND lead_deleted = 0 AND blog_id = %d", $blog->blog_id);
+        $contacts = $wpdb->get_results($q);
+
+        // Check if there are any subscribers in the li_leads table and build the list if any exist
+        $subscriber_exists = FALSE;
+        foreach ( $contacts as $contact )
+        {
+            if ( $contact->lead_status == 'subscribe' )
+            {
+                $subscriber_exists = TRUE;
+                break;
+            }
+        }
+
+        // Check if LeadIn Subscribe is activated
+        if ( ! $subscriber_exists )
+        {
+            if ( WPLeadIn::is_power_up_active('subscribe_widget') )
+                $subscriber_exists = TRUE;
+        }
+
+        $existing_synced_lists = array();
+        
+        // Check to see if the mailchimp power-up is active and add the existing synced list for serialization
+        $mailchimp_options = get_option('leadin_mls_options');
+        if ( $mailchimp_options['li_mls_subscribers_to_list'] )
+        {
+            $leadin_mailchimp = new WPMailChimpListSync(TRUE);
+            $leadin_mailchimp->admin_init();
+            $lists = $leadin_mailchimp->admin->li_get_lists();
+
+            if ( count($lists) )
+            {
+                foreach ( $lists as $list )
+                {
+                    if ( $list->id == $mailchimp_options['li_mls_subscribers_to_list'] )
+                    {
+                        array_push($existing_synced_lists,
+                            array(
+                                'esp' => 'mailchimp',
+                                'list_id' => $list->id,
+                                'list_name' => $list->name
+                            )
+                        );
+
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Check to see if the constant contact power-up is active and add the existing synced list for serialization
+        $constant_contact_options = get_option('leadin_cc_options');
+        if ( $constant_contact_options['li_cc_subscribers_to_list'] )
+        {
+            $leadin_constant_contact = new WPConstantContactListSync(TRUE);
+            $leadin_constant_contact->admin_init();
+            $lists = $leadin_constant_contact->admin->li_get_lists();
+
+            if ( count($lists) )
+            {
+                foreach ( $lists as $list )
+                {
+                    if ( $list->id == str_replace('@', '%40', $constant_contact_options['li_cc_subscribers_to_list']) ) 
+                    {
+                        array_push($existing_synced_lists,
+                            array(
+                                'esp' => 'constant_contact',
+                                'list_id' => end(explode('/', $list->id)), // Changed the list_id for constant contact to just store the list integer in 2.0
+                                'list_name' => $list->name
+                            )
+                        );
+
+                        break;
+                    }
+                }
+            }
+        }
+
+        unset($leadin_constant_contact);
+        unset($leadin_mailchimp);
+
+        // Create all the default comment lists (Commenters, Leads, Contacted, Customers). Figures out if it should add the subscriber list and puts the lists in the correct order
+        $q = "
+            INSERT INTO $wpdb->li_tags 
+                ( tag_text, tag_slug, tag_form_selectors, tag_synced_lists, tag_order ) 
+            VALUES " .
+                ( $subscriber_exists ? "('Subscribers', 'subscribers', '.vex-dialog-form', " . ( count($existing_synced_lists) ? $wpdb->prepare('%s', serialize($existing_synced_lists)) : "''" ) . ", 1 ), " : "" ) .
+                " ('Commenters', 'commenters', '#commentform', '', " . ( $subscriber_exists ? "2" : "1" ) . "),
+                ('Leads', 'leads', '', '', " . ( $subscriber_exists ? "3" : "2" ) . "),
+                ('Contacted', 'contacted', '', '', " . ( $subscriber_exists ? "4" : "3" ) . "),
+                ('Customers', 'customers', '', '', " . ( $subscriber_exists ? "5" : "4" ) . ")";
+
+        $wpdb->query($q);
+
+        $tags = $wpdb->get_results("SELECT tag_id, tag_slug FROM $wpdb->li_tags WHERE tag_slug IN ( 'commenters', 'leads', 'contacted', 'customers', 'subscribers' )");
+        foreach ( $tags as $tag )
+            ${$tag->tag_slug . '_tag_id'} = $tag->tag_id;
+
+        $insert_values = '';
+        foreach ( $contacts as $contact )
+        {
+            switch ( $contact->lead_status )
+            {
+                case 'comment' :
+                    $tag_id = $commenters_tag_id;
+                break;
+
+                case 'lead' :
+                    $tag_id = $leads_tag_id;
+                break;
+
+                case 'contacted' :
+                    $tag_id = $contacted_tag_id;
+                break;
+
+                case 'customer' :
+                    $tag_id = $customers_tag_id;
+                break;
+
+                case 'subscribe' :
+                    $tag_id = $subscribers_tag_id;
+                break;
+            }
+
+            $insert_values .= '(' . $tag_id . ', "' . $contact->hashkey . '" ),';
+        }
+
+        $q = "INSERT INTO $wpdb->li_tag_relationships ( tag_id, contact_hashkey ) VALUES " . rtrim($insert_values, ',');
+        $wpdb->query($q);
+
+        if ( is_multisite() )
+        {
+           $q = $wpdb->prepare("INSERT $wpdb->li_leads SELECT * FROM li_leads WHERE li_leads.blog_id = %d", $blog->blog_id);
+           $wpdb->query($q);
+
+           $q = $wpdb->prepare("INSERT $wpdb->li_pageviews SELECT * FROM li_pageviews WHERE li_pageviews.blog_id = %d", $blog->blog_id);
+           $wpdb->query($q);
+
+           $q = $wpdb->prepare("INSERT $wpdb->li_submissions SELECT * FROM li_submissions WHERE li_submissions.blog_id = %d", $blog->blog_id);
+           $wpdb->query($q);
+        }
+    }
+
+    leadin_update_option('leadin_options', 'converted_to_tags', '1');
 }
 
 /**
@@ -446,6 +617,17 @@ function leadin_encode_quotes ( $string )
 }
 
 /**
+ * Converts all carriage returns into HTML line breaks 
+ *
+ * @param   string
+ * @return  string
+ */
+function leadin_html_line_breaks ( $string ) 
+{
+    return stripslashes(str_replace('\n', '<br>', $string));
+}
+
+/**
  * Strip url get parameters off a url and return the base url
  *
  * @param   string
@@ -453,17 +635,11 @@ function leadin_encode_quotes ( $string )
  */
 function leadin_strip_params_from_url ( $url ) 
 { 
-    /*$url_parts = parse_url($url);
-    $base_url .= ( isset($url_parts['host']) ? : rtrim($url_parts['host'] . '/' . ltrim($url_parts['path'], '/'), '/'));
-    $base_url = urldecode($base_url);*/
-
     $url_parts = parse_url($url);
     $base_url = ( isset($url_parts['host']) ? 'http://' . rtrim($url_parts['host'], '/') : '' ); 
     $base_url .= ( isset($url_parts['path']) ? '/' . ltrim($url_parts['path'], '/') : '' ); 
-
-        ltrim($url_parts['path'], '/');
+    ltrim($url_parts['path'], '/');
     $base_url = urldecode(ltrim($base_url, '/'));
-
 
     return $base_url;
 }
@@ -499,25 +675,127 @@ function leadin_is_weekend ( $date )
 }
 
 /**
- * Get the lead_status types from the leads table
+ * Tie a tag to a contact in li_tag_relationships
  *
- * @return  array
+ * @param   int 
+ * @param   int
+ * @param   int
+ * @return  bool    successful insert
  */
-function leadin_get_contact_types ( $date )
+function leadin_apply_tag_to_contact ( $tag_id, $contact_hashkey )
 {
     global $wpdb;
 
-    $q = $wpdb->prepare("SELECT `COLUMN_TYPE` FROM `information_schema`.`COLUMNS`
-    WHERE `TABLE_SCHEMA` = %s
-    AND `TABLE_NAME`   = 'li_leads'
-    AND `COLUMN_NAME`  = 'lead_status' " . $wpdb->multisite_query, DB_NAME);
+    $q = $wpdb->prepare("SELECT tag_id FROM $wpdb->li_tag_relationships WHERE tag_id = %d AND contact_hashkey = %s", $tag_id, $contact_hashkey);
+    $exists = $wpdb->get_var($q);
 
-    $row = $wpdb->get_row($q);
-    $set = $row->COLUMN_TYPE;
-    $set  = substr($set,5,strlen($set)-7);
-
-    return preg_split("/','/",$set);
+    if ( ! $exists )
+    {
+        $q = $wpdb->prepare("INSERT INTO $wpdb->li_tag_relationships ( tag_id, contact_hashkey ) VALUES ( %d, %s )", $tag_id, $contact_hashkey);
+        return $wpdb->query($q);
+    }
 }
 
+
+/**
+ * Check multidimensional arrray for an existing value
+ *
+ * @param   string 
+ * @param   array
+ * @return  bool
+ */
+function leadin_in_array_deep ( $needle, $haystack ) 
+{
+    if ( in_array($needle, $haystack) )
+        return TRUE;
+
+    foreach ( $haystack as $element ) 
+    {
+        if ( is_array($element) && leadin_in_array_deep($needle, $element) )
+            return TRUE;
+    }
+
+    return FALSE;
+}
+
+/**
+ * Check multidimensional arrray for an existing value
+ *
+ * @param   string      needle 
+ * @param   array       haystack
+ * @return  string      key if found, null if not
+ */
+function leadin_array_search_deep ( $needle, $array, $index ) 
+{
+   foreach ( $array as $key => $val ) 
+   {
+       if ( $val[$index] === $needle )
+           return $key;
+   }
+
+   return NULL;
+}
+
+/**
+ * Creates a list of filtered contacts into a comma separated string of hashkeys
+ * 
+ * @param object
+ * @return string    sorted array
+ */
+function leadin_merge_filtered_contacts ( $filtered_contacts, $all_contacts = array() )
+{
+    if ( ! count($all_contacts) )
+        return $filtered_contacts;
+
+    if ( count($filtered_contacts) )
+    {
+        foreach ( $all_contacts as $key => $contact )
+        {
+            if ( ! leadin_in_array_deep($contact['lead_hashkey'], $filtered_contacts) )
+                unset($all_contacts[$key]);
+        }
+
+        return $all_contacts;
+    }
+    else
+        return FALSE;
+}
+
+/**
+ * Creates a list of filtered contacts into a comma separated string of hashkeys
+ * 
+ * @param object
+ * @return string    sorted array
+ */
+function leadin_explode_filtered_contacts ( $contacts )
+{
+    if ( count($contacts) )
+    {
+        $contacts = array_values($contacts);
+
+        $hashkeys = '';
+        for ( $i = 0; $i < count($contacts); $i++ )
+            $hashkeys .= "'" . $contacts[$i]['lead_hashkey'] . "'" . ( $i != (count($contacts) - 1) ? ', ' : '' );
+
+        return $hashkeys;
+    }
+    else
+        return FALSE;
+}
+
+/**
+ * Sets the wpdb tables to the current blog
+ * 
+ */
+function leadin_set_wpdb_tables ()
+{
+    global $wpdb;
+
+    $wpdb->li_submissions       = ( is_multisite() ? $wpdb->prefix . 'li_submissions' : 'li_submissions' );
+    $wpdb->li_pageviews         = ( is_multisite() ? $wpdb->prefix . 'li_pageviews' : 'li_pageviews' );
+    $wpdb->li_leads             = ( is_multisite() ? $wpdb->prefix . 'li_leads' : 'li_leads' );
+    $wpdb->li_tags              = ( is_multisite() ? $wpdb->prefix . 'li_tags' : 'li_tags' );
+    $wpdb->li_tag_relationships = ( is_multisite() ? $wpdb->prefix . 'li_tag_relationships' : 'li_tag_relationships' );
+}
 
 ?>

@@ -79,17 +79,24 @@ class WPMailChimpListSync extends WPLeadIn {
 
 	}
 
-	function push_mailchimp_subscriber_to_list ( $email = '', $first_name = '', $last_name = '', $phone = '' ) 
+	/**
+     * Adds a subcsriber to a specific list
+     *
+     * @param   string
+     * @param   string
+     * @param   string
+     * @param   string
+     * @param   string
+     * @return  int/bool 		API status code OR false if api key not set
+     */
+	function push_contact_to_list ( $list_id = '', $email = '', $first_name = '', $last_name = '', $phone = '' ) 
 	{
-		$options = $this->options;
-
-		if ( isset($options['li_mls_api_key']) && $options['li_mls_api_key']  && isset($options['li_mls_subscribers_to_list']) && $options['li_mls_subscribers_to_list'] )
+		if ( isset($this->options['li_mls_api_key']) && $this->options['li_mls_api_key'] && $list_id )
 		{
-	        $MailChimp = new LI_MailChimp($options['li_mls_api_key']);
-
-	        $subscribe = $MailChimp->call("lists/subscribe", array(
-				"id" => $options['li_mls_subscribers_to_list'],
-				"email" => array( 'email' => $email),
+	        $MailChimp = new LI_MailChimp($this->options['li_mls_api_key']);
+	        $contact_synced = $MailChimp->call("lists/subscribe", array(
+				"id" => $list_id,
+				"email" => array('email' => $email),
 				"send_welcome" => FALSE,
 				"email_type" => 'html',
 				"update_existing" => TRUE,
@@ -102,7 +109,37 @@ class WPMailChimpListSync extends WPLeadIn {
 				    'PHONE' => $phone
 				)
 			));
+
+			return $contact_synced;
 	    }
+
+	    return FALSE;
+	}
+
+	/**
+     * Removes an email address from a specific list
+     *
+     * @param   string
+     * @param   string
+     * @return  int/bool 		API status code OR false if api key not set
+     */
+	function remove_contact_from_list ( $list_id = '', $email = '' ) 
+	{
+		if ( isset($this->options['li_mls_api_key']) && $this->options['li_mls_api_key'] && $list_id )
+		{
+	        $MailChimp = new LI_MailChimp($this->options['li_mls_api_key']);
+	        $contact_removed = $MailChimp->call("lists/unsubscribe ", array(
+				"id" => $list_id,
+				"email" => array('email' => $email),
+				"delete_member" => TRUE,
+				"send_goodbye" => FALSE,
+				"send_notify" => FALSE
+			));
+
+	    	return $contact_removed;
+	    }
+
+	    return FALSE;
 	}
 }
 

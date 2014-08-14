@@ -19,7 +19,7 @@ class LI_ConstantContact
     * @param String $debug_style - Options are "cli" or "html". All it does is print "\n" or "<br>" for debugging output.
     */
 
-    public function __construct ( $username = '', $password = '', $api_key = '', $debug_enabled = FALSE, $debug_style = 'cli' )
+    public function __construct ( $username = '', $password = '', $api_key = '', $debug_enabled = FALSE, $debug_style = 'html' )
     {
         $this->debug['enabled'] = $debug_enabled;
         $this->debug['style'] = $debug_style;
@@ -76,6 +76,7 @@ class LI_ConstantContact
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION ,1);
         curl_setopt($ch, CURLOPT_TIMEOUT, 30);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+
         if(strlen(trim($post))>0)
         {
             if ($this->debug['style'] == 'cli')
@@ -103,6 +104,8 @@ class LI_ConstantContact
         }
    
         curl_setopt($ch, CURLOPT_HEADER, 0);
+
+
    
         $response = curl_exec($ch);
         $response_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -126,8 +129,9 @@ class LI_ConstantContact
             $this->debug_print("Received:\n\n---START---\n".$response."\n---END---\n\n");
         elseif ($this->debug['style'] == 'html')
             $this->debug_print("Received:<pre>\n\n---START---\n".htmlspecialchars($response)."\n---END---\n\n</pre>");
-            
+
         curl_close($ch);
+
         if ($fetch_as == 'array')
             return $this->xml_to_array($response);
         else
@@ -476,15 +480,20 @@ class LI_ConstantContact
     {
         //Get the old xml from get_contact() and then post after replacing values that need replacing
         $url = $this->api['url'].'contacts?email='.urlencode(strtolower($email));
+        $post = '';
         $response = Array();
         $response = $this->fetch($url,$post);
         
         if ($this->debug['last_response'] <= 204)
         {
             if ($id_only)
+            {
                 return $this->id_from_url($response['feed']['entry']['id']['value']);
+            }
             else
+            {
                 return $this->get_contact($this->id_from_url($response['feed']['entry']['id']['value']));
+            }
         }
         else
             return false;

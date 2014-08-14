@@ -28,7 +28,7 @@ class LI_Contact {
 	{
 		global $wpdb;
 
-		$q = $wpdb->prepare("SELECT hashkey FROM li_leads WHERE lead_id = %d " . $wpdb->multisite_query, $lead_id);
+		$q = $wpdb->prepare("SELECT hashkey FROM $wpdb->li_leads WHERE lead_id = %d", $lead_id);
 		$this->hashkey = $wpdb->get_var($q);
 		
 		return $this->hashkey;
@@ -44,52 +44,10 @@ class LI_Contact {
 	{
 		global $wpdb;
 
-		// Get the contact details
-		$q = $wpdb->prepare("
-			SELECT 
-				DATE_FORMAT(lead_date, %s) AS lead_date,
-				lead_id,
-				lead_ip, 
-				lead_email, 
-				lead_status 
-			FROM 
-				li_leads 
-			WHERE hashkey LIKE %s " . $wpdb->multisite_query, '%b %D %l:%i%p', $this->hashkey);
-
-		$lead = $wpdb->get_row($q);
-
-		// Get all page views for the contact
-		$q = $wpdb->prepare("
-			SELECT 
-				pageview_id,
-				pageview_date AS event_date,
-				DATE_FORMAT(pageview_date, %s) AS pageview_day, 
-				DATE_FORMAT(pageview_date, %s) AS pageview_date, 
-				lead_hashkey, pageview_title, pageview_url, pageview_source, pageview_session_start 
-			FROM 
-				li_pageviews 
-			WHERE 
-				pageview_deleted = 0 AND
-				lead_hashkey LIKE %s " . $wpdb->multisite_query . " ORDER BY event_date DESC", '%b %D', '%b %D %l:%i%p', $this->hashkey);
-
-		$pageviews = $wpdb->get_results($q, ARRAY_A);
-
-		// Get all submissions for the contact
-		$q = $wpdb->prepare("
-			SELECT 
-				form_date AS event_date, 
-				DATE_FORMAT(form_date, %s) AS form_date, 
-				form_page_title, 
-				form_page_url, 
-				form_fields, 
-				form_type 
-			FROM 
-				li_submissions 
-			WHERE 
-				form_deleted = 0 AND 
-				lead_hashkey = %s " . $wpdb->multisite_query . " ORDER BY event_date DESC", '%b %D %l:%i%p', $this->hashkey);
-		
-		$submissions = $wpdb->get_results($q, ARRAY_A);
+		$lead 			= $this->get_contact_details($this->hashkey);	
+		$pageviews 		= $this->get_contact_pageviews($this->hashkey, 'ARRAY_A');
+		$submissions 	= $this->get_contact_submissions($this->hashkey, 'ARRAY_A');
+		$tags 			= $this->get_contact_tags($this->hashkey);
 
 		// Merge the page views array and submissions array and reorder by date
 		$events_array = array_merge($pageviews, $submissions); 
@@ -159,7 +117,6 @@ class LI_Contact {
 
 				// Always overwrite the last_submission date which will end as last submission date
 				$lead->first_submission = $event['event_date'];
-				$lead->last_submission_type = $event['form_type'];
 
 				// Used for $lead->total_submissions
 				$total_submissions++;
@@ -173,17 +130,260 @@ class LI_Contact {
 			$count++;
 		}
 
-		$lead->lead_status 			= $this->frontend_lead_status($lead->lead_status);
 		$lead->total_visits 		= $total_visits;
 		$lead->total_pageviews 		= $total_pageviews;
 		$lead->total_submissions 	= $total_submissions;
 
-		$this->history = (object)NULL;
-		$this->history->submission = $submissions[0];
-		$this->history->sessions = $sessions;
-		$this->history->lead = $lead;
+		$this->history 				= (object)NULL;
+		$this->history->submission 	= $submissions[0];
+		$this->history->sessions 	= $sessions;
+		$this->history->lead 		= $lead;
+		$this->history->tags 		= $tags;
 
 		return stripslashes_deep($this->history);
+	}
+
+	/**
+	 * Gets all the submissions for a contact
+	 *
+	 * @param	string
+	 * @param 	string
+	 * @return	array/object
+	 */
+	function get_contact_submissions ( $hashkey, $output_type = 'OBJECT' )
+	{
+		global $wpdb;
+
+		$q = $wpdb->prepare("
+			SELECT 
+				form_date AS event_date, 
+				DATE_FORMAT(form_date, %s) AS form_date, 
+				form_page_title, 
+				form_page_url, 
+				form_fields
+			FROM 
+				$wpdb->li_submissions 
+			WHERE 
+				form_deleted = 0 AND 
+				lead_hashkey = %s ORDER BY event_date DESC", '%b %D %l:%i%p', $hashkey);
+		
+		$submissions = $wpdb->get_results($q, $output_type);
+
+		return $submissions;
+	}
+
+	/**
+	 * Gets all the pageviews for a contact
+	 *
+	 * @param	string
+	 * @param 	string
+	 * @return	array/object
+	 */
+	function get_contact_pageviews ( $hashkey, $output_type = 'OBJECT' )
+	{
+		global $wpdb;
+
+		$q = $wpdb->prepare("
+			SELECT 
+				pageview_id,
+				pageview_date AS event_date,
+				DATE_FORMAT(pageview_date, %s) AS pageview_day, 
+				DATE_FORMAT(pageview_date, %s) AS pageview_date, 
+				lead_hashkey, pageview_title, pageview_url, pageview_source, pageview_session_start 
+			FROM 
+				$wpdb->li_pageviews 
+			WHERE 
+				pageview_deleted = 0 AND
+				lead_hashkey LIKE %s ORDER BY event_date DESC", '%b %D', '%b %D %l:%i%p', $hashkey);
+		
+		$pageviews = $wpdb->get_results($q, $output_type);
+
+		return $pageviews;
+	}
+
+	/**
+	 * Gets the details row for a contact
+	 *
+	 * @param	string
+	 * @param 	string
+	 * @return	array/object
+	 */
+	function get_contact_details ( $hashkey, $output_type = 'OBJECT' )
+	{
+		global $wpdb;
+
+		$q = $wpdb->prepare("
+			SELECT 
+				DATE_FORMAT(lead_date, %s) AS lead_date,
+				lead_id,
+				lead_ip, 
+				lead_email
+			FROM 
+				$wpdb->li_leads 
+			WHERE hashkey LIKE %s", '%b %D %l:%i%p', $hashkey);
+
+		$contact_details = $wpdb->get_row($q, $output_type);
+
+		return $contact_details;
+	}
+
+	/**
+	 * Gets all the tags for a contact
+	 *
+	 * @param	string
+	 * @param 	string
+	 * @return	array/object
+	 */
+	function get_contact_tags ( $hashkey = '', $output_type = 'OBJECT' )
+	{
+		global $wpdb;
+
+		$q = $wpdb->prepare("
+            SELECT 
+                lt.tag_text, lt.tag_slug, lt.tag_order, lt.tag_id, ( ltr.tag_id IS NOT NULL AND ltr.tag_relationship_deleted = 0 ) AS tag_set
+            FROM 
+                $wpdb->li_tags lt
+            LEFT OUTER JOIN 
+            	$wpdb->li_tag_relationships ltr ON lt.tag_id = ltr.tag_id AND ltr.contact_hashkey = %s
+            WHERE 
+                lt.tag_deleted = 0 
+            ORDER BY lt.tag_order ASC", $hashkey);
+
+		$tags = $wpdb->get_results($q, $output_type);
+
+		return $tags;
+	}
+
+	/**
+	 * Set the tags on a contact
+	 *
+	 * @param	int
+	 * @param 	array
+	 * @return	bool 	rows deleted or not
+	 */
+	function update_contact_tags ( $contact_id, $update_tags )
+	{
+		global $wpdb;
+
+		$esp_power_ups = array(
+            'MailChimp'         => 'mailchimp_list_sync', 
+            'Constant Contact'  => 'constant_contact_list_sync', 
+            'AWeber'            => 'aweber_list_sync', 
+            'GetResponse'       => 'getresponse_list_sync', 
+            'MailPoet'          => 'mailpoet_list_sync', 
+            'Campaign Monitor'  => 'campaign_monitor_list_sync'
+        );
+
+		$safe_tags = $tags_to_update = '';
+
+		if ( ! isset($this->hashkey) )
+			$this->hashkey = $this->set_hashkey_by_id($contact_id);
+
+		if ( ! isset($this->history) )
+			$this->history = $this->get_contact_history();
+
+		$q = $wpdb->prepare("
+            SELECT 
+                lt.tag_text, lt.tag_slug, lt.tag_order, lt.tag_id, lt.tag_synced_lists, ltr.tag_relationship_id, ltr.tag_relationship_deleted, ( ltr.tag_id IS NOT NULL ) AS tag_set
+            FROM 
+                $wpdb->li_tags lt
+            LEFT OUTER JOIN 
+            	$wpdb->li_tag_relationships ltr ON lt.tag_id = ltr.tag_id AND ltr.contact_hashkey = %s
+            WHERE 
+                lt.tag_deleted = 0 
+            ORDER BY lt.tag_order ASC", $this->hashkey);
+
+		$tags = $wpdb->get_results($q);
+		
+
+		// Start looping through all the tags that exist
+		foreach ( $tags as $tag )
+		{
+			// Check if the tag is in the list of tags to update and hit the li_tag_relationships table accordingly
+			$update_tag = in_array($tag->tag_id, $update_tags);
+			if ( $update_tag )
+			{
+				if ( ! $tag->tag_set )
+				{
+					$wpdb->insert(
+						$wpdb->li_tag_relationships,
+						array (
+							'tag_id' => $tag->tag_id,
+							'contact_hashkey' => $this->hashkey
+						),
+						array (
+							'%d', '%s'
+						)
+					);
+
+					$safe_tags .= $wpdb->insert_id . ',';
+				}
+				else
+				{
+					$safe_tags .= $tag->tag_relationship_id . ',';
+					$tags_to_update .= $tag->tag_relationship_id . ',';
+				}
+			}
+
+			$synced_lists 	= array();
+			//$removed_lists 	= array();
+
+			// Only sync update contacts are deleted or were newly inserted
+			if ( $tag->tag_synced_lists && $update_tag && ( $tag->tag_relationship_deleted || ! $tag->tag_set ) )
+			{
+				foreach ( unserialize($tag->tag_synced_lists) as $list )
+				{
+					// Skip syncing this list because the contact is already synced through another list
+					if ( in_array($list['list_id'], $synced_lists) )
+						continue;
+
+					$power_up_global = 'leadin_' . $list['esp'] . '_list_sync' . '_wp';
+					if ( array_key_exists($power_up_global, $GLOBALS) )
+					{
+						global ${$power_up_global};
+
+						if ( ! ${$power_up_global}->activated )
+							continue;
+
+						${$power_up_global}->push_contact_to_list($list['list_id'], $this->history->lead->lead_email);
+					}
+
+					array_push($synced_lists, $list['list_id']);
+				}
+			}
+
+			/*else if ( $tag->tag_synced_lists && ! $update_tag && ! $tag->tag_relationship_deleted )
+			{
+				foreach ( unserialize($tag->tag_synced_lists) as $list )
+				{
+					// Skip removing contact form list if it has already happened or the contact was previoulsy synced
+					if ( in_array($list['list_id'], $removed_lists) || in_array($list['list_id'], $synced_lists) )
+						continue;
+
+					$power_up_global = 'leadin_' . $list['esp'] . '_list_sync' . '_wp';
+					if ( array_key_exists($power_up_global, $GLOBALS) )
+					{
+						global ${$power_up_global};
+
+						if ( ! ${$power_up_global}->activated )
+							continue;
+
+						${$power_up_global}->remove_contact_from_list($list['list_id'], $this->history->lead->lead_email);
+					}
+
+					array_push($synced_lists, $list['list_id']);
+				}
+			}*/
+		}
+
+		if ( $tags_to_update )
+		{
+			$q = $wpdb->prepare("UPDATE $wpdb->li_tag_relationships SET tag_relationship_deleted = 0 WHERE contact_hashkey = %s AND tag_relationship_id IN ( " . rtrim($tags_to_update, ',') . " ) ", $this->hashkey);
+			$tag_updated = $wpdb->query($q);
+		}
+
+		$q = $wpdb->prepare("UPDATE $wpdb->li_tag_relationships SET tag_relationship_deleted = 1 WHERE contact_hashkey = %s " . ( $safe_tags ? "AND tag_relationship_id NOT IN ( " . rtrim($safe_tags, ',') . " ) " : '' ) . " AND tag_relationship_deleted = 0 ", $this->hashkey);
+		$deleted_tags = $wpdb->query($q);
 	}
 
 	/**
@@ -195,28 +395,6 @@ class LI_Contact {
 	function sort_by_event_date ( $a, $b ) 
 	{
 		return $a['event_date'] < $b['event_date'];
-	}
-
-	/**
-	 * Normalizes li_leads.lead_status for front end display
-	 *
-	 * @param	string
-	 * @return	string
-	 */
-	function frontend_lead_status ( $lead_status = 'contact' ) 
-	{
-		if ( $lead_status == 'comment' )
-			return 'Commenter';
-		else if ( $lead_status == 'subscribe' )
-			return 'Subscriber';
-		else if ( $lead_status == 'lead' )
-			return 'Lead';
-		else if ( $lead_status == 'contacted' )
-			return 'Contacted';
-		else if ( $lead_status == 'customer' )
-			return 'Customer';
-		else
-			return 'Contact';
 	}
 }
 ?>

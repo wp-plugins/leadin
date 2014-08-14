@@ -32,6 +32,12 @@ if ( !class_exists('LI_Viewers') )
 if ( !class_exists('LI_StatsDashboard') )
     require_once LEADIN_PLUGIN_DIR . '/admin/inc/class-stats-dashboard.php';
 
+if ( !class_exists('LI_Tags_Table') )
+    require_once LEADIN_PLUGIN_DIR . '/admin/inc/class-leadin-tags-list-table.php';
+
+if ( !class_exists('LI_Tag_Editor') )
+    require_once LEADIN_PLUGIN_DIR . '/admin/inc/class-leadin-tag-editor.php';
+
 include_once(ABSPATH . 'wp-admin/includes/plugin.php');
 
 //=============================================
@@ -67,6 +73,8 @@ class WPLeadInAdmin {
                 add_action('admin_footer', array($this, 'build_contacts_chart'));
             }
         }
+
+        //print_r($_POST);
     }
     
     //=============================================
@@ -83,7 +91,7 @@ class WPLeadInAdmin {
         
         self::check_admin_action();
 
-        add_menu_page('LeadIn', 'LeadIn', 'manage_categories', 'leadin_stats', array($this, 'leadin_build_stats_page'), LEADIN_PATH . '/images/' . ( $wp_version < 3.8 && !is_plugin_active('mp6/mp6.php') ? 'leadin-icon-32x32.png' : 'leadin-svg-icon.svg'));
+        add_menu_page('LeadIn', 'LeadIn', 'manage_categories', 'leadin_stats', array($this, 'leadin_build_stats_page'), LEADIN_PATH . '/images/' . ( $wp_version < 3.8 && !is_plugin_active('mp6/mp6.php') ? 'leadin-icon-32x32.png' : 'leadin-svg-icon.svg'), '25.100713');
 
         foreach ( $this->admin_power_ups as $power_up )
         {
@@ -92,7 +100,6 @@ class WPLeadInAdmin {
                 $power_up->admin_init();
 
                 // Creates the menu icon for power-up if it's set. Overrides the main LeadIn menu to hit the contacts power-up
-                //if ( $power_up->menu_text == 'Contacts' )
                 if ( $power_up->menu_text )
                     add_submenu_page('leadin_stats', $power_up->menu_text, $power_up->menu_text, 'manage_categories', 'leadin_' . $power_up->menu_link, array($power_up, 'power_up_setup_callback'));    
             }
@@ -233,8 +240,6 @@ class WPLeadInAdmin {
         }
         else
             $new_contacts_postbox .= '<i>No new contacts today...</i>';
-
-        
 
         return $new_contacts_postbox;
     }
@@ -593,8 +598,10 @@ class WPLeadInAdmin {
                     <?php if ( $power_up_count == 1 ) : ?>
                         <!-- static content stats power-up - not a real powerup and this is a hack to put it second in the order -->
                         <li class="powerup activated">
+                            <div class="img-containter">
+                                <img src="<?php echo LEADIN_PATH; ?>/images/powerup-icon-analytics@2x.png" height="80px" width="80px">
+                            </div>
                             <h2>Content Stats</h2>
-                            <img src="<?php echo LEADIN_PATH; ?>/images/powerup-icon-analytics@2x.png" height="80px" width="80px">
                             <p>See where all your conversions are coming from.</p>
                             <p><a href="http://leadin.com/content-analytics-plugin-wordpress/" target="_blank">Learn more</a></p>
                             <a href="<?php echo get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_stats'; ?>" class="button button-large">View Stats</a>
@@ -603,12 +610,14 @@ class WPLeadInAdmin {
                     <?php endif; ?>
 
                     <li class="powerup <?php echo ( $power_up->activated ? 'activated' : ''); ?>">
+                        <div class="img-containter">
+                            <?php if ( strstr($power_up->icon, 'dashicon') ) : ?>
+                                <span class="<?php echo $power_up->icon; ?>"></span>
+                            <?php else : ?>
+                                <img src="<?php echo LEADIN_PATH . '/images/' . $power_up->icon . '@2x.png'; ?>" height="80px" width="80px"/>
+                            <?php endif; ?>
+                        </div>
                         <h2><?php echo $power_up->power_up_name; ?></h2>
-                        <?php if ( strstr($power_up->icon, 'dashicons') ) : ?>
-                            <div class="power-up-icon dashicons <?php echo $power_up->icon; ?>"></div>
-                        <?php else : ?>
-                            <img src="<?php echo LEADIN_PATH . '/images/' . $power_up->icon . '@2x.png'; ?>" height="80px" width="80px"/>
-                        <?php endif; ?>
                         <p><?php echo $power_up->description; ?></p>
                         <p><a href="<?php echo $power_up->link_uri; ?>" target="_blank">Learn more</a></p>
                         <?php if ( $power_up->activated ) : ?>
@@ -632,16 +641,20 @@ class WPLeadInAdmin {
                 <?php endforeach; ?>
 
                 <li class="powerup">
+                    <div class="img-containter">
+                        <img src="<?php echo LEADIN_PATH; ?>/images/powerup-icon-ideas@2x.png" height="80px" width="80px">
+                    </div>
                     <h2>Your Idea</h2>
-                    <img src="<?php echo LEADIN_PATH; ?>/images/powerup-icon-ideas@2x.png" height="80px" width="80px">
                     <p>Have an idea for a power-up? We'd love to hear it!</p>
                     <p>&nbsp;</p>
-                    <a href="mailto:team@leadin.com" target="_blank" class="button button-primary button-large">Suggest an idea</a>
+                    <a href="mailto:support@leadin.com" target="_blank" class="button button-primary button-large">Suggest an idea</a>
                 </li>
 
                 <li class="powerup">
+                    <div class="img-containter">
+                        <img src="<?php echo LEADIN_PATH; ?>/images/powerup-icon-vip@2x.png" height="80px" width="80px">
+                    </div>
                     <h2>LeadIn VIP Program</h2>
-                    <img src="<?php echo LEADIN_PATH; ?>/images/powerup-icon-vip@2x.png" height="80px" width="80px">
                     <p>Get access to exclusive features and offers for consultants and agencies.</p>
                     <p><a href="http://leadin.com/vip/" target="_blank">Learn more</a></p>
                     <a href="http://leadin.com/vip" target="_blank" class="button button-primary button-large">Become a VIP</a>

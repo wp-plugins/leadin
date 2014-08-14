@@ -6,6 +6,8 @@ class WPMailChimpListSyncAdmin extends WPLeadInAdmin {
     
     var $power_up_settings_section = 'leadin_mls_options_section';
     var $power_up_icon;
+    var $options;
+    var $authed = FALSE;
 
     /**
      * Class constructor
@@ -20,6 +22,8 @@ class WPMailChimpListSyncAdmin extends WPLeadInAdmin {
         {
             $this->power_up_icon = $power_up_icon_small;
             add_action('admin_init', array($this, 'leadin_mls_build_settings_page'));
+            $this->options = get_option('leadin_mls_options');
+            $this->authed = ( $this->options['li_mls_api_key'] ? TRUE : FALSE );
         }
     }
 
@@ -32,14 +36,12 @@ class WPMailChimpListSyncAdmin extends WPLeadInAdmin {
      */
     function leadin_mls_build_settings_page ()
     {
-        $options = get_option('leadin_mls_options');
-
         register_setting('leadin_settings_options', 'leadin_mls_options', array($this, 'sanitize'));
         add_settings_section($this->power_up_settings_section, $this->power_up_icon . "MailChimp", '', LEADIN_ADMIN_PATH);
         add_settings_field('li_mls_api_key', 'API key', array($this, 'li_mls_api_key_callback'), LEADIN_ADMIN_PATH, $this->power_up_settings_section);
-        
-        if ( isset($options['li_mls_api_key']) && $options['li_mls_api_key'] )
-            add_settings_field('li_mls_subscribers_to_list', 'Add subscribers to list', array($this, 'li_mls_subscribers_to_list_callback'), LEADIN_ADMIN_PATH, $this->power_up_settings_section);
+
+        if ( isset($this->options['li_mls_api_key']) )
+            add_settings_field('li_print_synced_lists', 'Synced tags', array($this, 'li_print_synced_lists'), LEADIN_ADMIN_PATH, $this->power_up_settings_section);
     }
 
     /**
@@ -65,15 +67,68 @@ class WPMailChimpListSyncAdmin extends WPLeadInAdmin {
      */
     function li_mls_api_key_callback ()
     {
-        $options = get_option('leadin_mls_options');
-        $li_mls_api_key = ( $options['li_mls_api_key'] ? $options['li_mls_api_key'] : '' ); // Get header from options, or show default
+        $li_mls_api_key = ( $this->options['li_mls_api_key'] ? $this->options['li_mls_api_key'] : '' ); // Get header from options, or show default
         
         printf(
             '<input id="li_mls_api_key" type="text" id="title" name="leadin_mls_options[li_mls_api_key]" value="%s" size="50"/>',
             $li_mls_api_key
         );
 
-        echo '<p><a href="http://admin.mailchimp.com/account/api/" target="_blank">Get an API key from MailChimp.com</a></p>';
+        if ( ! isset($li_mls_api_key) )
+            echo '<p><a href="http://admin.mailchimp.com/account/api/" target="_blank">Get an API key from MailChimp.com</a></p>';
+    }
+
+    /**
+     * Prints email input for settings page
+     */
+    function li_print_synced_lists ()
+    {
+        $li_mls_api_key = ( $this->options['li_mls_api_key'] ? $this->options['li_mls_api_key'] : '' ); // Get header from options, or show default
+        
+        if ( isset($li_mls_api_key ) )
+        {
+            $synced_lists = $this->li_get_synced_list_for_esp('mailchimp');
+            $list_value_pairs = array();
+            $synced_list_count = 0;
+
+            echo '<table>';
+            foreach ( $synced_lists as $synced_list )
+            {
+                foreach ( stripslashes_deep(unserialize($synced_list->tag_synced_lists)) as $tag_synced_list )
+                {
+                    if ( $tag_synced_list['esp'] == 'mailchimp' )
+                    {
+                        echo '<tr class="synced-list-row">';
+                            echo '<td class="synced-list-cell"><span class="icon-tag"></span> ' . $synced_list->tag_text . '</td>';
+                            echo '<td class="synced-list-cell"><span class="synced-list-arrow">&#8594;</span></td>';
+                            echo '<td class="synced-list-cell"><span class="icon-envelope"></span> ' . $tag_synced_list['list_name'] . '</td>';
+                            echo '<td class="synced-list-edit"><a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts&action=edit_tag&tag=' . $synced_list->tag_id . '">edit</a></td>';
+                        echo '</tr>';
+
+                        $synced_list_count++;
+                    }
+                }
+            }
+            echo '</table>';
+
+            if ( ! $synced_list_count )
+                echo "<p>You don't have any MailChimp lists synced with LeadIn yet...</p>";
+            
+            echo '<p><a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts&action=manage_tags' . '">Manage tags</a></p>';
+        }
+
+        if ( $li_mls_api_key )
+            echo '<p style="padding-top: 10px;"><a href="http://admin.mailchimp.com/lists/new-list/" target="_blank">Create a new list on MailChimp.com</a></p>';
+    }
+
+    function li_get_synced_list_for_esp ( $esp_name, $output_type = 'OBJECT' )
+    {
+        global $wpdb;
+
+        $q = $wpdb->prepare("SELECT * FROM $wpdb->li_tags WHERE tag_synced_lists LIKE '%%%s%%' AND tag_deleted = 0", $esp_name);
+        $synced_lists = $wpdb->get_results($q, $output_type);
+
+        return $synced_lists;
     }
 
     /**
@@ -81,10 +136,9 @@ class WPMailChimpListSyncAdmin extends WPLeadInAdmin {
      */
     function li_mls_subscribers_to_list_callback ()
     {
-        $options = get_option('leadin_mls_options');
-        $li_mls_subscribers_to_list = ( isset($options['li_mls_subscribers_to_list']) ? $options['li_mls_subscribers_to_list'] : '' );
+        $li_mls_subscribers_to_list = ( isset($this->options['li_mls_subscribers_to_list']) ? $this->options['li_mls_subscribers_to_list'] : '' );
 
-        $lists = $this->li_mls_get_mailchimp_lists($options['li_mls_api_key']);
+        $lists = $this->li_mls_get_mailchimp_lists($this->options['li_mls_api_key']);
 
         echo '<select id="li_mls_subscribers_to_list" name="leadin_mls_options[li_mls_subscribers_to_list]" ' . ( ! count($lists['data']) ? 'disabled' : '' ) . '>';
 
@@ -111,6 +165,23 @@ class WPMailChimpListSyncAdmin extends WPLeadInAdmin {
         echo '</select>';
 
         echo '<p><a href="http://admin.mailchimp.com/lists/new-list/" target="_blank">Create a new list on MailChimp.com</a></p>';
+    }
+
+    function li_get_lists ( )
+    {
+        $lists = $this->li_mls_get_mailchimp_lists($this->options['li_mls_api_key']);
+        
+        $sanitized_lists = array();
+        foreach ( $lists['data'] as $list )
+        {
+            $list_obj = (Object)NULL;
+            $list_obj->id = $list['id'];
+            $list_obj->name = $list['name'];
+
+            array_push($sanitized_lists, $list_obj);;
+        }
+        
+        return $sanitized_lists;
     }
 
     function li_mls_get_mailchimp_lists ( $api_key )

@@ -22,8 +22,9 @@ class LI_List_Table extends WP_List_Table {
     public $view_label;
     private $view_count;
     private $views;
-    private $totals;
+    private $total_contacts;
     private $total_filtered;
+    public $tags;
 
     /**
      * Class constructor
@@ -61,8 +62,6 @@ class LI_List_Table extends WP_List_Table {
         {
             case 'email':
 
-            case 'status':
-                return $item[$column_name];
             case 'date':
                 return $item[$column_name];
             case 'last_visit':
@@ -129,7 +128,6 @@ class LI_List_Table extends WP_List_Table {
             'cb'            => '<input type="checkbox" />',
             'email'         => 'Email',
             'source'        => 'Original source',
-            'status'        => 'Status',
             'visits'        => 'Visits',
             'pageviews'     => 'Page views',
             'submissions'   => 'Forms',
@@ -149,8 +147,7 @@ class LI_List_Table extends WP_List_Table {
     function get_sortable_columns () 
     {
         $sortable_columns = array(
-            'email'         => array('email',false),     //true means it's already sorted
-            'status'        => array('status',false),
+            'email'         => array('email',false), // presorted if true
             'pageviews'     => array('pageviews',false),
             'visits'        => array('visits',false),
             'submissions'   => array('submissions',false),
@@ -168,15 +165,15 @@ class LI_List_Table extends WP_List_Table {
      */
     function get_bulk_actions ()
     {
+        $contact_type   = strtolower($this->view_label);
+        $filtered       =  ( isset($_GET['filter_action']) ? 'filtered ' : '' );
         $actions = array(
-            'change_status_to_contact' => 'Change status to contact',
-            'change_status_to_comment' => 'Change status to commenter',
-            'change_status_to_subscribe' => 'Change status to subscriber',
-            'change_status_to_lead' => 'Change status to lead',
-            'change_status_to_contacted' => 'Change status to contacted',
-            'change_status_to_customer' => 'Change status to customer',
-            'delete'    => 'Delete'
-
+            'add_tag_to_all'             => 'Add a tag to all ' . $filtered . $contact_type . ' in list',
+            'add_tag_to_selected'        => 'Add a tag to selected ' . $contact_type,
+            'remove_tag_from_all'        => 'Remove a tag from all ' . $filtered . $contact_type . ' in list',
+            'remove_tag_from_selected'   => 'Remove a tag from selected ' . $contact_type,
+            'delete_all'                 => 'Delete all ' . $contact_type . ' from LeadIn',
+            'delete_selected'            => 'Delete selected ' . $contact_type . ' from LeadIn'
         );
 
         return $actions;
@@ -192,46 +189,114 @@ class LI_List_Table extends WP_List_Table {
         $ids_for_action = '';
         $hashes_for_action = '';
 
-        if ( isset ($_GET['contact']) )
+        // @TODO Fix the delete logic
+        if ( strstr($this->current_action(), 'delete') )
         {
-            for ( $i = 0; $i < count($_GET['contact']); $i++ )
+            if ( 'delete_selected' === $this->current_action() )
             {
-               $ids_for_action .= $_GET['contact'][$i];;
+                for ( $i = 0; $i < count($_GET['contact']); $i++ )
+                {
+                   $ids_for_action .= $_GET['contact'][$i];;
 
-               if ( $i != (count($_GET['contact'])-1) )
-                    $ids_for_action .= ',';
+                   if ( $i != (count($_GET['contact'])-1) )
+                        $ids_for_action .= ',';
+                }
+            }
+            else if ( 'delete_all' === $this->current_action() )
+            {
+                $contacts = $this->get_contacts();
+                foreach ( $contacts as $contact )
+                    $ids_for_action .= $contact['ID'] . ',';
+
+                $ids_for_action = rtrim($ids_for_action, ',');
             }
 
-            $q = $wpdb->prepare("SELECT hashkey FROM li_leads WHERE lead_id IN ( " . $ids_for_action . " ) " . $wpdb->multisite_query, "");
+            $q = $wpdb->prepare("SELECT hashkey FROM $wpdb->li_leads WHERE lead_id IN ( " . $ids_for_action . " ) ", "");
             $hashes = $wpdb->get_results($q);
 
             if ( count($hashes) )
             {
-                for ( $i = 0; $i < count($hashes); $i++ )
-                {
-                     $hashes_for_action .= "'". $hashes[$i]->hashkey. "'";
+                foreach ( $hashes as $hash )
+                    $hashes_for_action .= "'" . $hash->hashkey . "',";
 
-                   if ( $i != (count($hashes)-1) )
-                        $hashes_for_action .= ",";
+                $hashes_for_action = rtrim($hashes_for_action, ',');
+
+                $q = $wpdb->prepare("UPDATE $wpdb->li_pageviews SET pageview_deleted  = 1 WHERE lead_hashkey IN (" . $hashes_for_action . ") ", "");
+                $delete_pageviews = $wpdb->query($q);
+
+                $q = $wpdb->prepare("UPDATE $wpdb->li_submissions SET form_deleted  = 1 WHERE lead_hashkey IN (" . $hashes_for_action . ") ", "");
+                $delete_submissions = $wpdb->query($q);
+
+                $q = $wpdb->prepare("UPDATE $wpdb->li_leads SET lead_deleted  = 1 WHERE lead_id IN (" . $ids_for_action . ") ", "");
+                $delete_leads = $wpdb->query($q);
+
+                $q = $wpdb->prepare("UPDATE $wpdb->li_tag_relationships SET tag_relationship_deleted = 1 WHERE contact_hashkey IN (" . $hashes_for_action . ") ", "");
+                $delete_tags = $wpdb->query($q);
+            }
+        }
+        
+        if ( isset($_POST['bulk_edit_tags']) )
+        {
+            $q = $wpdb->prepare("SELECT tag_id FROM $wpdb->li_tags WHERE tag_slug = %s ", $_POST['bulk_selected_tag']);
+            $tag_id = $wpdb->get_var($q);
+
+            if ( empty($_POST['leadin_selected_contacts']) )
+            {
+                $contacts = $this->get_contacts();
+                foreach ( $contacts as $contact )
+                    $ids_for_action .= $contact['ID'] . ',';
+
+                $ids_for_action = rtrim($ids_for_action, ',');
+            }
+            else
+                $ids_for_action = $_POST['leadin_selected_contacts'];
+
+            $q = $wpdb->prepare("
+                SELECT 
+                    l.hashkey, l.lead_id, 
+                    ( SELECT ltr.tag_id FROM $wpdb->li_tag_relationships ltr WHERE ltr.tag_id = %d AND ltr.contact_hashkey = l.hashkey GROUP BY ltr.contact_hashkey ) AS tag_set 
+                FROM 
+                    $wpdb->li_leads l
+                WHERE 
+                    l.lead_id IN ( " . $ids_for_action . " ) AND l.lead_deleted = 0 GROUP BY l.lead_id", $tag_id);
+
+            $hashes = $wpdb->get_results($q);
+
+            $insert_values      = '';
+            $hashes_to_update   = '';
+
+            if ( count($hashes) )
+            {
+                foreach ( $hashes as $hash )
+                {
+                    if ( $hash->tag_set === NULL )
+                       $insert_values .= '(' . $tag_id . ', "' . $hash->hashkey . '"),';
+                    else
+                        $hashes_to_update .= "'" . $hash->hashkey . "',";
+                }
+            }
+
+            if ( $_POST['bulk_edit_tag_action'] == 'add_tag' )
+            {
+                if ( $insert_values )
+                {
+                    $q = "INSERT INTO $wpdb->li_tag_relationships ( tag_id, contact_hashkey ) VALUES " . rtrim($insert_values, ',');
+                    $wpdb->query($q);
                 }
 
-                //Detect when a bulk action is being triggered...
-                if( 'delete' === $this->current_action() )
+                if ( $hashes_to_update )
                 {
-                    $q = $wpdb->prepare("UPDATE li_pageviews SET pageview_deleted  = 1 WHERE lead_hashkey IN (" . $hashes_for_action . ") " . $wpdb->multisite_query, "");
-                    $delete_pageviews = $wpdb->query($q);
-
-                    $q = $wpdb->prepare("UPDATE li_submissions SET form_deleted  = 1 WHERE lead_hashkey IN (" . $hashes_for_action . ") " . $wpdb->multisite_query, "");
-                    $delete_submissions = $wpdb->query($q);
-
-                    $q = $wpdb->prepare("UPDATE li_leads SET lead_deleted  = 1 WHERE lead_id IN (" . $ids_for_action . ") " . $wpdb->multisite_query, "");
-                    $delete_leads = $wpdb->query($q);
+                    // update the relationships for the contacts that exist already
+                    $q = $wpdb->prepare("UPDATE $wpdb->li_tag_relationships SET tag_relationship_deleted = 0 WHERE tag_id = %d AND contact_hashkey IN ( " . rtrim($hashes_to_update, ',')  . ") ", $tag_id);
+                    $wpdb->query($q);
                 }
-                else if ( strstr($this->current_action(), 'change_status_to_') )
+            }
+            else
+            {
+                if ( $hashes_to_update )
                 {
-                    $new_status = str_replace('change_status_to_', '', $this->current_action());
-
-                    $q = $wpdb->prepare("UPDATE li_leads SET lead_status = %s WHERE lead_id IN (" . $ids_for_action . ")" . $wpdb->multisite_query, $new_status);
+                    // Update the existing tags only
+                    $q = $wpdb->prepare("UPDATE $wpdb->li_tag_relationships SET tag_relationship_deleted = 1 WHERE tag_id = %d AND contact_hashkey IN ( " . rtrim($hashes_to_update, ',')  . ") ", $tag_id);
                     $wpdb->query($q);
                 }
             }
@@ -247,14 +312,20 @@ class LI_List_Table extends WP_List_Table {
     {
         /*** 
             == FILTER ARGS ==
-            - &visited          = visited a specific page url
-            - &num_pageviews    = visited at least # pages
-            - &submitted        = submitted a form on specific page url
+            - filter_action (visited)      = visited a specific page url (filter_action) 
+            - filter_action (submitted)    = submitted a form on specific page url (filter_action) 
+            - filter_content               = content for filter_action
+            - filter_form                  = selector id/class
+            - num_pageviews                = visited at least #n pages
+            - s                            = search query on lead_email/lead_source
         */
 
         global $wpdb;
 
-        $mysql_search_filter = '';
+        $mysql_search_filter        = '';
+        $mysql_contact_type_filter  = '';
+        $mysql_action_filter        = '';
+        $filter_action_set          = FALSE;
 
         // search filter
         if ( isset($_GET['s']) )
@@ -262,71 +333,84 @@ class LI_List_Table extends WP_List_Table {
             $search_query = $_GET['s'];
             $mysql_search_filter = $wpdb->prepare(" AND ( l.lead_email LIKE '%%%s%%' OR l.lead_source LIKE '%%%s%%' ) ", like_escape($search_query), like_escape($search_query));
         }
+        
+        $filtered_contacts = array();
 
         // contact type filter
         if ( isset($_GET['contact_type']) )
         {
-            $mysql_contact_type_filter = $wpdb->prepare("AND l.lead_status = %s ", $_GET['contact_type']);
-        }
-        else 
-        {
-            $mysql_contact_type_filter = " AND ( l.lead_status = 'contact' OR l.lead_status = 'comment' OR l.lead_status = 'subscribe' OR l.lead_status = 'lead' OR l.lead_status = 'contacted' OR l.lead_status = 'customer' ) ";
+            // Query for the tag_id, then find all hashkeys with that tag ID tied to them. Use those hashkeys to modify the query
+            $q = $wpdb->prepare("
+                SELECT 
+                    DISTINCT ltr.contact_hashkey as lead_hashkey 
+                FROM 
+                    $wpdb->li_tag_relationships ltr, $wpdb->li_tags lt 
+                WHERE 
+                    lt.tag_id = ltr.tag_id AND 
+                    ltr.tag_relationship_deleted = 0 AND  
+                    lt.tag_slug = %s GROUP BY ltr.contact_hashkey",  $_GET['contact_type']);
+
+            $filtered_contacts = $wpdb->get_results($q, 'ARRAY_A');
+            $num_contacts = count($filtered_contacts);
         }
 
-        // filter for visiting a specific page
         if ( isset($_GET['filter_action']) && $_GET['filter_action'] == 'visited' )
         {
-            $q = $wpdb->prepare("SELECT lead_hashkey FROM li_pageviews WHERE pageview_title LIKE '%%%s%%' " . $wpdb->multisite_query . " GROUP BY lead_hashkey",  htmlspecialchars(urldecode($_GET['filter_content'])));
-            $filtered_contacts = $wpdb->get_results($q);
-
-            if ( count($filtered_contacts) )
+            if ( isset($_GET['filter_content']) && $_GET['filter_content'] != 'any page' )
             {
-                $filtered_hashkeys = '';
-                for ( $i = 0; $i < count($filtered_contacts); $i++ )
-                    $filtered_hashkeys .= "'" . $filtered_contacts[$i]->lead_hashkey . "'" . ( $i != (count($filtered_contacts) - 1) ? ', ' : '' );
-            
-                $mysql_search_filter = " AND l.hashkey IN ( " . $filtered_hashkeys . " ) ";
+                $q = $wpdb->prepare("SELECT lead_hashkey FROM $wpdb->li_pageviews WHERE pageview_title LIKE '%%%s%%' GROUP BY lead_hashkey",  htmlspecialchars(urldecode($_GET['filter_content'])));
+                $filtered_contacts = leadin_merge_filtered_contacts($wpdb->get_results($q, 'ARRAY_A'), $filtered_contacts);
+                $filter_action_set = TRUE;
             }
         }
         
         // filter for a form submitted on a specific page
         if ( isset($_GET['filter_action']) && $_GET['filter_action'] == 'submitted' )
         {
-            $q = $wpdb->prepare("SELECT lead_hashkey FROM li_submissions WHERE form_page_title LIKE '%%%s%%' " . $wpdb->multisite_query . " GROUP BY lead_hashkey", htmlspecialchars(urldecode($_GET['filter_content'])));
-            $filtered_contacts = $wpdb->get_results($q);
-
-            if ( count($filtered_contacts) )
+            $filter_form = '';
+            if ( isset($_GET['filter_form']) && $_GET['filter_form'] && $_GET['filter_form'] != 'any form' )
             {
-                $filtered_hashkeys = '';
-                for ( $i = 0; $i < count($filtered_contacts); $i++ )
-                    $filtered_hashkeys .= "'" . $filtered_contacts[$i]->lead_hashkey . "'" . ( $i != (count($filtered_contacts) - 1) ? ', ' : '' );
-            
-                $mysql_search_filter = " AND l.hashkey IN ( " . $filtered_hashkeys . " ) ";
+                $filter_form = str_replace(array('#', '.'), '', htmlspecialchars(urldecode($_GET['filter_form'])));
+                $filter_form_query = $wpdb->prepare(" AND ( form_selector_id LIKE '%%%s%%' OR form_selector_classes LIKE '%%%s%%' )", $filter_form, $filter_form);
             }
-        }
 
-        if ( ( isset($_GET['filter_action']) && $mysql_search_filter ) || !isset($_GET['filter_action']) )
+            $q = $wpdb->prepare("SELECT lead_hashkey FROM $wpdb->li_submissions WHERE form_page_title LIKE '%%%s%%' ", ( $_GET['filter_content'] != 'any page' ? htmlspecialchars(urldecode($_GET['filter_content'])): '' ));
+            $q .= ( $filter_form_query ? $filter_form_query : '' );
+            $q .= " GROUP BY lead_hashkey";
+            $filtered_contacts = leadin_merge_filtered_contacts($wpdb->get_results($q, 'ARRAY_A'), $filtered_contacts);
+            $filter_action_set = TRUE;
+        }        
+
+        $filtered_hashkeys = leadin_explode_filtered_contacts($filtered_contacts);
+
+        $mysql_action_filter = '';
+        if ( $filter_action_set ) // If a filter action is set and there are no contacts, do a blank
+            $mysql_action_filter = " AND l.hashkey IN ( " . ( $filtered_hashkeys ? $filtered_hashkeys : "''" ) . " ) ";
+        else
+            $mysql_action_filter = ( $filtered_hashkeys ? " AND l.hashkey IN ( " . $filtered_hashkeys . " ) " : '' ); // If a filter action isn't set, use the filtered hashkeys if they exist, else, don't include the statement
+
+        // There's a filter and leads are in it
+        if ( ( isset($_GET['contact_type']) && $num_contacts ) || ! isset($_GET['contact_type']) )
         {
             $q =  $wpdb->prepare("
                 SELECT 
                     l.lead_id AS lead_id, 
-                    LOWER(DATE_FORMAT(l.lead_date, %s)) AS lead_date, l.lead_ip, l.lead_source, l.lead_email, l.lead_status, l.hashkey,
+                    LOWER(DATE_FORMAT(l.lead_date, %s)) AS lead_date, l.lead_ip, l.lead_source, l.lead_email, l.hashkey,
                     COUNT(DISTINCT s.form_id) AS lead_form_submissions,
                     COUNT(DISTINCT p.pageview_id) AS lead_pageviews,
                     LOWER(DATE_FORMAT(MAX(p.pageview_date), %s)) AS last_visit,
-                    ( SELECT COUNT(DISTINCT pageview_id) FROM li_pageviews WHERE lead_hashkey = l.hashkey AND pageview_session_start = 1 AND pageview_deleted = 0 " . $wpdb->multisite_query . " ) AS visits,
-                    ( SELECT MAX(pageview_source) AS pageview_source FROM li_pageviews WHERE lead_hashkey = l.hashkey AND pageview_session_start = 1 AND pageview_deleted = 0 " . $wpdb->multisite_query . " ) AS pageview_source 
+                    ( SELECT COUNT(DISTINCT pageview_id) FROM $wpdb->li_pageviews WHERE lead_hashkey = l.hashkey AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS visits,
+                    ( SELECT MAX(pageview_source) AS pageview_source FROM $wpdb->li_pageviews WHERE lead_hashkey = l.hashkey AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS pageview_source 
                 FROM 
-                    li_leads l
-                LEFT JOIN li_submissions s ON l.hashkey = s.lead_hashkey
-                LEFT JOIN li_pageviews p ON l.hashkey = p.lead_hashkey 
-                WHERE l.lead_email != '' AND l.lead_deleted = 0 ", '%Y/%m/%d %l:%i%p', '%Y/%m/%d %l:%i%p');
+                    $wpdb->li_leads l
+                LEFT JOIN $wpdb->li_submissions s ON l.hashkey = s.lead_hashkey
+                LEFT JOIN $wpdb->li_pageviews p ON l.hashkey = p.lead_hashkey 
+                WHERE l.lead_email != '' AND l.lead_deleted = 0 AND l.hashkey != '' ", '%Y/%m/%d %l:%i%p', '%Y/%m/%d %l:%i%p');
 
             $q .= $mysql_contact_type_filter;
             $q .= ( $mysql_search_filter ? $mysql_search_filter : "" );
-            $q .= $wpdb->prepare(" AND l.blog_id = %d ", $wpdb->blogid);
-            $q .=  " GROUP BY l.lead_email";
-
+            $q .= ( $mysql_action_filter ? $mysql_action_filter : "" );
+            $q .=  " GROUP BY l.hashkey";
             $leads = $wpdb->get_results($q);
         }
         else
@@ -342,19 +426,6 @@ class LI_List_Table extends WP_List_Table {
         {
             foreach ( $leads as $key => $lead ) 
             {
-                $lead_status = 'Contact';
-
-                if ( $lead->lead_status == 'subscribe' )
-                    $lead_status = 'Subscriber';
-                else if ( $lead->lead_status == 'comment' )
-                    $lead_status = 'Commenter';
-                else if ( $lead->lead_status == 'lead' )
-                    $lead_status = 'Lead';
-                else if ( $lead->lead_status == 'contacted' )
-                    $lead_status = 'Contacted';
-                else if ( $lead->lead_status == 'customer' )
-                    $lead_status = 'Customer';
-
                 // filter for number of page views and skipping lead if it doesn't meet the minimum
                 if ( isset($_GET['filter_action']) && $_GET['filter_action'] == 'num_pageviews' )
                 {
@@ -368,7 +439,6 @@ class LI_List_Table extends WP_List_Table {
                     'ID' => $lead->lead_id,
                     'hashkey' => $lead->hashkey,
                     'email' => sprintf('<a href="?page=%s&action=%s&lead=%s">' . "<img class='pull-left leadin-contact-avatar leadin-dynamic-avatar_" . substr($lead->lead_id, -1) . "' src='https://app.getsignals.com/avatar/image/?emails=" . $lead->lead_email . "' width='35' height='35'/> " . '</a>', $_REQUEST['page'], 'view', $lead->lead_id) .  sprintf('<a href="?page=%s&action=%s&lead=%s"><b>' . $lead->lead_email . '</b></a>', $_REQUEST['page'], 'view', $lead->lead_id),
-                    'status' => $lead_status,
                     'visits' => ( !isset($lead->visits) ? 1 : $lead->visits ),
                     'submissions' => $lead->lead_form_submissions,
                     'pageviews' => $lead->lead_pageviews,
@@ -391,25 +461,20 @@ class LI_List_Table extends WP_List_Table {
     /**
      * Gets the total number of contacts, comments and subscribers for above the table
      */
-    function get_contact_type_totals ()
+    function get_total_contacts ()
     {
         global $wpdb;
-        // @TODO Need to select distinct emails
+
         $q = "
             SELECT 
-                COUNT(DISTINCT lead_email) AS total_contacts,
-                ( SELECT COUNT(DISTINCT lead_email) FROM li_leads WHERE lead_status = 'lead' AND lead_email != '' AND lead_deleted = 0 " . $wpdb->multisite_query . " ) AS total_leads,
-                ( SELECT COUNT(DISTINCT lead_email) FROM li_leads WHERE lead_status = 'comment' AND lead_email != '' AND lead_deleted = 0 " . $wpdb->multisite_query . " ) AS total_comments,
-                ( SELECT COUNT(DISTINCT lead_email) FROM li_leads WHERE lead_status = 'subscribe' AND lead_email != '' AND lead_deleted = 0 " . $wpdb->multisite_query . " ) AS total_subscribes,
-                ( SELECT COUNT(DISTINCT lead_email) FROM li_leads WHERE lead_status = 'contacted' AND lead_email != '' AND lead_deleted = 0 " . $wpdb->multisite_query . " ) AS total_contacted,
-                ( SELECT COUNT(DISTINCT lead_email) FROM li_leads WHERE lead_status = 'customer' AND lead_email != '' AND lead_deleted = 0 " . $wpdb->multisite_query . " ) AS total_customers
+                COUNT(DISTINCT hashkey) AS total_contacts
             FROM 
-                li_leads
+                $wpdb->li_leads
             WHERE
-                lead_email != '' AND lead_deleted = 0 " . $wpdb->multisite_query;
+                lead_email != '' AND lead_deleted = 0 AND hashkey != '' ";
 
-        $totals = $wpdb->get_row($q);
-        return $totals;
+        $total_contacts = $wpdb->get_var($q);
+        return $total_contacts;
     }
 
     /**
@@ -440,50 +505,25 @@ class LI_List_Table extends WP_List_Table {
     }
     
     /**
-     * Get the view menus above the contacts table
+     * Get the contact tags
      *
      * @return  string
      */
-    function get_views ()
+    function get_tags ()
     {
-        $views = array();
-        $this->totals = $this->get_contact_type_totals();
+        global $wpdb;
 
-        $current = ( !empty($_GET['contact_type']) ? html_entity_decode($_GET['contact_type']) : 'all' );
-        $all_params = array( 'contact_type', 's', 'paged', '_wpnonce', '_wpreferrer', '_wp_http_referer', 'action', 'action2', 'filter_action', 'filter_content', 'contact');
-        $all_url = remove_query_arg($all_params);
+        $q = $wpdb->prepare("
+            SELECT 
+                lt.tag_text, lt.tag_slug, lt.tag_synced_lists, lt.tag_form_selectors, lt.tag_order, lt.tag_id,
+                ( SELECT COUNT(DISTINCT contact_hashkey) FROM $wpdb->li_tag_relationships, $wpdb->li_leads WHERE tag_id = lt.tag_id AND tag_relationship_deleted = 0 AND contact_hashkey != '' AND $wpdb->li_leads.hashkey = $wpdb->li_tag_relationships.contact_hashkey GROUP BY tag_id ) AS tag_count
+            FROM 
+                $wpdb->li_tags lt
+            WHERE 
+                lt.tag_deleted = 0
+            ORDER BY lt.tag_order ASC", "");
 
-        // All link
-        $class = ( $current == 'all' ? ' class="current"' :'' );
-        $views['all'] = "<a href='{$all_url }' {$class} >" . ( $this->totals->total_contacts ) .  " total contacts</a>";
-
-        // Commenters link
-        $comments_url = add_query_arg('contact_type','comment', $all_url);
-        $class = ( $current == 'comment' ? ' class="current"' :'' );
-        $views['commenters'] = "<a href='{$comments_url}' {$class} >" . leadin_single_plural_label($this->totals->total_comments, 'commenter', 'commenters') .  "</a>";
-
-        // Subscribers link
-        $subscribers_url = add_query_arg('contact_type','subscribe', $all_url);
-        $class = ( $current == 'subscribe' ? ' class="current"' :'' );
-        $views['subscribe'] = "<a href='{$subscribers_url}' {$class} >" . leadin_single_plural_label($this->totals->total_subscribes, 'subscriber', 'subscribers') .  "</a>";
-
-        // Leads link
-        $leads_url = add_query_arg('contact_type','lead', $all_url);
-        $class = ( $current == 'lead' ? ' class="current"' :'' );
-        $views['contacts'] = "<a href='{$leads_url}' {$class} >" . leadin_single_plural_label($this->totals->total_leads, 'lead', 'leads') .  "</a>";
-
-        // Contacted link
-        $contacted_url = add_query_arg('contact_type','contacted', $all_url);
-        $class = ( $current == 'contacted' ? ' class="current"' :'' );
-        $views['contacted'] = "<a href='{$contacted_url}' {$class} >" . leadin_single_plural_label($this->totals->total_contacted, 'contacted', 'contacted') .  "</a>";
-
-        // Customers link
-        $customers_url = add_query_arg('contact_type','customer', $all_url);
-        $class = ( $current == 'customer' ? ' class="current"' :'' );
-        $views['customer'] = "<a href='{$customers_url}' {$class} >" . leadin_single_plural_label($this->totals->total_customers, 'customer', 'customers') .  "</a>";
-
-
-        return $views;
+        return $wpdb->get_results($q);
     }
 
     /**
@@ -491,53 +531,44 @@ class LI_List_Table extends WP_List_Table {
      */
     function views ()
     {
-        $this->views = $this->get_views();
-        $this->views = apply_filters( 'views_' . $this->screen->id, $this->views );
-        $this->current_view = $this->get_view();
+        $this->tags = stripslashes_deep($this->get_tags());
+        $current = ( !empty($_GET['contact_type']) ? html_entity_decode($_GET['contact_type']) : 'all' );
+        $all_params = array( 'contact_type', 's', 'paged', '_wpnonce', '_wpreferrer', '_wp_http_referer', 'action', 'action2', 'filter_form', 'filter_action', 'filter_content', 'contact');
+        $all_url = remove_query_arg($all_params);
+        $this->total_contacts = $this->get_total_contacts();
 
-        switch ( $this->current_view )
-        {
-            case 'comment' : 
-                $this->view_label = 'Commenters';
-                $this->view_count = number_format($this->totals->total_comments);
-            break;
+        echo "<ul class='leadin-contacts__type-picker'>";
+            echo "<li><a href='$all_url' class='" . ( $current == 'all' ? 'current' :'' ) . "'><span class='icon-user'></span>" . $this->total_contacts .  " Total</a></li>";
+        echo "</ul>";
 
-            case 'subscribe' : 
-                $this->view_label = 'Subscribers';
-                $this->view_count = number_format($this->totals->total_subscribes);
-            break;
-
-            case 'lead' : 
-                $this->view_label = 'Leads';
-                $this->view_count = number_format($this->totals->total_leads);
-            break;
-
-            case 'contacted' : 
-                $this->view_label = 'Contacted';
-                $this->view_count = number_format($this->totals->total_contacted);
-            break;
-
-            case 'customer' : 
-                $this->view_label = 'Customers';
-                $this->view_count = number_format($this->totals->total_customers);
-            break;
-
-            default:
-                $this->view_label = 'Contacts';
-                $this->view_count = number_format($this->totals->total_contacts);
-            break;
+        if ( $current == "all" ) {
+            $this->view_label = "Contacts";
+            $this->view_count = $this->total_contacts;
         }
 
-        if ( empty( $this->views ) )
-            return;
+        if ( empty( $this->tags ) ) {
+            echo "<h3 class='leadin-contacts__tags-header'>No Tags</h3>";
+        }
+        else {
+            echo "<h3 class='leadin-contacts__tags-header'>Tags</h3>";
+        }
 
-        echo "<ul class='leadin-contacts__type-picker'>\n";
-            foreach ( $this->views as $class => $view ) 
-            {
-                $this->views[ $class ] = "\t<li class='$class'>$view";
+        echo "<ul class='leadin-contacts__type-picker'>";
+            foreach ( $this->tags as $tag ) {
+                
+                if ( $current == $tag->tag_slug ) {
+                    $currentTag = true;
+                    $this->view_label = $tag->tag_text;
+                    $this->view_count = $tag->tag_count;
+                } else {
+                    $currentTag = false;
+                }
+
+                echo "<li><a href='" . $all_url . "&contact_type=" . $tag->tag_slug . "' class='" . ( $currentTag ? 'current' :'' ) . "''><span class='icon-tag'></span>" . ( $tag->tag_count ? $tag->tag_count : '0' ) . " " . $tag->tag_text . "</a></li>";
             }
-            echo implode( "</li>\n", $this->views ) . "</li>\n";
         echo "</ul>";
+
+        echo "<a href='" . get_bloginfo('wpurl') . "/wp-admin/admin.php?page=leadin_contacts&action=manage_tags" . "' class='button'>Manage tags</a>";
     }
 
 
@@ -550,20 +581,28 @@ class LI_List_Table extends WP_List_Table {
 
         ?>
             <form id="leadin-contacts-filter" class="leadin-contacts__filter" method="GET">
+                
                 <h3 class="leadin-contacts__filter-text">
-                    Viewing <span class="leadin-contacts__filter-count"> <?php echo ( $this->total_filtered != $this->view_count ? $this->total_filtered . '/' : '' ) . strtolower(leadin_single_plural_label($this->view_count, rtrim($this->view_label, 's'), $this->view_label)); ?></span> who 
-                    <select class="select2" name="filter_action" id="filter_action" style="width:200px">
-                        <option value="visited" <?php echo ( $filters['action']=='visited' ? 'selected' : '' ) ?> >Viewed</option>
-                        <option value="submitted" <?php echo ( $filters['action']=='submitted' ? 'selected' : '' ) ?> >Submitted a form on</option>
+                    
+                    <span class="leadin-contacts__filter-count"><?php echo ( $this->total_filtered != $this->view_count ? '<span id="contact-count">' . $this->total_filtered . '</span>' . '/' : '' ) . '<span id="contact-count">' . ( $this->view_count ? $this->view_count : '0' ) . '</span>' . ' ' . strtolower($this->view_label); ?></span> who 
+                    
+                    <select class="select2" name="filter_action" id="filter_action" style="width:125px">
+                        <option value="visited" <?php echo ( $filters['action']=='visited' ? 'selected' : '' ) ?> >viewed</option>
+                        <option value="submitted" <?php echo ( $filters['action']=='submitted' ? 'selected' : '' ) ?> >submitted</option>
                     </select>
 
-                    <input type="hidden" name="filter_content" class="bigdrop" id="filter_content" style="width:300px" value="<?php echo ( isset($_GET['filter_content']) ? stripslashes($_GET['filter_content']) : '' ); ?>"/>
+                    <span id="form-filter-input" <?php echo ( ! isset($_GET['filter_form']) || ( isset($_GET['filter_action']) && $_GET['filter_action'] != 'submitted' ) ? 'style="display: none;"' : ''); ?>>
+                        <input type="hidden" name="filter_form" class="bigdrop" id="filter_form" style="width:250px" value="<?php echo ( isset($_GET['filter_form']) ? stripslashes($_GET['filter_form']) : '' ); ?>"/> on 
+                    </span>
+
+                    <input type="hidden" name="filter_content" class="bigdrop" id="filter_content" style="width:250px" value="<?php echo ( isset($_GET['filter_content']) ? stripslashes($_GET['filter_content']) : '' ); ?>"/>
                     
                     <input type="submit" name="" id="leadin-contacts-filter-button" class="button action" value="Apply">
 
                     <?php if ( isset($_GET['filter_action']) || isset($_GET['filter_content']) ) : ?>
                         <a href="<?php echo get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts' . ( isset($_GET['contact_type']) ? '&contact_type=' . $_GET['contact_type'] : '' ); ?>" id="clear-filter">clear filter</a>
                     <?php endif; ?>
+
                 </h3>
 
                 <?php if ( isset($_GET['contact_type']) ) : ?>
@@ -606,6 +645,13 @@ class LI_List_Table extends WP_List_Table {
         ) );
     }
 
+    /**
+     * Sorting function for usort
+     * 
+     * @param array
+     * @param array
+     * @return array    sorted array
+     */
     function usort_reorder ( $a, $b ) 
     {
         $orderby = ( !empty($_REQUEST['orderby']) ? $_REQUEST['orderby'] : 'last_visit' );
@@ -620,5 +666,4 @@ class LI_List_Table extends WP_List_Table {
 
         return ( $order === 'asc' ? $result : -$result );
     }
-    
 }

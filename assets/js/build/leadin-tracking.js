@@ -135,7 +135,6 @@ jQuery(document).ready( function ( $ ) {
 			submission_data.lead_first_name, 
 			submission_data.lead_last_name, 
 			submission_data.lead_phone, 
-			submission_data.form_submission_type, 
 			submission_data.form_selector_id, 
 			submission_data.form_selector_classes, 
 			function ( data ) {
@@ -186,7 +185,7 @@ jQuery(function($){
 	}
 });
 
-function leadin_submit_form ( $form, $, form_type )
+function leadin_submit_form ( $form, $ )
 {
 	var $this = $form;
 
@@ -195,7 +194,6 @@ function leadin_submit_form ( $form, $, form_type )
 	var lead_first_name = '';
 	var lead_last_name 	= '';
 	var lead_phone 		= '';
-	var form_submission_type 	= ( form_type ? form_type : 'contact' );
 	var ignore_form 			= false;
 	var form_selector_id 		= ( $form.attr('id') ? $form.attr('id') : '' );
 	var form_selector_classes 	= ( $form.classes() ? $form.classes().join(',') : '' );
@@ -397,11 +395,6 @@ function leadin_submit_form ( $form, $, form_type )
 
 	$this.find('.li_used').removeClass('li_used'); // Clean up added classes
 
-	if ( $this.find('#comment_post_ID').length )
-	{
-		form_submission_type = 'comment';
-	}
-
 	// Save submission into database if email is present and form is not ignore, send LeadIn email, and submit form as usual
 	if ( lead_email && ! ignore_form )
 	{
@@ -421,7 +414,6 @@ function leadin_submit_form ( $form, $, form_type )
 			"page_title": 		page_title,
 			"page_url": 		page_url,
 			"json_form_fields": 		json_form_fields,
-			"form_submission_type": 	form_submission_type,
 			"form_selector_id": 		form_selector_id,
 			"form_selector_classes": 	form_selector_classes
 		};
@@ -437,8 +429,7 @@ function leadin_submit_form ( $form, $, form_type )
 			lead_email, 
 			lead_first_name, 
 			lead_last_name, 
-			lead_phone, 
-			form_submission_type,
+			lead_phone,
 			form_selector_id,
 			form_selector_classes, 
 			function ( data ) {
@@ -534,7 +525,7 @@ function leadin_insert_lead ( hashkey, page_referrer ) {
 	});
 }
 
-function leadin_insert_form_submission ( submission_haskey, hashkey, page_title, page_url, json_fields, lead_email, lead_first_name, lead_last_name, lead_phone, form_submission_type, form_selector_id, form_selector_classes, Callback )
+function leadin_insert_form_submission ( submission_haskey, hashkey, page_title, page_url, json_fields, lead_email, lead_first_name, lead_last_name, lead_phone, form_selector_id, form_selector_classes, Callback )
 {
 	jQuery.ajax({
 		type: 'POST',
@@ -550,7 +541,6 @@ function leadin_insert_form_submission ( submission_haskey, hashkey, page_title,
 			"li_first_name": 	lead_first_name,
 			"li_last_name": 	lead_last_name,
 			"li_phone": 		lead_phone,
-			"li_submission_type": 	form_submission_type,
 			"li_form_selector_id": 	form_selector_id,
 			"li_form_selector_classes": form_selector_classes
 		},

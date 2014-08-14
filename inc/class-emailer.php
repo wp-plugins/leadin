@@ -43,18 +43,7 @@ class LI_Emailer {
         $options = get_option('leadin_options');
         $to = ( $options['li_email'] ? $options['li_email'] : get_bloginfo('admin_email') ); // Get email from plugin settings, if none set, use admin email
 
-        if ( $history->lead->last_submission_type == "comment" ) {   
-            $subject = "Comment posted on " . $history->submission->form_page_title;
-            $subject .= " by " . $history->lead->lead_email;
-        } 
-        elseif ( $history->lead->last_submission_type == "subscribe" ) {   
-            $subject = "LeadIn Subscribe submission on " . $history->submission->form_page_title;
-            $subject .= " by " . $history->lead->lead_email;
-        }
-        else {   
-            $subject = "Form submission on " . get_bloginfo('name') . " - " . $history->lead->lead_email;
-        }
-
+        $subject = "Form submission on " . get_bloginfo('name') . " - " . $history->lead->lead_email;
         $email_sent = wp_mail($to, $subject, $body, $headers);
 
         return $email_sent;
@@ -149,7 +138,7 @@ class LI_Emailer {
                     $submission_Time = date('g:ia', strtotime($submission['event_date']));
                     $submission_url = $submission['form_page_url'];
                     $submission_page_title = $submission['form_page_title'];
-                    $submission_form_fields = json_decode(stripslashes($submission['form_fields']));
+                    $submission_form_fields = json_decode($submission['form_fields']);
                     
                     $format = '<table class="row lead-timeline__event submission" style="border-spacing: 0;border-collapse: collapse;padding: 0px;vertical-align: top;text-align: left;width: 100%%;position: relative;display: block;background-color: #fff;border-top: 1px solid #dedede;border-right: 1px solid #dedede;border-left: 4px solid #f6601d;"><tr style="padding: 0;vertical-align: top;text-align: left;"><td class="wrapper" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 10px 20px 0px 0px;vertical-align: top;text-align: left;position: relative;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"><table class="two columns" style="border-spacing: 0;border-collapse: collapse;padding: 0;vertical-align: top;text-align: left;margin: 0 auto;width: 80px;"><tr style="padding: 0;vertical-align: top;text-align: left;"><td class="text-pad" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 0px 0px 10px;vertical-align: top;text-align: left;padding-left: 10px;padding-right: 10px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"><p class="lead-timeline__event-time" style="margin: 0;color: #b34a12;font-family: Helvetica, Arial, sans-serif;font-weight: normal;padding: 0;text-align: left;line-height: 19px;font-size: 14px;margin-bottom: 10px;">%s</p></td><td class="expander" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 0;vertical-align: top;text-align: left;visibility: hidden;width: 0px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"></td></tr></table></td><td class="wrapper last" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 10px 20px 0px 0px;vertical-align: top;text-align: left;position: relative;padding-right: 0px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"><table class="ten columns" style="border-spacing: 0;border-collapse: collapse;padding: 0;vertical-align: top;text-align: left;margin: 0 auto;width: 480px;"><tr style="padding: 0;vertical-align: top;text-align: left;"><td class="text-pad" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 0px 0px 10px;vertical-align: top;text-align: left;padding-left: 10px;padding-right: 10px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"><p class="lead-timeline__event-title" style="margin: 0;color: #b34a12;font-family: Helvetica, Arial, sans-serif;font-weight: normal;padding: 0;text-align: left;line-height: 19px;font-size: 14px;margin-bottom: 10px;">Filled out form on page <a href="%s" style="color: #2ba6cb;text-decoration: none;">%s</a></p> %s </td><td class="expander" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 0;vertical-align: top;text-align: left;visibility: hidden;width: 0px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"></td></tr></table></td></tr></table>';
                     $built_sessions .= sprintf($format, $submission_Time, $submission_url, $submission_page_title, $this->build_form_fields($submission_form_fields));
@@ -173,8 +162,10 @@ class LI_Emailer {
         {
             foreach ( $form_fields as $field )
             {
+                $field->value =  str_replace("\n", "\\n", str_replace(array("\r\n"), "\n", $field->value));
+
                 $format = '<p class="lead-timeline__submission-field" style="margin: 0;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;padding: 0;text-align: left;line-height: 19px;font-size: 14px;margin-bottom: 10px;"><label class="lead-timeline__submission-label" style="text-transform: uppercase;font-size: 12px;color: #999;letter-spacing: 0.05em;">%s</label><br/>%s </p>';
-                $built_form_fields .= sprintf($format, $field->label, $field->value);
+                $built_form_fields .= sprintf($format, $field->label, leadin_html_line_breaks($field->value));
             }
         }
         
@@ -248,28 +239,17 @@ class LI_Emailer {
         
         // Form Submission section open
         $body .= "<table class='row section form-submission' style='border-spacing: 0;border-collapse: collapse;vertical-align: top;text-align: left;width: 100%;position: relative;display: block;background: #deedf8;padding: 0px;' bgcolor='#deedf8'><tr style='vertical-align: top;text-align: left;padding: 0;' align='left'><td class='wrapper last' style='word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse !important;vertical-align: top;text-align: left;position: relative;padding: 0 0px 0 0;' align='left' valign='top'>";
-
-        // Form Submission section header
-        //$body .= $this->build_submission_header($history->submission, TRUE);
         
         $submission = $history->submission;
         $submission_Time = date('g:ia', strtotime($submission['event_date']));
         $submission_url = $submission['form_page_url'];
         $submission_page_title = $submission['form_page_title'];
-        $submission_form_fields = json_decode(stripslashes($submission['form_fields']));
+        $submission_form_fields = json_decode($submission['form_fields']);
         
         $format = '<table class="row lead-timeline__event submission" style="border-spacing: 0;border-collapse: collapse;padding: 0px;vertical-align: top;text-align: left;width: 100%%;position: relative;display: block;background-color: #fff;border-top: 1px solid #dedede;border-right: 1px solid #dedede;border-left: 4px solid #f6601d;"><tr style="padding: 0;vertical-align: top;text-align: left;"><td class="wrapper" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 10px 20px 0px 0px;vertical-align: top;text-align: left;position: relative;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"><table class="two columns" style="border-spacing: 0;border-collapse: collapse;padding: 0;vertical-align: top;text-align: left;margin: 0 auto;width: 80px;"><tr style="padding: 0;vertical-align: top;text-align: left;"><td class="text-pad" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 0px 0px 10px;vertical-align: top;text-align: left;padding-left: 10px;padding-right: 10px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"><p class="lead-timeline__event-time" style="margin: 0;color: #b34a12;font-family: Helvetica, Arial, sans-serif;font-weight: normal;padding: 0;text-align: left;line-height: 19px;font-size: 14px;margin-bottom: 10px;">%s</p></td><td class="expander" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 0;vertical-align: top;text-align: left;visibility: hidden;width: 0px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"></td></tr></table></td><td class="wrapper last" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 10px 20px 0px 0px;vertical-align: top;text-align: left;position: relative;padding-right: 0px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"><table class="ten columns" style="border-spacing: 0;border-collapse: collapse;padding: 0;vertical-align: top;text-align: left;margin: 0 auto;width: 480px;"><tr style="padding: 0;vertical-align: top;text-align: left;"><td class="text-pad" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 0px 0px 10px;vertical-align: top;text-align: left;padding-left: 10px;padding-right: 10px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"><p class="lead-timeline__event-title" style="margin: 0;color: #b34a12;font-family: Helvetica, Arial, sans-serif;font-weight: normal;padding: 0;text-align: left;line-height: 19px;font-size: 14px;margin-bottom: 10px;">Filled out form on page <a href="%s" style="color: #2ba6cb;text-decoration: none;">%s</a></p> %s </td><td class="expander" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 0;vertical-align: top;text-align: left;visibility: hidden;width: 0px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"></td></tr></table></td></tr></table>';
         $built_sessions = sprintf($format, $submission_Time, $submission_url, $submission_page_title, $this->build_form_fields($submission_form_fields));
 
         $body .= $built_sessions;
-
-        /*// Form Submission Rows
-        $fields = json_decode(stripslashes($history->submission->form_fields), true);
-        
-        foreach ( $fields as $field )
-        {
-            $body .= $this->build_submission_row($field);
-        }*/
 
         // Form Submission Section Close
         $body .= "</td></tr></table>";
@@ -304,45 +284,4 @@ class LI_Emailer {
         $email_sent = wp_mail($history->lead->lead_email, $subject, $body, $headers);
         return $email_sent;
     }
-
-    /**
-     * Builds the blue form submission header for the lead email
-     *
-     * @param   object      $submission
-     * @param   bool        confirmation_email should be sent or not
-     * @return  string
-     */     
-    function build_submission_header ( $submission, $confirmation_email = FALSE )
-    {
-        // @EMAIL Use these variables to construct the heading for the form section
-        $form_page_title = "<a href='" . $submission->form_page_url . "'>" . $submission->form_page_title . "</a>";
-        $form_submission_day = date('M j' , strtotime($submission->form_date));
-        $form_submission_time = date('g:i a', strtotime($submission->form_date));
-        $form_submission_type = $submission->form_type;
-
-        $submissionHeader = "";
-
-        // Form Submission header open
-        $submissionHeader .= "<table class='twelve columns' style='border-spacing: 0;border-collapse: collapse;vertical-align: top;text-align: left;width: 580px;margin: 0 auto;padding: 0;'><tr style='vertical-align: top;text-align: left;padding: 0;' align='left'><td class='section-header' style='word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse !important;vertical-align: top;text-align: left;border-bottom-width: 1px;border-bottom-color: #c9e1f3;border-bottom-style: solid;background: #c9e1f3;padding: 15px 20px;' align='left' bgcolor='#c9e1f3' valign='top'>";
-
-        // Form Submission header content
-        $submissionHeader .= "<h3 style='color: #153d60;display: block;font-family: Helvetica, Arial, sans-serif;font-weight: bold;text-align: left;line-height: 1.3;word-break: normal;font-size: 16px;margin: 0;padding: 0;' align='left'>";
-        
-        if ( $form_submission_type == "comment" )
-        {
-            $submissionHeader .= "Commented on " . $form_page_title . " on " . $form_submission_day . ' at ' . $form_submission_time;
-        }
-        else
-        {
-            $submissionHeader .= ( $confirmation_email ? "You filled out the subscription form on " : "Filled out a form on " ) . $form_page_title . " on " . $form_submission_day . ' at ' . $form_submission_time;
-        }
-        
-        $submissionHeader .= "</h3>";
-
-        // Form Submission header close
-        $submissionHeader .= "</td><td class='expander' style='word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse !important;vertical-align: top;text-align: left;visibility: hidden;width: 0px;border-bottom-color: #c9e1f3;border-bottom-style: solid;padding: 0;border-width: 0 0 1px;' align='left' valign='top'></td></tr></table>";
-
-        return $submissionHeader;
-    }
-
 }
