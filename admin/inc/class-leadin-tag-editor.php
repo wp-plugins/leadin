@@ -14,7 +14,7 @@ class LI_Tag_Editor {
 	/**
 	 * Class constructor
 	 */
-	function __construct ( $tag_id ) 
+	function __construct ( $tag_id = FALSE ) 
 	{
 		if ( $tag_id )
 			$this->tag_id = $tag_id;
@@ -113,14 +113,19 @@ class LI_Tag_Editor {
 	function save_tag ( $tag_id, $tag_text, $tag_form_selectors, $tag_synced_lists )
 	{
 		global $wpdb;
+		global $leadin_mailchimp_connect_wp;
 
 		$tag_slug = $this->generate_slug($tag_text, $tag_id);
+
+		$this->push_contacts_to_tagged_list($tag_id, $tag_synced_lists);
 
 		$q = $wpdb->prepare("
 			UPDATE $wpdb->li_tags 
 			SET tag_text = %s, tag_slug = %s, tag_form_selectors = %s, tag_synced_lists = %s
 			WHERE tag_id = %d", $tag_text, $tag_slug, $tag_form_selectors, $tag_synced_lists, $tag_id);
 		$result = $wpdb->query($q);
+
+		// Add a method to loop through all the lists here and 
 
 		return $result;
 	}
@@ -150,9 +155,10 @@ class LI_Tag_Editor {
      * Generates a slug based off a string. If slug exists, then appends -N until the slug is free
      *
      * @param 	string
+     * @param 	int
      * @return  string
      */
-	function generate_slug ( $tag_text, $tag_id = FALSE )
+	function generate_slug ( $tag_text, $tag_id = 0 )
 	{
 		global $wpdb;
 
@@ -179,6 +185,58 @@ class LI_Tag_Editor {
 		}
 
 		return $tag_slug;
+	}
+
+	/**
+     * Gets all the contacts in a list given a tag_id
+     *
+     * @param 	int
+     * @return  object
+     */
+	function get_contacts_in_tagged_list ( $tag_id = 0 )
+	{
+		global $wpdb;
+		$q = $wpdb->prepare("SELECT contact_hashkey, lead_email FROM $wpdb->li_tag_relationships ltr, $wpdb->li_leads ll WHERE ltr.contact_hashkey = ll.hashkey AND ltr.tag_id = %d", $tag_id);
+		$contacts = $wpdb->get_results($q);
+		return $contacts;
+	}
+
+	/**
+     * Gets all the contacts in a list given a tag_id
+     *
+     * @param 	int
+     * @param 	string 		serialized array
+     * @return  object
+     */
+	function push_contacts_to_tagged_list ( $tag_id = 0, $tag_synced_lists = '' )
+	{
+		global $wpdb;
+
+		if ( ! $tag_synced_lists )
+		{
+			$this->get_tag_details($tag_id);
+			$tag_synced_lists = $this->details->tag_synced_lists;
+		}
+
+		$contacts = $this->get_contacts_in_tagged_list($tag_id);
+
+		if ( count($contacts) && $tag_synced_lists )
+		{
+			$synced_lists = unserialize($tag_synced_lists);
+
+			if ( count($synced_lists) )
+			{
+				foreach ( $synced_lists as $synced_list )
+				{
+					$power_up_slug = $synced_list['esp'] . '_connect';  // e.g leadin_mailchimp_connect_wp
+					if ( WPLeadIn::is_power_up_active($power_up_slug) )
+					{
+						global ${'leadin_' . $power_up_slug . '_wp'}; // e.g leadin_mailchimp_connect_wp
+						${'leadin_' . $power_up_slug . '_wp'}->bulk_push_contact_to_list($synced_list['list_id'], $contacts);
+					}
+				}
+			}
+		}
 	}
 }
 ?>

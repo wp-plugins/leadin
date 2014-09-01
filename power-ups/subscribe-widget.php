@@ -55,8 +55,13 @@ class WPLeadInSubscribe extends WPLeadIn {
 			return false;
 
 		$this->options = get_option('leadin_subscribe_options');
-		add_action('get_footer', array(&$this, 'append_leadin_subscribe_settings'));
-		
+
+		if ( ! is_admin() ) 
+		{
+			add_action('get_footer', array(&$this, 'append_leadin_subscribe_settings'));
+			add_action('wp_enqueue_scripts', array($this, 'add_leadin_subscribe_frontend_scripts_and_styles'));
+		}
+
 		if ( ($this->options['li_susbscibe_installed'] != 1) || (!is_array($this->options)) )
 		{
 			$this->add_defaults();
@@ -131,8 +136,6 @@ class WPLeadInSubscribe extends WPLeadIn {
 
 	    // Div checked by media query for mobile
 	    echo '<span id="leadin-subscribe-mobile-check"></span>';
-
-	    $this->add_leadin_subscribe_frontend_scripts_and_styles();
 	}
 
 	//=============================================

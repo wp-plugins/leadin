@@ -51,7 +51,9 @@ function leadin_update_option ( $option, $option_key, $new_value )
     }
 
     $options_array[$option_key] = $new_value;
+    update_option($option, $options_array);
 
+    $options_array = get_option($option);
     return update_option($option, $options_array);
 }
 
@@ -461,7 +463,7 @@ function leadin_convert_statuses_to_tags ( )
         $mailchimp_options = get_option('leadin_mls_options');
         if ( $mailchimp_options['li_mls_subscribers_to_list'] )
         {
-            $leadin_mailchimp = new WPMailChimpListSync(TRUE);
+            $leadin_mailchimp = new WPMailChimpConnect(TRUE);
             $leadin_mailchimp->admin_init();
             $lists = $leadin_mailchimp->admin->li_get_lists();
 
@@ -489,7 +491,7 @@ function leadin_convert_statuses_to_tags ( )
         $constant_contact_options = get_option('leadin_cc_options');
         if ( $constant_contact_options['li_cc_subscribers_to_list'] )
         {
-            $leadin_constant_contact = new WPConstantContactListSync(TRUE);
+            $leadin_constant_contact = new WPConstantContactConnect(TRUE);
             $leadin_constant_contact->admin_init();
             $lists = $leadin_constant_contact->admin->li_get_lists();
 
@@ -578,7 +580,7 @@ function leadin_convert_statuses_to_tags ( )
         }
     }
 
-    leadin_update_option('leadin_options', 'converted_to_tags', '1');
+    leadin_update_option('leadin_options', 'converted_to_tags', 1);
 }
 
 /**
@@ -638,10 +640,13 @@ function leadin_strip_params_from_url ( $url )
     $url_parts = parse_url($url);
     $base_url = ( isset($url_parts['host']) ? 'http://' . rtrim($url_parts['host'], '/') : '' ); 
     $base_url .= ( isset($url_parts['path']) ? '/' . ltrim($url_parts['path'], '/') : '' ); 
-    ltrim($url_parts['path'], '/');
+    
+    if ( isset($url_parts['path'] ) )
+        ltrim($url_parts['path'], '/');
+
     $base_url = urldecode(ltrim($base_url, '/'));
 
-    return $base_url;
+    return strtolower($base_url);
 }
 
 /**

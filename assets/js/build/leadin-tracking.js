@@ -115,6 +115,7 @@ var page_title = jQuery(document).find("title").text();
 var page_url = window.location.href;
 var page_referrer = document.referrer;
 var form_saved = false;
+var ignore_form = false;
 
 jQuery(document).ready( function ( $ ) {
 
@@ -194,7 +195,6 @@ function leadin_submit_form ( $form, $ )
 	var lead_first_name = '';
 	var lead_last_name 	= '';
 	var lead_phone 		= '';
-	var ignore_form 			= false;
 	var form_selector_id 		= ( $form.attr('id') ? $form.attr('id') : '' );
 	var form_selector_classes 	= ( $form.classes() ? $form.classes().join(',') : '' );
 
@@ -293,10 +293,11 @@ function leadin_submit_form ( $form, $ )
 
 		var $label_text = $.trim($label.replaceArray(["(", ")", "required", "Required", "*", ":"], [""]));
 
-		if ( $label_text.toLowerCase().indexOf('credit card') != -1 || $label_text.toLowerCase().indexOf('card number') != -1 )
-			ignore_form = true;
+		/*if ( $label_text.toLowerCase().indexOf('credit card') != -1 || $label_text.toLowerCase().indexOf('card number') != -1 )
+			ignore_form = true;*/
 
-		push_form_field($label_text, $value, form_fields);
+		if ( ! ignore_field($label_text, $value) )
+			push_form_field($label_text, $value, form_fields);
 
 		if ( $value.indexOf('@') != -1 && $value.indexOf('.') != -1 && !lead_email )
 			lead_email = $value;
@@ -342,7 +343,8 @@ function leadin_submit_form ( $form, $ )
 
 		var rgb_selected = ( !$("input:radio[name='" + radio_groups[i] + "']:checked").val() ) ? 'not selected' : $("input:radio[name='" + radio_groups[i] + "']:checked").val();
 
-		push_form_field($rbg_label, rgb_selected, form_fields);
+		if ( ! ignore_field($rbg_label, rgb_selected) )
+			push_form_field($rbg_label, rgb_selected, form_fields);
 	}
 
 	$this.find('select').each( function ( ) {
@@ -390,14 +392,20 @@ function leadin_submit_form ( $form, $ )
 			select_value = $select.val();
 		}
 
-		push_form_field($select_label, select_value, form_fields);
+		if ( ! ignore_field($select_label, select_value) )
+			push_form_field($select_label, select_value, form_fields);
 	});
 
 	$this.find('.li_used').removeClass('li_used'); // Clean up added classes
 
 	// Save submission into database if email is present and form is not ignore, send LeadIn email, and submit form as usual
-	if ( lead_email && ! ignore_form )
+	if ( lead_email )
 	{
+		if ( ignore_form )
+		{
+			push_form_field('Credit card form submitted', 'Payment fields not collected for security', form_fields);
+		}
+
 		var submission_hash = Math.random().toString(36).slice(2);
 		var hashkey = $.cookie("li_hash");
 		var json_form_fields = JSON.stringify(form_fields);
@@ -565,6 +573,47 @@ function push_form_field ( label, value, form_fields )
 	form_fields.push(field);
 }
 
+function ignore_field ( label, value )
+{
+	var bool_ignore_field = false;
+
+	// Ignore any fields with labels that indicate a credit card field
+	if ( label.toLowerCase().indexOf('credit card') != -1 || label.toLowerCase().indexOf('card number') != -1 )
+		bool_ignore_field = true;
+
+	if ( label.toLowerCase().indexOf('expiration') != -1 || label.toLowerCase().indexOf('expiry') != -1)
+		bool_ignore_field = true;
+
+	if ( label.toLowerCase().indexOf('month') != -1 || label.toLowerCase().indexOf('mm') != -1 || label.toLowerCase().indexOf('yy') != -1 || label.toLowerCase().indexOf('year') != -1 )
+		bool_ignore_field = true;
+
+	if ( label.toLowerCase().indexOf('cvv') != -1 || label.toLowerCase().indexOf('cvc') != -1 || label.toLowerCase().indexOf('secure code') != -1 || label.toLowerCase().indexOf('security code') != -1 )
+		bool_ignore_field = true;
+
+	if ( value.toLowerCase().indexOf('visa') != -1 || value.toLowerCase().indexOf('mastercard') != -1 || value.toLowerCase().indexOf('american express') != -1 || value.toLowerCase().indexOf('amex') != -1 || value.toLowerCase().indexOf('discover') != -1 )
+		bool_ignore_field = true;
+
+	// Check if value has integers, strip out spaces, then ignore anything with a credit card length (>16) or an expiration/cvv length (<5)
+	var int_regex = new RegExp("/^[0-9]+$/"); 
+	if ( int_regex.test(value) )
+	{
+		var value_no_spaces = value.replace(' ', '');
+
+		if ( isInt(value_no_spaces) && value_no_spaces.length >= 16 )
+			bool_ignore_field = true;
+	}
+
+	if ( bool_ignore_field )
+	{
+		if ( ! ignore_form )
+			ignore_form = true;
+
+		return true;
+	}
+	else
+		return false;
+}
+
 String.prototype.replaceArray = function(find, replace) {
   var replaceString = this;
   for (var i = 0; i < find.length; i++) {
@@ -635,3 +684,7 @@ String.prototype.replaceArray = function(find, replace) {
         return classes;
     };
 })(jQuery);
+
+function isInt ( n ) {
+    return typeof n== "number" && isFinite(n) && n%1===0;
+}

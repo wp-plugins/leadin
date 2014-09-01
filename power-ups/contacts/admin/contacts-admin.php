@@ -68,6 +68,7 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
 
             foreach ( $_POST as $name => $value )
             {
+                // Create a comma deliniated list of selectors for tag_form_selectors
                 if ( strstr($name, 'email_form_tags_') )
                 {
                     $tag_selector = '';
@@ -81,14 +82,14 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                         if ( ! strstr($tag_form_selectors, $tag_selector) )
                             $tag_form_selectors .= $tag_selector . ',';
                     }
-                }
-                else if ( strstr($name, 'email_list_sync_') )
+                } // Create a comma deliniated list of synced lists for tag_synced_lists
+                else if ( strstr($name, 'email_connect_') )
                 {
                     $synced_list = '';
                     if ( strstr($name, '_mailchimp') )
-                        $synced_list = array('esp' => 'mailchimp', 'list_id' => str_replace('email_list_sync_mailchimp_', '', $name), 'list_name' => $value);
+                        $synced_list = array('esp' => 'mailchimp', 'list_id' => str_replace('email_connect_mailchimp_', '', $name), 'list_name' => $value);
                     else if ( strstr($name, '_constant_contact') )
-                        $synced_list = array('esp' => 'constant_contact', 'list_id' => str_replace('email_list_sync_constant_contact_', '', $name), 'list_name' => $value);
+                        $synced_list = array('esp' => 'constant_contact', 'list_id' => str_replace('email_connect_constant_contact_', '', $name), 'list_name' => $value);
 
                     array_push($tag_synced_lists, $synced_list);
                 }
@@ -210,7 +211,7 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
             echo '<a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts">&larr; All Contacts</a>';
         
         echo '<div class="contact-header-wrap">';
-            echo '<img class="contact-header-avatar leadin-dynamic-avatar_' . substr($lead_id, -1) . '" height="76px" width="76px" src="https://app.getsignals.com/avatar/image/?emails=' . $lead_email . '"/>';
+            echo '<img class="contact-header-avatar leadin-dynamic-avatar_' . substr($lead_id, -1) . '" height="76px" width="76px" src="https://api.hubapi.com/socialintel/v1/avatars?email=' . $lead_email . '"/>';
             echo '<div class="contact-header-info">';
                 echo '<h1 class="contact-name">' . $lead_email . '</h1>';
                 echo '<div class="contact-tags">';
@@ -422,20 +423,20 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                         
                         <?php
                             $esp_power_ups = array(
-                                'MailChimp'         => 'mailchimp_list_sync', 
-                                'Constant Contact'  => 'constant_contact_list_sync', 
-                                'AWeber'            => 'aweber_list_sync', 
-                                'GetResponse'       => 'getresponse_list_sync', 
-                                'MailPoet'          => 'mailpoet_list_sync', 
-                                'Campaign Monitor'  => 'campaign_monitor_list_sync'
+                                'MailChimp'         => 'mailchimp_connect', 
+                                'Constant Contact'  => 'constant_contact_connect', 
+                                'AWeber'            => 'aweber_connect', 
+                                'GetResponse'       => 'getresponse_connect', 
+                                'MailPoet'          => 'mailpoet_connect', 
+                                'Campaign Monitor'  => 'campaign_monitor_connect'
                             );
 
                             foreach ( $esp_power_ups as $power_up_name => $power_up_slug )
                             {
                                 if ( WPLeadIn::is_power_up_active($power_up_slug) )
                                 {
-                                    global ${'leadin_' . $power_up_slug . '_wp'}; // e.g leadin_mailchimp_list_sync_wp
-                                    $esp_name = strtolower(str_replace('_list_sync', '', $power_up_slug)); // e.g. mailchimp
+                                    global ${'leadin_' . $power_up_slug . '_wp'}; // e.g leadin_mailchimp_connect_wp
+                                    $esp_name = strtolower(str_replace('_connect', '', $power_up_slug)); // e.g. mailchimp
                                     $lists = ${'leadin_' . $power_up_slug . '_wp'}->admin->li_get_lists();
                                     $synced_lists = ( isset($tagger->details->tag_synced_lists) ? unserialize($tagger->details->tag_synced_lists) : '' );
 
@@ -481,7 +482,7 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                                                         if ( $power_up_name == 'Constant Contact' )
                                                             $list_id = end(explode('/', $list_id));
 
-                                                        $html_id = 'email_list_sync_' . $esp_name . '_' . $list_id;
+                                                        $html_id = 'email_connect_' . $esp_name . '_' . $list_id;
                                                         $synced = FALSE;
 
                                                         if ( $synced_lists )
@@ -739,7 +740,7 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
         {
             wp_register_script('leadin-admin-js', LEADIN_PATH . '/assets/js/build/leadin-admin.min.js', array ( 'jquery' ), FALSE, TRUE);
             wp_enqueue_script('leadin-admin-js');
-            wp_localize_script('leadin-admin-js', 'li_admin_ajax', array('ajax_url' => admin_url('admin-ajax.php')));
+            wp_localize_script('leadin-admin-js', 'li_admin_ajax', array('ajax_url' => get_admin_url(NULL,'') . '/admin-ajax.php'));
         }
 
         if ( $pagenow == 'post.php' && isset($_GET['post']) && isset($_GET['action']) && strstr($_GET['action'], 'edit') )
@@ -765,6 +766,7 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
 if ( isset($_POST['export-all']) || isset($_POST['export-selected']) )
 {
     global $wpdb;
+    leadin_set_wpdb_tables();
 
     $sitename = sanitize_key(get_bloginfo('name'));
 

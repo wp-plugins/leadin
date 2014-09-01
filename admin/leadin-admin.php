@@ -59,22 +59,120 @@ class WPLeadInAdmin {
         // Hooks & Filters
         //=============================================
 
+        $options = get_option('leadin_options');
+
+        // If the plugin version matches the latest version escape the update function
+        //if ( $options['leadin_version'] != LEADIN_PLUGIN_VERSION )
+            self::leadin_update_check();
+
         $this->admin_power_ups = $power_ups;
+        
+        add_action('admin_menu', array(&$this, 'leadin_add_menu_items'));
+        add_action('admin_init', array(&$this, 'leadin_build_settings_page'));
+        add_action('admin_print_styles', array(&$this, 'add_leadin_admin_styles'));
+        add_filter('plugin_action_links_' . 'leadin/leadin.php', array($this, 'leadin_plugin_settings_link'));
 
-        if( is_admin() )
+        if ( isset($_GET['page']) && $_GET['page'] == 'leadin_stats' )
         {
-            add_action('admin_menu', array(&$this, 'leadin_add_menu_items'));
-            add_action('admin_init', array(&$this, 'leadin_build_settings_page'));
-            add_action('admin_print_styles', array(&$this, 'add_leadin_admin_styles'));
-            add_action('add_meta_boxes', array(&$this, 'add_li_analytics_meta_box' ));
-
-            if ( isset($_GET['page']) && $_GET['page'] == 'leadin_stats' )
-            {
-                add_action('admin_footer', array($this, 'build_contacts_chart'));
-            }
+            add_action('admin_footer', array($this, 'build_contacts_chart'));
         }
 
+        if ( isset($options['beta_tester']) && $options['beta_tester'] )
+            $li_wp_updater = new WPLeadInUpdater();
+
         //print_r($_POST);
+    }
+
+    function leadin_update_check ( )
+    {
+        $options = get_option('leadin_options');
+
+        // 0.5.1 upgrade - Create active power-ups option if it doesn't exist
+        $leadin_active_power_ups = get_option('leadin_active_power_ups');
+
+        if ( !$leadin_active_power_ups )
+        {
+            $auto_activate = array(
+                'contacts',
+                'beta_program'
+            );
+
+            update_option('leadin_active_power_ups', serialize($auto_activate));
+        }
+        else
+        {
+            // 0.9.2 upgrade - set beta program power-up to auto-activate
+            $activated_power_ups = unserialize($leadin_active_power_ups);
+
+            // 0.9.3 bug fix for duplicate beta_program values being stored in the active power-ups array
+            if ( !in_array('beta_program', $activated_power_ups) )
+            {
+                $activated_power_ups[] = 'beta_program';
+                update_option('leadin_active_power_ups', serialize($activated_power_ups));
+            }
+            else 
+            {
+                $tmp = array_count_values($activated_power_ups);
+                $count = $tmp['beta_program'];
+
+                if ( $count > 1 )
+                {
+                    $activated_power_ups = array_unique($activated_power_ups);
+                    update_option('leadin_active_power_ups', serialize($activated_power_ups));
+                }
+            }
+
+            // 2.0.1 upgrade - [plugin_slug]_list_sync changed to [plugin_slug]_connect
+            $mailchimp_list_sync_key = array_search('mailchimp_list_sync', $activated_power_ups);
+            if ( $mailchimp_list_sync_key !== FALSE )
+            {
+                unset($activated_power_ups[$mailchimp_list_sync_key]);
+                $activated_power_ups[] = 'mailchimp_connect';
+            }
+
+            $constant_contact_list_sync_key = array_search('constant_contact_list_sync', $activated_power_ups);
+            if ( $constant_contact_list_sync_key !== FALSE )
+            {
+                unset($activated_power_ups[$constant_contact_list_sync_key]);
+                $activated_power_ups[] = 'constant_contact_connect';
+            }
+
+            update_option('leadin_active_power_ups', serialize($activated_power_ups));
+        }
+
+        // 0.7.2 bug fix - data recovery algorithm for deleted contacts
+        if ( ! isset($options['data_recovered']) )
+        {
+            leadin_recover_contact_data();
+        }
+
+        // Set the database version if it doesn't exist
+        if ( isset($options['li_db_version']) )
+        {
+            if ( $options['li_db_version'] != LEADIN_DB_VERSION ) 
+            {
+                leadin_db_install();
+
+                // 2.0.0 upgrade
+                if ( ! isset($options['converted_to_tags']) )
+                {
+                    leadin_convert_statuses_to_tags();
+                }
+            }
+        }
+        else
+        {
+            leadin_db_install();
+        }
+
+        // 0.8.3 bug fix - bug fix for duplicated contacts that should be merged
+        if ( ! isset($options['delete_flags_fixed']) )
+        {
+            leadin_delete_flag_fix();
+        }
+
+        // Set the plugin version
+        leadin_update_option('leadin_options', 'leadin_version', LEADIN_PLUGIN_VERSION);
     }
     
     //=============================================
@@ -86,6 +184,8 @@ class WPLeadInAdmin {
      */
     function leadin_add_menu_items ()
     {
+        $options = get_option('leadin_options');
+
         global $submenu;
         global  $wp_version;
         
@@ -112,9 +212,11 @@ class WPLeadInAdmin {
         if ( !isset($_GET['page']) || $_GET['page'] != 'leadin_settings' )
         {
             $options = get_option('leadin_options');
-            if ( !isset($options['ignore_settings_popup']) || !$options['ignore_settings_popup'] )
-                $li_pointers = new LI_Pointers();
+            //if ( !isset($options['ignore_settings_popup']) || !$options['ignore_settings_popup'] )
+               
         }
+
+         $li_pointers = new LI_Pointers();
     }
 
     //=============================================
@@ -129,10 +231,10 @@ class WPLeadInAdmin {
      */
     function leadin_plugin_settings_link ( $links )
     {
-       $url = get_admin_url() . 'admin.php?page=leadin_settings';
-       $settings_link = '<a href="' . $url . '">Settings</a>';
-       array_unshift($links, $settings_link);
-       return $links;
+        $url = get_admin_url() . 'admin.php?page=leadin_settings';
+        $settings_link = '<a href="' . $url . '">Settings</a>';
+        array_unshift($links, $settings_link);
+        return $links;
     }
 
     /**
@@ -142,7 +244,7 @@ class WPLeadInAdmin {
     {
         global $wp_version;
         $this->stats_dashboard = new LI_StatsDashboard();
-        
+
         leadin_track_plugin_activity("Loaded Stats Page");
 
         if ( !current_user_can( 'manage_categories' ) )
@@ -229,7 +331,7 @@ class WPLeadInAdmin {
                 {
                     $new_contacts_postbox .= '<tr>';
                         $new_contacts_postbox .= '<td class="">';
-                            $new_contacts_postbox .= '<a href="?page=leadin_contacts&action=view&lead=' . $contact->lead_id . '&stats_dashboard=1"><img class="lazy pull-left leadin-contact-avatar leadin-dynamic-avatar_' . substr($contact->lead_id, -1) .'" src="https://app.getsignals.com/avatar/image/?emails=' . $contact->lead_email . '" width="35" height="35"><b>' . $contact->lead_email . '</b></a>';
+                            $new_contacts_postbox .= '<a href="?page=leadin_contacts&action=view&lead=' . $contact->lead_id . '&stats_dashboard=1"><img class="lazy pull-left leadin-contact-avatar leadin-dynamic-avatar_' . substr($contact->lead_id, -1) .'" src="https://api.hubapi.com/socialintel/v1/avatars?email=' . $contact->lead_email . '" width="35" height="35"><b>' . $contact->lead_email . '</b></a>';
                         $new_contacts_postbox .= '</td>';
                         $new_contacts_postbox .= '<td class="">' . $contact->pageviews . '</td>';
                         $new_contacts_postbox .= '<td class="">' . $this->stats_dashboard->print_readable_source($this->stats_dashboard->check_lead_source($contact->lead_source)) . '</td>';
@@ -264,7 +366,7 @@ class WPLeadInAdmin {
                 {
                     $returning_contacts_postbox .= '<tr>';
                         $returning_contacts_postbox .= '<td class="">';
-                            $returning_contacts_postbox .= '<a href="?page=leadin_contacts&action=view&lead=' . $contact->lead_id . '&stats_dashboard=1"><img class="lazy pull-left leadin-contact-avatar leadin-dynamic-avatar_' . substr($contact->lead_id, -1) .'" src="https://app.getsignals.com/avatar/image/?emails=' . $contact->lead_email . '" width="35" height="35"><b>' . $contact->lead_email . '</b></a>';
+                            $returning_contacts_postbox .= '<a href="?page=leadin_contacts&action=view&lead=' . $contact->lead_id . '&stats_dashboard=1"><img class="lazy pull-left leadin-contact-avatar leadin-dynamic-avatar_' . substr($contact->lead_id, -1) .'" src="https://api.hubapi.com/socialintel/v1/avatars?email=' . $contact->lead_email . '" width="35" height="35"><b>' . $contact->lead_email . '</b></a>';
                         $returning_contacts_postbox .= '</td>';
                         $returning_contacts_postbox .= '<td class="">' . $contact->pageviews . '</td>';
                         $returning_contacts_postbox .= '<td class="">' . $this->stats_dashboard->print_readable_source($this->stats_dashboard->check_lead_source($contact->lead_source)) . '</td>';
@@ -377,12 +479,15 @@ class WPLeadInAdmin {
     {
          // Hacky solution to solve the Settings API overwriting the default values
         $options = get_option('leadin_options');
-        $li_installed = ( $options['li_installed'] ? $options['li_installed'] : 1 );
-        $li_db_version = ( $options['li_db_version'] ? $options['li_db_version'] : LEADIN_DB_VERSION );
-        $ignore_settings_popup = ( $options['ignore_settings_popup'] ? $options['ignore_settings_popup'] : 0 );
-        $onboarding_complete = ( $options['onboarding_complete'] ? $options['onboarding_complete'] : 0 );
-        $data_recovered = ( $options['data_recovered'] ? $options['data_recovered'] : 0 );
-        $delete_flags_fixed = ( $options['delete_flags_fixed'] ? $options['delete_flags_fixed'] : 0 );
+
+        $li_installed           = ( isset($options['li_installed']) ? $options['li_installed'] : 1 );
+        $li_db_version          = ( isset($options['li_db_version']) ? $options['li_db_version'] : LEADIN_DB_VERSION );
+        $ignore_settings_popup  = ( isset($options['ignore_settings_popup']) ? $options['ignore_settings_popup'] : 0 );
+        $onboarding_complete    = ( isset($options['onboarding_complete']) ? $options['onboarding_complete'] : 0 );
+        $data_recovered         = ( isset($options['data_recovered']) ? $options['data_recovered'] : 0 );
+        $delete_flags_fixed     = ( isset($options['delete_flags_fixed']) ? $options['delete_flags_fixed'] : 0 );
+        $converted_to_tags      = ( isset($options['converted_to_tags']) ? $options['converted_to_tags'] : 0 );
+        $leadin_version         = ( isset($options['leadin_version']) ? $options['leadin_version'] : LEADIN_PLUGIN_VERSION );
 
         printf(
             '<input id="li_installed" type="hidden" name="leadin_options[li_installed]" value="%d"/>',
@@ -412,6 +517,11 @@ class WPLeadInAdmin {
         printf(
             '<input id="delete_flags_fixed" type="hidden" name="leadin_options[delete_flags_fixed]" value="%d"/>',
             $delete_flags_fixed
+        );
+
+        printf(
+            '<input id="converted_to_tags" type="hidden" name="leadin_options[converted_to_tags]" value="%d"/>',
+            $converted_to_tags
         );
     }
 
@@ -537,6 +647,18 @@ class WPLeadInAdmin {
 
         if( isset( $input['ignore_settings_popup'] ) )
             $new_input['ignore_settings_popup'] = $input['ignore_settings_popup'];
+
+        if( isset( $input['data_recovered'] ) )
+            $new_input['data_recovered'] = $input['data_recovered'];
+
+        if( isset( $input['converted_to_tags'] ) )
+            $new_input['converted_to_tags'] = $input['converted_to_tags'];
+
+        if( isset( $input['delete_flags_fixed'] ) )
+            $new_input['delete_flags_fixed'] = $input['delete_flags_fixed'];
+
+        if( isset( $input['leadin_version'] ) )
+            $new_input['leadin_version'] = $input['leadin_version'];
 
         if( isset( $input['beta_tester'] ) )
         {
@@ -796,88 +918,6 @@ class WPLeadInAdmin {
         <?php
     }
 
-    /**
-     * Adds the analytics meta box in the post editor
-     */
-    function add_li_analytics_meta_box ()
-    {
-        global $post;
-        if ( ! in_array(get_post_status($post->ID), array('publish', 'private')) )
-            return false;
-
-        $post_types = get_post_types( array( 'public' => true ) );
-
-        $permalink = get_permalink($post->ID);
-        $this->li_viewers = new LI_Viewers();
-        $this->li_viewers->get_identified_viewers($permalink);
-        $this->li_viewers->get_submissions($permalink);
-
-        if ( is_array( $post_types ) && $post_types !== array() ) {
-            foreach ( $post_types as $post_type ) {
-                add_meta_box( 'li_analytics-meta', 'LeadIn Analytics', array( $this, 'li_analytics_meta_box' ), $post_type, 'normal', 'high');
-            }
-        }
-    }
-
-    /**
-     * Output the LeadIn Analytics meta box
-     */
-    function li_analytics_meta_box () 
-    {
-        global $post;
-        $view_count         = 0;
-        $submission_count   = 0;
-        $max_faces          = 10;
-        ?>
-            <table class="form-table"><tbody>
-                <tr>
-                    <th scope="row">
-                        <?php echo count($this->li_viewers->viewers) . ' ' . ( count($this->li_viewers->viewers) != 1 ? 'identified viewers:' : 'identified viewer:' ); ?>
-                    </th>
-                    <td>
-                        <?php
-                            if ( count($this->li_viewers->viewers) )
-                            {
-                                foreach ( $this->li_viewers->viewers as $viewer )
-                                {
-                                    $view_count++;
-                                    $contact_view_url = get_bloginfo('wpurl') . "/wp-admin/admin.php?page=leadin_contacts&action=view&lead=" . $viewer->lead_id . '&post_id=' . $post->ID;
-                                    echo '<a class="li-analytics-link ' . ( $view_count > $max_faces ? 'hidden_face' : '' ) . '" href="' . $contact_view_url . '" title="' . $viewer->lead_email . '"><img height="35px" width="35px" data-original="https://app.getsignals.com/avatar/image/?emails=' . $viewer->lead_email . '" class="lazy li-analytics__face leadin-dynamic-avatar_' . substr($viewer->lead_id, -1) . '"/></a>'; 
-                                }
-                            }
-
-                            if ( $view_count > $max_faces )
-                            {
-                                echo '<div class="show-all-faces-container"><a class="show_all_faces" href="javascript:void(0)">+ Show ' . ( $view_count - $max_faces ) . ' more</a></div>';
-                            }
-                        ?>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row">
-                        <?php echo count($this->li_viewers->submissions) . ' ' . ( count($this->li_viewers->submissions) != 1 ? 'form submissions:' : 'form submission:' ); ?>
-                    </th>
-                    <td>
-                        <?php 
-                            foreach ( $this->li_viewers->submissions as $submission )
-                            {
-                                $submission_count++;
-                                $contact_view_url = get_bloginfo('wpurl') . "/wp-admin/admin.php?page=leadin_contacts&action=view&lead=" . $submission->lead_id . '&post_id=' . $post->ID;
-                                echo '<a class="li-analytics-link ' . ( $submission_count > $max_faces ? 'hidden_face' : '' ) . '" href="' . $contact_view_url . '" title="' . $submission->lead_email . '"><img height="35px" width="35px" data-original="https://app.getsignals.com/avatar/image/?emails=' . $submission->lead_email . '" class="lazy li-analytics__face leadin-dynamic-avatar_' . substr($submission->lead_id, -1) . '"/></a>';
-                            }
-
-                            if ( $submission_count > $max_faces )
-                            {
-                                echo '<div class="show-all-faces-container"><a class="show_all_faces" href="javascript:void(0)">+ Show ' . ( $submission_count - $max_faces ) . ' more</a></div>';
-                            }
-                        ?>
-                    </td>
-                </tr>
-            </tbody></table>
-        <?php
-    }
-
-
     function build_contacts_chart ( )
     {
         ?>
@@ -1068,7 +1108,7 @@ class WPLeadInAdmin {
         
         </script>
         <?php
-    }
+    }    
 }
 
 ?>

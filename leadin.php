@@ -3,7 +3,7 @@
 Plugin Name: LeadIn
 Plugin URI: http://leadin.com
 Description: LeadIn is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
-Version: 2.0.0
+Version: 2.0.1
 Author: Andy Cook, Nelson Joyce
 Author URI: http://leadin.com
 License: GPL2
@@ -26,7 +26,7 @@ if ( !defined('LEADIN_DB_VERSION') )
 	define('LEADIN_DB_VERSION', '2.0.0');
 
 if ( !defined('LEADIN_PLUGIN_VERSION') )
-	define('LEADIN_PLUGIN_VERSION', '2.0.0');
+	define('LEADIN_PLUGIN_VERSION', '2.0.1');
 
 if ( !defined('MIXPANEL_PROJECT_TOKEN') )
     define('MIXPANEL_PROJECT_TOKEN', 'a9615503ec58a6bce2c646a58390eac1');
@@ -41,32 +41,18 @@ require_once(LEADIN_PLUGIN_DIR . '/inc/class-emailer.php');
 require_once(LEADIN_PLUGIN_DIR . '/inc/class-leadin-updater.php');
 require_once(LEADIN_PLUGIN_DIR . '/admin/leadin-admin.php');
 
-
 require_once(LEADIN_PLUGIN_DIR . '/lib/mixpanel/LI_Mixpanel.php');
 require_once(LEADIN_PLUGIN_DIR . '/inc/class-leadin.php');
 
 require_once(LEADIN_PLUGIN_DIR . '/power-ups/subscribe-widget.php');
 require_once(LEADIN_PLUGIN_DIR . '/power-ups/contacts.php');
-require_once(LEADIN_PLUGIN_DIR . '/power-ups/mailchimp-list-sync.php');
-require_once(LEADIN_PLUGIN_DIR . '/power-ups/constant-contact-list-sync.php');
+require_once(LEADIN_PLUGIN_DIR . '/power-ups/mailchimp-connect.php');
+require_once(LEADIN_PLUGIN_DIR . '/power-ups/constant-contact-connect.php');
 require_once(LEADIN_PLUGIN_DIR . '/power-ups/beta-program.php');
 
 //=============================================
 // Hooks & Filters
 //=============================================
-
-
-
-
-// Pretty sure this hook is being run 
-
-if ( ! defined( 'WP_INSTALLING' ) || WP_INSTALLING === false )
-{
-	if ( ! has_action('init', 'leadin_update_check') )
-	{
-		add_action('init', 'leadin_update_check', 9);
-	}
-}
 
 // Activate + install LeadIn
 register_activation_hook( __FILE__, 'activate_leadin');
@@ -131,7 +117,8 @@ function add_leadin_defaults ( )
 			'ignore_settings_popup'		=> 0,
 			'data_recovered'			=> 1,
 			'delete_flags_fixed'		=> 1,
-			'beta_tester'				=> 0
+			'beta_tester'				=> 0,
+			'converted_to_tags'			=> 1
 		);
 		
 		update_option('leadin_options', $opt);
@@ -207,90 +194,9 @@ function activate_leadin_on_new_blog ( $blog_id, $user_id, $domain, $path, $site
 /**
  * Checks the stored database version against the current data version + updates if needed
  */
-function leadin_update_check ()
+function leadin_init ()
 {
-    global $wpdb;
-
     $leadin_wp = new WPLeadIn();
-
-    if ( defined('DOING_AJAX') && DOING_AJAX )
-    	return;
-
-    $options = get_option('leadin_options');
-
-    // If the plugin version matches the latest version escape the update function
-    if ( isset ($options['leadin_version']) && $options['leadin_version'] == LEADIN_PLUGIN_VERSION )
-    	return FALSE;
-
-    // 0.5.1 upgrade - Create active power-ups option if it doesn't exist
-    $leadin_active_power_ups = get_option('leadin_active_power_ups');
-
-	if ( !$leadin_active_power_ups )
-	{
-		$auto_activate = array(
-			'contacts',
-			'beta_program'
-		);
-
-		update_option('leadin_active_power_ups', serialize($auto_activate));
-	}
-	else
-	{
-		// 0.9.2 upgrade - set beta program power-up to auto-activate
-		$activated_power_ups = unserialize($leadin_active_power_ups);
-
-		// 0.9.3 bug fix for dupliate beta_program values being stored in the active power-ups array
-		if ( !in_array('beta_program', $activated_power_ups) )
-		{
-			$activated_power_ups[] = 'beta_program';
-			update_option('leadin_active_power_ups', serialize($activated_power_ups));
-		}
-		else 
-		{
-			$tmp = array_count_values($activated_power_ups);
-			$count = $tmp['beta_program'];
-
-			if ( $count > 1 )
-			{
-				$activated_power_ups = array_unique($activated_power_ups);
-				update_option('leadin_active_power_ups', serialize($activated_power_ups));
-			}
-		}
-
-		update_option('leadin_active_power_ups', serialize($activated_power_ups));
-	}
-
-	// 0.7.2 bug fix - data recovery algorithm for deleted contacts
-	if ( ! isset($options['data_recovered']) )
-	{
-		leadin_recover_contact_data();
-	}
-
-	// Set the database version if it doesn't exist
-    if ( isset($options['li_db_version']) )
-    {
-    	if ( $options['li_db_version'] != LEADIN_DB_VERSION ) 
-    	{
-    		leadin_db_install();
-
-	    	// 2.0.0 upgrade
-        	if ( ! isset($options['converted_to_tags']) )
-        		leadin_convert_statuses_to_tags();
-    	}
-    }
-    else
-    {
-    	leadin_db_install();
-    }
-
-    // 0.8.3 bug fix - bug fix for duplicated contacts that should be merged
-	if ( ! isset($options['delete_flags_fixed']) )
-	{
-		leadin_delete_flag_fix();
-	}
-
-	// Set the plugin version
-    leadin_update_option('leadin_options', 'leadin_version', LEADIN_PLUGIN_VERSION);
 }
 
 //=============================================
@@ -378,6 +284,20 @@ function leadin_db_install ()
 	dbDelta($sql);
 
     leadin_update_option('leadin_options', 'li_db_version', LEADIN_DB_VERSION);
+}
+
+add_action( 'plugins_loaded', 'leadin_init', 14 );
+
+if ( is_admin() ) 
+{
+	// Activate + install LeadIn
+	register_activation_hook( __FILE__, 'activate_leadin');
+
+	// Deactivate LeadIn
+	register_deactivation_hook( __FILE__, 'deactivate_leadin');
+
+	// Activate on newly created wpmu blog
+	add_action('wpmu_new_blog', 'activate_leadin_on_new_blog', 10, 6);
 }
 
 ?>
