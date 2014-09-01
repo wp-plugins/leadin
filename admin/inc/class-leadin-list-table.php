@@ -253,26 +253,26 @@ class LI_List_Table extends WP_List_Table {
 
             $q = $wpdb->prepare("
                 SELECT 
-                    l.hashkey, l.lead_id, 
+                    l.hashkey, l.lead_email,
                     ( SELECT ltr.tag_id FROM $wpdb->li_tag_relationships ltr WHERE ltr.tag_id = %d AND ltr.contact_hashkey = l.hashkey GROUP BY ltr.contact_hashkey ) AS tag_set 
                 FROM 
                     $wpdb->li_leads l
                 WHERE 
                     l.lead_id IN ( " . $ids_for_action . " ) AND l.lead_deleted = 0 GROUP BY l.lead_id", $tag_id);
 
-            $hashes = $wpdb->get_results($q);
+            $contacts = $wpdb->get_results($q);
 
-            $insert_values      = '';
-            $hashes_to_update   = '';
+            $insert_values          = '';
+            $contacts_to_update     = '';
 
-            if ( count($hashes) )
+            if ( count($contacts) )
             {
-                foreach ( $hashes as $hash )
+                foreach ( $contacts as $contact )
                 {
-                    if ( $hash->tag_set === NULL )
-                       $insert_values .= '(' . $tag_id . ', "' . $hash->hashkey . '"),';
+                    if ( $contact->tag_set === NULL )
+                       $insert_values .= '(' . $tag_id . ', "' . $contact->hashkey . '"),';
                     else
-                        $hashes_to_update .= "'" . $hash->hashkey . "',";
+                        $contacts_to_update .= "'" . $contact->hashkey . "',";
                 }
             }
 
@@ -284,19 +284,23 @@ class LI_List_Table extends WP_List_Table {
                     $wpdb->query($q);
                 }
 
-                if ( $hashes_to_update )
+                if ( $contacts_to_update )
                 {
-                    // update the relationships for the contacts that exist already
-                    $q = $wpdb->prepare("UPDATE $wpdb->li_tag_relationships SET tag_relationship_deleted = 0 WHERE tag_id = %d AND contact_hashkey IN ( " . rtrim($hashes_to_update, ',')  . ") ", $tag_id);
+                    // update the relationships for the contacts that exist already making sure to set all the tag_relationship_deleted = 0
+                    $q = $wpdb->prepare("UPDATE $wpdb->li_tag_relationships SET tag_relationship_deleted = 0 WHERE tag_id = %d AND contact_hashkey IN ( " . rtrim($contacts_to_update, ',')  . ") ", $tag_id);
                     $wpdb->query($q);
                 }
+
+                // Bulk push all the email addresses for the tag to the MailChimp API
+                $tagger = new LI_Tag_Editor($tag_id);
+                $tagger->push_contacts_to_tagged_list($tag_id);
             }
             else
             {
-                if ( $hashes_to_update )
+                if ( $contacts_to_update )
                 {
-                    // Update the existing tags only
-                    $q = $wpdb->prepare("UPDATE $wpdb->li_tag_relationships SET tag_relationship_deleted = 1 WHERE tag_id = %d AND contact_hashkey IN ( " . rtrim($hashes_to_update, ',')  . ") ", $tag_id);
+                    // "Delete" the existing tags only
+                    $q = $wpdb->prepare("UPDATE $wpdb->li_tag_relationships SET tag_relationship_deleted = 1 WHERE tag_id = %d AND contact_hashkey IN ( " . rtrim($contacts_to_update, ',')  . ") ", $tag_id);
                     $wpdb->query($q);
                 }
             }
@@ -390,7 +394,7 @@ class LI_List_Table extends WP_List_Table {
             $mysql_action_filter = ( $filtered_hashkeys ? " AND l.hashkey IN ( " . $filtered_hashkeys . " ) " : '' ); // If a filter action isn't set, use the filtered hashkeys if they exist, else, don't include the statement
 
         // There's a filter and leads are in it
-        if ( ( isset($_GET['contact_type']) && $num_contacts ) || ! isset($_GET['contact_type']) )
+        if ( ( isset($_GET['contact_type']) && ( $num_contacts || ! $_GET['contact_type'] ) ) || ! isset($_GET['contact_type']) )
         {
             $q =  $wpdb->prepare("
                 SELECT 
@@ -438,7 +442,7 @@ class LI_List_Table extends WP_List_Table {
                 $lead_array = array(
                     'ID' => $lead->lead_id,
                     'hashkey' => $lead->hashkey,
-                    'email' => sprintf('<a href="?page=%s&action=%s&lead=%s">' . "<img class='pull-left leadin-contact-avatar leadin-dynamic-avatar_" . substr($lead->lead_id, -1) . "' src='https://app.getsignals.com/avatar/image/?emails=" . $lead->lead_email . "' width='35' height='35'/> " . '</a>', $_REQUEST['page'], 'view', $lead->lead_id) .  sprintf('<a href="?page=%s&action=%s&lead=%s"><b>' . $lead->lead_email . '</b></a>', $_REQUEST['page'], 'view', $lead->lead_id),
+                    'email' => sprintf('<a href="?page=%s&action=%s&lead=%s">' . "<img class='pull-left leadin-contact-avatar leadin-dynamic-avatar_" . substr($lead->lead_id, -1) . "' src='https://api.hubapi.com/socialintel/v1/avatars?email=" . $lead->lead_email . "' width='35' height='35'/> " . '</a>', $_REQUEST['page'], 'view', $lead->lead_id) .  sprintf('<a href="?page=%s&action=%s&lead=%s"><b>' . $lead->lead_email . '</b></a>', $_REQUEST['page'], 'view', $lead->lead_id),
                     'visits' => ( !isset($lead->visits) ? 1 : $lead->visits ),
                     'submissions' => $lead->lead_form_submissions,
                     'pageviews' => $lead->lead_pageviews,
@@ -513,7 +517,7 @@ class LI_List_Table extends WP_List_Table {
     {
         global $wpdb;
 
-        $q = $wpdb->prepare("
+        $q = "
             SELECT 
                 lt.tag_text, lt.tag_slug, lt.tag_synced_lists, lt.tag_form_selectors, lt.tag_order, lt.tag_id,
                 ( SELECT COUNT(DISTINCT contact_hashkey) FROM $wpdb->li_tag_relationships, $wpdb->li_leads WHERE tag_id = lt.tag_id AND tag_relationship_deleted = 0 AND contact_hashkey != '' AND $wpdb->li_leads.hashkey = $wpdb->li_tag_relationships.contact_hashkey GROUP BY tag_id ) AS tag_count
@@ -521,7 +525,7 @@ class LI_List_Table extends WP_List_Table {
                 $wpdb->li_tags lt
             WHERE 
                 lt.tag_deleted = 0
-            ORDER BY lt.tag_order ASC", "");
+            ORDER BY lt.tag_order ASC";
 
         return $wpdb->get_results($q);
     }
@@ -532,10 +536,15 @@ class LI_List_Table extends WP_List_Table {
     function views ()
     {
         $this->tags = stripslashes_deep($this->get_tags());
+        
         $current = ( !empty($_GET['contact_type']) ? html_entity_decode($_GET['contact_type']) : 'all' );
         $all_params = array( 'contact_type', 's', 'paged', '_wpnonce', '_wpreferrer', '_wp_http_referer', 'action', 'action2', 'filter_form', 'filter_action', 'filter_content', 'contact');
+        
         $all_url = remove_query_arg($all_params);
+
         $this->total_contacts = $this->get_total_contacts();
+
+        
 
         echo "<ul class='leadin-contacts__type-picker'>";
             echo "<li><a href='$all_url' class='" . ( $current == 'all' ? 'current' :'' ) . "'><span class='icon-user'></span>" . $this->total_contacts .  " Total</a></li>";

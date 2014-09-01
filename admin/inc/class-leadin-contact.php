@@ -266,12 +266,12 @@ class LI_Contact {
 		global $wpdb;
 
 		$esp_power_ups = array(
-            'MailChimp'         => 'mailchimp_list_sync', 
-            'Constant Contact'  => 'constant_contact_list_sync', 
-            'AWeber'            => 'aweber_list_sync', 
-            'GetResponse'       => 'getresponse_list_sync', 
-            'MailPoet'          => 'mailpoet_list_sync', 
-            'Campaign Monitor'  => 'campaign_monitor_list_sync'
+            'MailChimp'         => 'mailchimp_connect', 
+            'Constant Contact'  => 'constant_contact_connect', 
+            'AWeber'            => 'aweber_connect', 
+            'GetResponse'       => 'getresponse_connect', 
+            'MailPoet'          => 'mailpoet_connect', 
+            'Campaign Monitor'  => 'campaign_monitor_connect'
         );
 
 		$safe_tags = $tags_to_update = '';
@@ -337,7 +337,7 @@ class LI_Contact {
 					if ( in_array($list['list_id'], $synced_lists) )
 						continue;
 
-					$power_up_global = 'leadin_' . $list['esp'] . '_list_sync' . '_wp';
+					$power_up_global = 'leadin_' . $list['esp'] . '_connect' . '_wp';
 					if ( array_key_exists($power_up_global, $GLOBALS) )
 					{
 						global ${$power_up_global};
@@ -351,29 +351,6 @@ class LI_Contact {
 					array_push($synced_lists, $list['list_id']);
 				}
 			}
-
-			/*else if ( $tag->tag_synced_lists && ! $update_tag && ! $tag->tag_relationship_deleted )
-			{
-				foreach ( unserialize($tag->tag_synced_lists) as $list )
-				{
-					// Skip removing contact form list if it has already happened or the contact was previoulsy synced
-					if ( in_array($list['list_id'], $removed_lists) || in_array($list['list_id'], $synced_lists) )
-						continue;
-
-					$power_up_global = 'leadin_' . $list['esp'] . '_list_sync' . '_wp';
-					if ( array_key_exists($power_up_global, $GLOBALS) )
-					{
-						global ${$power_up_global};
-
-						if ( ! ${$power_up_global}->activated )
-							continue;
-
-						${$power_up_global}->remove_contact_from_list($list['list_id'], $this->history->lead->lead_email);
-					}
-
-					array_push($synced_lists, $list['list_id']);
-				}
-			}*/
 		}
 
 		if ( $tags_to_update )

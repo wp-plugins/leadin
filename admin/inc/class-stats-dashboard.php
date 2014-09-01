@@ -125,6 +125,7 @@ class LI_StatsDashboard {
 			FROM 
 				$wpdb->li_leads ll, $wpdb->li_pageviews lpv
 			WHERE 
+				ll.lead_date < CURRENT_DATE() AND 
 				pageview_date >= CURRENT_DATE() AND 
 				ll.hashkey = lpv.lead_hashkey AND 
 				pageview_deleted = 0 AND lead_email != '' AND lead_deleted = 0 ";
@@ -162,7 +163,7 @@ class LI_StatsDashboard {
 		 	$wpdb->li_leads
 		 WHERE 
 		 	lead_date BETWEEN CURDATE() - INTERVAL 30 DAY AND CURDATE() AND lead_email != ''";
-
+		 	
 		$contacts = $wpdb->get_results($q);
 
 		foreach ( $contacts as $contact ) 
@@ -204,10 +205,12 @@ class LI_StatsDashboard {
 	{
 		if ( $source )
 		{
-			if ( strstr(urldecode($source), 'utm_medium=cpc') || strstr(urldecode($source), 'utm_medium=ppc') )
+			$decoded_source = urldecode($source);
+
+			if ( stristr($decoded_source, 'utm_medium=cpc') || stristr($decoded_source, 'utm_medium=ppc') || stristr($decoded_source, 'aclk') || stristr($decoded_source, 'gclid') )
 				return 'paid';
 
-			if ( strstr($source, 'utm_') )
+			if ( stristr($source, 'utm_') )
 			{
 				$url = $source;
 				$url_parts = parse_url($url);
@@ -230,7 +233,7 @@ class LI_StatsDashboard {
 
 				if ( isset($path_parts['utm_source']) )
 				{
-					if ( strstr($path_parts['utm_source'], 'email') ) 
+					if ( stristr($path_parts['utm_source'], 'email') ) 
 						return 'email';
 				}
 			}

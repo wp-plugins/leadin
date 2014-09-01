@@ -249,8 +249,8 @@ function leadin_insert_form_submission ()
 				{
 					foreach ( unserialize($list->tag_synced_lists) as $synced_list )
 					{
-						// e.g. leadin_constant_contact_list_sync_wp
-						$leadin_esp_wp = 'leadin_' . $synced_list['esp'] . '_list_sync_wp';
+						// e.g. leadin_constant_contact_connect_wp
+						$leadin_esp_wp = 'leadin_' . $synced_list['esp'] . '_connect_wp';
 						global ${$leadin_esp_wp};
 						
 						if ( ${$leadin_esp_wp}->activated )
@@ -280,8 +280,8 @@ function leadin_insert_form_submission ()
 				{
 					foreach ( unserialize($list->tag_synced_lists) as $synced_list )
 					{
-						// e.g. leadin_constant_contact_list_sync_wp
-						$leadin_esp_wp = 'leadin_' . $synced_list['esp'] . '_list_sync_wp';
+						// e.g. leadin_constant_contact_connect_wp
+						$leadin_esp_wp = 'leadin_' . $synced_list['esp'] . '_connect_wp';
 						global ${$leadin_esp_wp};
 
 						if ( ${$leadin_esp_wp}->activated )
