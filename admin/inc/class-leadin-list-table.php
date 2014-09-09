@@ -404,7 +404,7 @@ class LI_List_Table extends WP_List_Table {
                     COUNT(DISTINCT p.pageview_id) AS lead_pageviews,
                     LOWER(DATE_FORMAT(MAX(p.pageview_date), %s)) AS last_visit,
                     ( SELECT COUNT(DISTINCT pageview_id) FROM $wpdb->li_pageviews WHERE lead_hashkey = l.hashkey AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS visits,
-                    ( SELECT MAX(pageview_source) AS pageview_source FROM $wpdb->li_pageviews WHERE lead_hashkey = l.hashkey AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS pageview_source 
+                    ( SELECT MIN(pageview_source) AS pageview_source FROM $wpdb->li_pageviews WHERE lead_hashkey = l.hashkey AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS pageview_source 
                 FROM 
                     $wpdb->li_leads l
                 LEFT JOIN $wpdb->li_submissions s ON l.hashkey = s.lead_hashkey

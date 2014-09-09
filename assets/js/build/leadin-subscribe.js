@@ -423,7 +423,7 @@ function bind_leadin_subscribe_widget ()
                             '<h3>Thanks!<br>You should receive a confirmation email in your inbox shortly.</h3>' + 
                             '<div>' +
                                 '<span class="powered-by">Powered by LeadIn</span>' + 
-                                '<a href="http://leadin.com/wordpress-subscribe-widget/?utm_campaign=subscribe_widget&utm_medium=email&utm_source=' + window.location.host + '"><img alt="LeadIn" height="20px" width="99px" src="http://leadin.com/wp-content/themes/LeadIn-WP-Theme/library/images/logos/Leadin_logo@2x.png" alt="leadin.com"/></a>' +
+                                '<a href="http://leadin.com/wordpress-subscribe-widget/?utm_campaign=subscribe_widget&utm_medium=email&utm_source=' + window.location.host + '"><img alt="LeadIn" height="20px" width="99px" src="' + document.location.protocol + '//leadin.com/wp-content/themes/LeadIn-WP-Theme/library/images/logos/Leadin_logo@2x.png" alt="leadin.com"/></a>' +
                             '</div>'
                         ).css('text-align', 'center').fadeIn(250);
                     });

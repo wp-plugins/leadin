@@ -121,7 +121,7 @@ class LI_StatsDashboard {
 				lead_id, 
 				lead_email, 
 				( SELECT COUNT(*) FROM $wpdb->li_pageviews WHERE lead_hashkey = lh ) as pageviews,
-				( SELECT MAX(pageview_source) AS pageview_source FROM $wpdb->li_pageviews WHERE lead_hashkey = lh AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS lead_source 
+				( SELECT MIN(pageview_source) AS pageview_source FROM $wpdb->li_pageviews WHERE lead_hashkey = lh AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS lead_source 
 			FROM 
 				$wpdb->li_leads ll, $wpdb->li_pageviews lpv
 			WHERE 
@@ -142,7 +142,7 @@ class LI_StatsDashboard {
 				lead_id, 
 				lead_email, 
 				( SELECT COUNT(*) FROM $wpdb->li_pageviews WHERE lead_hashkey = lh ) as pageviews, 
-				( SELECT MAX(pageview_source) AS pageview_source FROM $wpdb->li_pageviews WHERE lead_hashkey = lh AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS lead_source 
+				( SELECT MIN(pageview_source) AS pageview_source FROM $wpdb->li_pageviews WHERE lead_hashkey = lh AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS lead_source 
 			FROM 
 				$wpdb->li_leads ll, li_pageviews lpv
 			WHERE 
@@ -158,7 +158,7 @@ class LI_StatsDashboard {
 		global $wpdb;
 
 		$q = "SELECT hashkey lh,
-			( SELECT MAX(pageview_source) AS pageview_source FROM $wpdb->li_pageviews WHERE lead_hashkey = lh AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS lead_source 
+			( SELECT MIN(pageview_source) AS pageview_source FROM $wpdb->li_pageviews WHERE lead_hashkey = lh AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS lead_source 
 		 FROM 
 		 	$wpdb->li_leads
 		 WHERE 

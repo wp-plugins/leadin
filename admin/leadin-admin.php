@@ -212,11 +212,11 @@ class WPLeadInAdmin {
         if ( !isset($_GET['page']) || $_GET['page'] != 'leadin_settings' )
         {
             $options = get_option('leadin_options');
-            //if ( !isset($options['ignore_settings_popup']) || !$options['ignore_settings_popup'] )
-               
+            if ( !isset($options['ignore_settings_popup']) || !$options['ignore_settings_popup'] )
+                $li_pointers = new LI_Pointers();
         }
 
-         $li_pointers = new LI_Pointers();
+        
     }
 
     //=============================================

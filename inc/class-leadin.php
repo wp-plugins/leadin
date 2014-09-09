@@ -5,68 +5,72 @@
 //=============================================
 class WPLeadIn {
 
-	var $power_ups;
-	/**
-	 * Class constructor
-	 */
-	function __construct ()
-	{
-		leadin_set_wpdb_tables();
+    var $power_ups;
+    /**
+     * Class constructor
+     */
+    function __construct ()
+    {
+        leadin_set_wpdb_tables();
 
-		$this->power_ups = self::get_available_power_ups();
+        $this->power_ups = self::get_available_power_ups();
         add_action('admin_bar_menu', array($this, 'add_leadin_link_to_admin_bar'), 999);
-		
-		if ( is_admin()  )
-		{
-			if ( ! defined('DOING_AJAX') || ! DOING_AJAX )
-			{
-				if ( current_user_can('manage_options') )	
-					$li_wp_admin = new WPLeadInAdmin($this->power_ups);
-			}
-		}
-		else
-		{
+        
+        if ( is_admin()  )
+        {
+            if ( ! defined('DOING_AJAX') || ! DOING_AJAX )
+            {
+                if ( current_user_can('manage_options') )   
+                    $li_wp_admin = new WPLeadInAdmin($this->power_ups);
+            }
+        }
+        else
+        {
 
-			add_action('wp_enqueue_scripts', array($this, 'add_leadin_frontend_scripts'));
-			// Get all the power-ups and instantiate them
-		}
-	}
+            add_action('wp_enqueue_scripts', array($this, 'add_leadin_frontend_scripts'));
+            // Get all the power-ups and instantiate them
+        }
+    }
 
-	//=============================================
-	// Scripts & Styles
-	//=============================================
+    //=============================================
+    // Scripts & Styles
+    //=============================================
 
-	/**
-	 * Adds front end javascript + initializes ajax object
-	 */
-	function add_leadin_frontend_scripts ()
-	{
-		wp_register_script('leadin-tracking', LEADIN_PATH . '/assets/js/build/leadin-tracking.min.js', array ('jquery'), FALSE, TRUE);
-		wp_enqueue_script('leadin-tracking');
+    /**
+     * Adds front end javascript + initializes ajax object
+     */
+    function add_leadin_frontend_scripts ()
+    {
+        wp_register_script('leadin-tracking', LEADIN_PATH . '/assets/js/build/leadin-tracking.min.js', array ('jquery'), FALSE, TRUE);
+        wp_enqueue_script('leadin-tracking');
 
-		// replace https with http for admin-ajax calls for SSLed backends
-		//wp_localize_script('leadin-tracking', 'li_ajax', array('ajax_url' => str_replace('https:', 'http:', admin_url('admin-ajax.php'))));
-		wp_localize_script('leadin-tracking', 'li_ajax', array('ajax_url' => get_admin_url(NULL,'') . '/admin-ajax.php'));
-	}
+        // replace https with http for admin-ajax calls for SSLed backends 
+        $admin_url = admin_url('admin-ajax.php');
+        wp_localize_script(
+            'leadin-tracking', 
+            'li_ajax', 
+            array('ajax_url' => ( is_ssl() ? str_replace('http:', 'https:', $admin_url) : str_replace('https:', 'http:', $admin_url) ))
+        );
+    }
 
-	/**
+    /**
      * Adds LeadIn link to top-level admin bar
      */
-	function add_leadin_link_to_admin_bar( $wp_admin_bar ) {
-		global $wp_version;
+    function add_leadin_link_to_admin_bar( $wp_admin_bar ) {
+        global $wp_version;
 
-		$args = array(
-			'id'     => 'leadin-admin-menu',
-			'title'  => '<span class="ab-icon" '. ( $wp_version < 3.8 && !is_plugin_active('mp6/mp6.php') ? ' style="margin-top: 3px;"' : ''). '><img src="/wp-content/plugins/leadin/images/leadin-svg-icon.svg" style="height:16px; width:16px;"></span><span class="ab-label">LeadIn</span>', // alter the title of existing node
-			'parent' => FALSE,	 // set parent to false to make it a top level (parent) node
-			'href' => get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_stats',
-			'meta' => array('title' => 'LeadIn')
-		);
+        $args = array(
+            'id'     => 'leadin-admin-menu',
+            'title'  => '<span class="ab-icon" '. ( $wp_version < 3.8 && !is_plugin_active('mp6/mp6.php') ? ' style="margin-top: 3px;"' : ''). '><img src="/wp-content/plugins/leadin/images/leadin-svg-icon.svg" style="height:16px; width:16px;"></span><span class="ab-label">LeadIn</span>', // alter the title of existing node
+            'parent' => FALSE,   // set parent to false to make it a top level (parent) node
+            'href' => get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_stats',
+            'meta' => array('title' => 'LeadIn')
+        );
 
-		$wp_admin_bar->add_node( $args );
-	}
+        $wp_admin_bar->add_node( $args );
+    }
 
-	/**
+    /**
      * List available power-ups
      */
     public static function get_available_power_ups ( $min_version = FALSE, $max_version = FALSE ) {
