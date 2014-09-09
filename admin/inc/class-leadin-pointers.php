@@ -22,6 +22,7 @@ class LI_Pointers {
 		// Hooks & Filters
 		//=============================================
 
+
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue' ) );
 	}
 
@@ -30,13 +31,19 @@ class LI_Pointers {
 	 */
 	function enqueue () 
 	{
+
+
 		if ( !current_user_can( 'manage_options' ) )
-           return;
+			return;
+
+
 
 		$options = get_option('leadin_options');
-		
+
 		if ( !isset($options['ignore_settings_popup']) || !$options['ignore_settings_popup'] )
 		{
+			leadin_log_debug('isset');
+
 			wp_enqueue_style( 'wp-pointer' );
 			wp_enqueue_script( 'jquery-ui' );
 			wp_enqueue_script( 'wp-pointer' );
@@ -50,7 +57,7 @@ class LI_Pointers {
 	 * Shows a popup that asks for permission to allow tracking.
 	 */
 	function li_settings_popup() {
-		$id    = '#toplevel_page_leadin_contacts';
+		$id    = '#toplevel_page_leadin_stats';
 		$nonce = wp_create_nonce( 'wpseo_activate_tracking' );
 
 		$content = '<h3>' . __( 'Finish setting up LeadIn', 'leadin' ) . '</h3>';
@@ -111,6 +118,7 @@ class LI_Pointers {
 					$(document).ready(setup);
 			})(jQuery);
 			//]]>
+
 		</script>
 	<?php
 	}

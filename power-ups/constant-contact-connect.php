@@ -5,7 +5,7 @@
 	* Power-up Menu Text: 
 	* Power-up Slug: constant_contact_connect
 	* Power-up Menu Link: settings
-	* Power-up URI: http://leadin.com/mailchimp-list-sync
+	* Power-up URI: http://leadin.com/mailchimp-connect
 	* Power-up Description: Push your contacts to Constant Contact email lists.
 	* Power-up Icon: power-up-icon-constant-contact-connect
 	* Power-up Icon Small: power-up-icon-constant-contact-connect_small

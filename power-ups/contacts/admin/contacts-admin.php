@@ -296,6 +296,24 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                                     echo '<div class="event-time">' . date('g:ia', strtotime($pageview['event_date'])) . '</div>';
                                     echo '<div class="event-content">';
                                         echo '<p class="event-title">Traffic Source: ' . ( $pageview['pageview_source'] ? '<a href="' . $pageview['pageview_source'] . '">' . leadin_strip_params_from_url($pageview['pageview_source']) : 'Direct' ) . '</a></p>';
+                                        $url_parts = parse_url($pageview['pageview_source']);
+                                        if ( $url_parts['query'] )
+                                        {
+                                            parse_str($url_parts['query'], $url_vars);
+                                            if ( count($url_vars) )
+                                            {
+                                                echo '<ul class="event-detail fields">';
+                                                    foreach ( $url_vars as $key => $value )
+                                                    {
+                                                        echo '<li class="field">';
+                                                            echo '<label class="field-label">' . $key . ':</label>';
+                                                            echo '<p class="field-value">' . nl2br($value) . '</p>';
+                                                        echo '</li>';
+                                                    }
+                                                echo '</ul>';
+                                            }
+                                        }
+                                        
                                     echo '</div>';
                                 echo '</li>';
                             }
@@ -441,10 +459,10 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                                     $synced_lists = ( isset($tagger->details->tag_synced_lists) ? unserialize($tagger->details->tag_synced_lists) : '' );
 
                                     echo '<tr>';
-                                        echo '<th scope="row">Sync tagged contacts with these ' . $power_up_name . ' lists</th>';
+                                        echo '<th scope="row">Push tagged contacts with these ' . $power_up_name . ' lists</th>';
                                         echo '<td>';
                                             echo '<fieldset>';
-                                                echo '<legend class="screen-reader-text"><span>Sync tagged contacts to with these ' . $power_up_name . ' email lists</span></legend>';
+                                                echo '<legend class="screen-reader-text"><span>Push tagged contacts to with these ' . $power_up_name . ' email lists</span></legend>';
                                                 //
                                                 $esp_name_readable = ucwords(str_replace('_', ' ', $esp_name));
                                                 $esp_url = str_replace('_', '', $esp_name) . '.com';

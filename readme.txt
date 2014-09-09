@@ -3,7 +3,7 @@ Contributors: andygcook, nelsonjoyce
 Tags:  crm, contacts, lead tracking, click tracking, visitor tracking, analytics, marketing automation, inbound marketing, subscription, marketing, lead generation, mailchimp, constant contact, newsletter, popup, popover, email list, email, contacts database, contact form, forms, form widget, popup form
 Requires at least: 3.7
 Tested up to: 4.0
-Stable tag: 2.0.1
+Stable tag: 2.0.2
 
 Leadin is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
 
@@ -17,10 +17,10 @@ When a person submits a form on your WordPress site, you want to know more about
 
 = How does it work? =
 
--1. When you activate the WordPress plugin, Leadin will track each anonymous visitor to your site with a cookie.
--2. Leadin automatically identifies and watches each existing form on your site for submissions.
--3. Once someone fills out any other form on your site, Leadin will identify that person with their email address. and add them to your contact list.
--4. You'll also receive an email with a link to the new contact record with all of their visit history.
+1. When you activate the WordPress plugin, Leadin will track each anonymous visitor to your site with a cookie.
+2. Leadin automatically identifies and watches each existing form on your site for submissions.
+3. Once someone fills out any other form on your site, Leadin will identify that person with their email address. and add them to your contact list.
+4. You'll also receive an email with a link to the new contact record with all of their visit history.
 
 = Multisite Compatible =
 
@@ -103,8 +103,15 @@ You betcha! Leadin should work just fine on Multisite right out-of-the-box witho
 
 == Changelog ==
 
-- Current version: 2.0.1
-- Current version release: 2014-09-01
+- Current version: 2.0.2
+- Current version release: 2014-09-09
+
+= 2.0.2 (2014.09.09) =
+
+- Bug fixes
+- Fix inconsistent sources on stats widgets and contact timeline widgets
+- Onboarding tooltip popup for setting up settings now works correctly
+- Parse out get vars for traffic sources in the contact timeline
 
 = 2.0.1 (2014.09.01) =
 = Enhancements =

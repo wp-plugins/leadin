@@ -681,36 +681,40 @@ end;
             $entries[] = $response['feed']['entry'];
         else
             $entries = $response['feed']['entry'];
-        foreach ($entries as $data)
+        
+        if ( count($entries) )
         {
-            $my_data = Array();
-            $my_data = $data['content']['ContactList'];
-            $d = Array();
-            //$d['ListID'] = $this->id_from_url($my_data['attr']['id']);
-            $d['ListID'] = $my_data['attr']['id'];
-
-            // Exclude the default lists like active, do-not-mail and removed
-            if ( ! is_numeric($this->id_from_url($my_data['attr']['id'])) )
-                continue;
-
-            unset($my_data['attr']);
-            foreach ($my_data as $dkey => $dval)
+            foreach ($entries as $data)
             {
-                if ( isset($dval['value']) )
-                    $d[$dkey] = $dval['value'];
-            }
-            
-            if ($key)
-            {
-                if ($unique)
-                    $ret[$d[$key]] = $d;
+                $my_data = Array();
+                $my_data = $data['content']['ContactList'];
+                $d = Array();
+                //$d['ListID'] = $this->id_from_url($my_data['attr']['id']);
+                $d['ListID'] = $my_data['attr']['id'];
+
+                // Exclude the default lists like active, do-not-mail and removed
+                if ( ! is_numeric($this->id_from_url($my_data['attr']['id'])) )
+                    continue;
+
+                unset($my_data['attr']);
+                foreach ($my_data as $dkey => $dval)
+                {
+                    if ( isset($dval['value']) )
+                        $d[$dkey] = $dval['value'];
+                }
+                
+                if ($key)
+                {
+                    if ($unique)
+                        $ret[$d[$key]] = $d;
+                    else
+                        $ret[$d[$key]][] = $d;
+                }
                 else
-                    $ret[$d[$key]][] = $d;
+                    $ret[] = $d;
             }
-            else
-                $ret[] = $d;
+            return $ret;
         }
-        return $ret;
     }
 
     /**
