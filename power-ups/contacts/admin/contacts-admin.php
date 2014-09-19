@@ -208,7 +208,26 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
         else if ( isset($_GET['stats_dashboard']) )
             echo '<a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_stats">&larr; Stat Dashboard</a>';
         else
-            echo '<a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts">&larr; All Contacts</a>';
+        {
+            if ( isset($_GET['redirect_to']) )
+            {
+                if ( strstr($_GET['redirect_to'], 'contact_type') )
+                {
+                    $url_parts = parse_url(urldecode($_GET['redirect_to']));
+                    parse_str($url_parts['query'], $url_vars);
+
+                    if ( isset($url_vars['contact_type']) )
+                        echo '<a href="' . $_GET['redirect_to'] . '">&larr; All ' . ucwords($url_vars['contact_type']) . '</a>';
+                }
+                else
+                {
+                    echo '<a href="' . $_GET['redirect_to'] . '">&larr; All Contacts</a>';
+                }
+                
+            }
+            else
+                echo '<a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts">&larr; All Contacts</a>';
+        }
         
         echo '<div class="contact-header-wrap">';
             echo '<img class="contact-header-avatar leadin-dynamic-avatar_' . substr($lead_id, -1) . '" height="76px" width="76px" src="https://api.hubapi.com/socialintel/v1/avatars?email=' . $lead_email . '"/>';
@@ -574,7 +593,7 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
         <div class="leadin-contacts">
 
             <?php
-                $this->leadin_header('Manage LeadIn Tags <a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts&action=add_tag" class="add-new-h2">Add New</a>', 'leadin-contacts__header');
+                $this->leadin_header('Manage Leadin Tags <a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts&action=add_tag" class="add-new-h2">Add New</a>', 'leadin-contacts__header');
             ?>
             
             <div class="">
@@ -638,7 +657,7 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
 
             <?php
 
-                $this->leadin_header('LeadIn Contacts', 'leadin-contacts__header');
+                $this->leadin_header('Leadin Contacts', 'leadin-contacts__header');
             ?>
 
             <div class="leadin-contacts__nav">

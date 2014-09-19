@@ -42,8 +42,6 @@ class LI_Pointers {
 
 		if ( !isset($options['ignore_settings_popup']) || !$options['ignore_settings_popup'] )
 		{
-			leadin_log_debug('isset');
-
 			wp_enqueue_style( 'wp-pointer' );
 			wp_enqueue_script( 'jquery-ui' );
 			wp_enqueue_script( 'wp-pointer' );
@@ -60,8 +58,9 @@ class LI_Pointers {
 		$id    = '#toplevel_page_leadin_stats';
 		$nonce = wp_create_nonce( 'wpseo_activate_tracking' );
 
-		$content = '<h3>' . __( 'Finish setting up LeadIn', 'leadin' ) . '</h3>';
-		$content .= '<p>' . __( 'You\'ve just installed LeadIn. Visit your settings page to make sure LeadIn is properly setup.', 'leadin' ) . '</p>';
+		$content = '<h3>' . __( 'So close...', 'leadin' ) . '</h3>';
+		$content .= '<p>' . __( 'Leadin needs just a bit more info to get your contact tracking up and running. click on \'Go to settings\' to complete the setup.', 'leadin' ) . '</p>';
+		
 		$opt_arr = array(
 			'content'  => $content,
 			'position' => array( 'edge' => 'left', 'align' => 'center' )

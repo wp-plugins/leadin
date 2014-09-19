@@ -394,7 +394,7 @@ function bind_leadin_subscribe_widget ()
             subscribe.vex = vex.dialog.open({
                 showCloseButton: true,
                 className: 'leadin-subscribe ' + $('#leadin-subscribe-vex-class').val(),
-                message: $('#leadin-subscribe-heading').val(),
+                message: '<h4>' + $('#leadin-subscribe-heading').val() + '</h4>' + '<p>' + $('#leadin-subscribe-text').val() + '</p>',
                 input: '<input id="leadin-subscribe-email" name="email" type="email" placeholder="Email address" />' +
                     (($('#leadin-subscribe-name-fields').val()==0) ? '' : '<input id="leadin-subscribe-fname" name="fname" type="text" placeholder="First Name" /><input id="leadin-subscribe-lname" name="lname" type="text" placeholder="Last Name"  />') +
                     (($('#leadin-subscribe-phone-field').val()==0) ? '' : '<input id="leadin-subscribe-phone" name="phone" type="tel" placeholder="Phone" />'),
@@ -422,8 +422,8 @@ function bind_leadin_subscribe_widget ()
                             '<div class="vex-close"></div>' + 
                             '<h3>Thanks!<br>You should receive a confirmation email in your inbox shortly.</h3>' + 
                             '<div>' +
-                                '<span class="powered-by">Powered by LeadIn</span>' + 
-                                '<a href="http://leadin.com/wordpress-subscribe-widget/?utm_campaign=subscribe_widget&utm_medium=email&utm_source=' + window.location.host + '"><img alt="LeadIn" height="20px" width="99px" src="' + document.location.protocol + '//leadin.com/wp-content/themes/LeadIn-WP-Theme/library/images/logos/Leadin_logo@2x.png" alt="leadin.com"/></a>' +
+                                '<span class="powered-by">Powered by Leadin</span>' + 
+                                '<a href="http://leadin.com/wordpress-subscribe-widget/?utm_campaign=subscribe_widget&utm_medium=email&utm_source=' + window.location.host + '"><img alt="Leadin" height="20px" width="99px" src="' + document.location.protocol + '//leadin.com/wp-content/themes/LeadIn-WP-Theme/library/images/logos/Leadin_logo@2x.png" alt="leadin.com"/></a>' +
                             '</div>'
                         ).css('text-align', 'center').fadeIn(250);
                     });
@@ -443,7 +443,7 @@ function bind_leadin_subscribe_widget ()
 
             //leadin_subscribe_show();
 
-            $('.leadin-subscribe form.vex-dialog-form').append('<a href="http://leadin.com/pop-subscribe-form-plugin-wordpress/?utm_campaign=subscribe_widget&utm_medium=widget&utm_source=' + document.URL + '" id="leadin-subscribe-powered-by" class="leadin-subscribe-powered-by">Powered by LeadIn</a>');
+            $('.leadin-subscribe form.vex-dialog-form').append('<a href="http://leadin.com/wordpress-subscribe-widget/?utm_campaign=subscribe_widget&utm_medium=widget&utm_source=' + document.URL + '" id="leadin-subscribe-powered-by" class="leadin-subscribe-powered-by">Powered by Leadin</a>');
         };
 
         subscribe._open = function() {

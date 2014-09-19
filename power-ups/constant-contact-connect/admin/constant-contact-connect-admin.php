@@ -227,7 +227,7 @@ class WPConstantContactConnectAdmin extends WPLeadInAdmin {
         echo '</table>';
 
         if ( ! $synced_list_count )
-                echo "<p>You don't have any Constant Contact lists synced with LeadIn yet...</p>";
+                echo "<p>You don't have any Constant Contact lists synced with Leadin yet...</p>";
             
         echo '<p><a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts&action=manage_tags' . '">Manage tags</a></p>';
 

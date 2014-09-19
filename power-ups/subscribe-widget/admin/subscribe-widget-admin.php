@@ -44,7 +44,7 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
 
         add_settings_section(
             $this->power_up_settings_section,
-            $this->power_up_icon . 'Subscribe Pop-up',
+            $this->power_up_icon . 'Pop-up Form',
             array($this, 'print_hidden_settings_fields'),
             LEADIN_ADMIN_PATH
         );
@@ -60,6 +60,13 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
             'li_subscribe_heading',
             'Pop-up header text',
             array($this, 'li_subscribe_heading_callback'),
+            LEADIN_ADMIN_PATH,
+            $this->power_up_settings_section
+        );
+        add_settings_field(
+            'li_subscribe_text',
+            'Description text',
+            array($this, 'li_subscribe_text_callback'),
             LEADIN_ADMIN_PATH,
             $this->power_up_settings_section
         );
@@ -110,6 +117,9 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
 
         if( isset( $input['li_subscribe_heading'] ) )
             $new_input['li_subscribe_heading'] = sanitize_text_field( $input['li_subscribe_heading'] );
+
+        if( isset( $input['li_subscribe_text'] ) )
+            $new_input['li_subscribe_text'] = sanitize_text_field( $input['li_subscribe_text'] );
 
         if( isset( $input['li_subscribe_btn_label'] ) )
             $new_input['li_subscribe_btn_label'] = sanitize_text_field( $input['li_subscribe_btn_label'] );
@@ -173,11 +183,25 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
     function li_subscribe_heading_callback ()
     {
         $options = $this->options;
-        $li_subscribe_heading = ( $options['li_subscribe_heading'] ? $options['li_subscribe_heading'] : 'Sign up for my newsletter to get new posts by email' ); // Get header from options, or show default
+        $li_subscribe_heading = ( $options['li_subscribe_heading'] ? $options['li_subscribe_heading'] : 'Sign up for email updates' ); // Get header from options, or show default
         
         printf(
             '<input id="li_subscribe_heading" type="text" name="leadin_subscribe_options[li_subscribe_heading]" value="%s" size="50"/>',
             $li_subscribe_heading
+        );
+    }
+
+    /**
+     * Prints subscribe heading input for settings page
+     */
+    function li_subscribe_text_callback ()
+    {
+        $options = $this->options;
+        $li_subscribe_text = ( $options['li_subscribe_text'] ? $options['li_subscribe_text'] : '' ); // Get header from options, or show default
+        
+        printf(
+            '<input id="li_subscribe_text" type="text" name="leadin_subscribe_options[li_subscribe_text]" value="%s" size="50"/>',
+            $li_subscribe_text
         );
     }
 

@@ -38,7 +38,7 @@ class WPLeadInUpdater {
 	//=============================================
 
 	/**
-	 * Adds setting link for LeadIn to plugins management page 
+	 * Adds setting link for Leadin to plugins management page 
 	 *
 	 * @param 	array $transient_data		plugins that have updates
 	 * @return	array
@@ -84,7 +84,7 @@ class WPLeadInUpdater {
 	}
 
 	/**
-	 * Adds setting link for LeadIn to plugins management page 
+	 * Adds setting link for Leadin to plugins management page 
 	 *
 	 * @param 	string $checked_data		plugins that have updates
 	 * @return	object on success, WP_Error on failure.
