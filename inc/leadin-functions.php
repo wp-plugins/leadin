@@ -74,7 +74,7 @@ function leadin_single_plural_label ( $number, $singular_label, $plural_label )
 }
 
 /**
- * Get LeadIn user
+ * Get Leadin user
  *
  * @return  array
  */
@@ -108,16 +108,17 @@ function leadin_get_current_user ()
 }
 
 /**
- * Register LeadIn user
+ * Register Leadin user
  *
  * @return  bool
  */
 function leadin_register_user ()
 {
     $leadin_user = leadin_get_current_user();
-    $mp = new LI_Mixpanel(MIXPANEL_PROJECT_TOKEN);
     
     // @push mixpanel event for updated email
+    
+    $mp = new LI_Mixpanel(MIXPANEL_PROJECT_TOKEN);
     $mp->identify($leadin_user['user_id']);
     $mp->createAlias( $leadin_user['user_id'],  $leadin_user['alias']);
     $mp->people->set( $leadin_user['user_id'], array(
@@ -127,40 +128,37 @@ function leadin_register_user ()
         '$li-version'       => $leadin_user['li_version']
     ));
 
-    // @push contact to HubSpot
-
-    $hs_context = array(
-        'pageName' => 'Plugin Settings'
-    );
-
-    $hs_context_json = json_encode($hs_context);
-    
-    //Need to populate these varilables with values from the form.
-    $str_post = "email=" . urlencode($leadin_user['email'])
-        . "&li_version=" . urlencode($leadin_user['li_version'])
-        . "&leadin_stage=Activated"
-        . "&li_user_id=" . urlencode($leadin_user['user_id'])
-        . "&website=" . urlencode($leadin_user['wp_url'])
-        . "&wp_version=" . urlencode($leadin_user['wp_version'])
-        . "&hs_context=" . urlencode($hs_context_json);
-    
-    $endpoint = 'https://forms.hubspot.com/uploads/form/v2/324680/d93719d5-e892-4137-98b0-913efffae204';
-    
-    $ch = @curl_init();
-    @curl_setopt($ch, CURLOPT_POST, true);
-    @curl_setopt($ch, CURLOPT_POSTFIELDS, $str_post);
-    @curl_setopt($ch, CURLOPT_URL, $endpoint);
-    @curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/x-www-form-urlencoded'));
-    @curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    $response = @curl_exec($ch);  //Log the response from HubSpot as needed.
-    @curl_close($ch);
-    echo $response;
-
-    return TRUE;
+    return true;
 }
 
 /**
- * Register LeadIn user
+ * Subscribe user to user updates in MailChimp
+ *
+ * @return  bool
+ */
+function leadin_subscribe_user_updates ()
+{
+    $leadin_user = leadin_get_current_user();
+ 
+    // Sync to email to MailChimp
+
+    $MailChimp = new LI_MailChimp(MC_KEY);
+    $contact_synced = $MailChimp->call("lists/subscribe", array(
+        "id"                => 'c390aea726',
+        "email"             => array('email' => $leadin_user['email']),
+        "send_welcome"      => FALSE,
+        "email_type"        => 'html',
+        "update_existing"   => TRUE,
+        'replace_interests' => FALSE,
+        'double_optin'      => FALSE,
+        "merge_vars"        => array('EMAIL' => $leadin_user['email'], 'WEBSITE' => get_site_url() )
+    ));
+
+    return $contact_synced;
+}
+
+/**
+ * Set Beta propertey on Leadin user in Mixpanel
  *
  * @return  bool
  */
@@ -182,7 +180,7 @@ function leadin_set_beta_tester_property ( $beta_tester )
  */
 function leadin_track_plugin_registration_hook ( $activated )
 {
-    if ( $activated ) 
+    if ( $activated )
     {
         leadin_register_user();
         leadin_track_plugin_activity("Activated Plugin");
@@ -450,7 +448,7 @@ function leadin_convert_statuses_to_tags ( )
             }
         }
 
-        // Check if LeadIn Subscribe is activated
+        // Check if Leadin Subscribe is activated
         if ( ! $subscriber_exists )
         {
             if ( WPLeadIn::is_power_up_active('subscribe_widget') )
@@ -801,6 +799,16 @@ function leadin_set_wpdb_tables ()
     $wpdb->li_leads             = ( is_multisite() ? $wpdb->prefix . 'li_leads' : 'li_leads' );
     $wpdb->li_tags              = ( is_multisite() ? $wpdb->prefix . 'li_tags' : 'li_tags' );
     $wpdb->li_tag_relationships = ( is_multisite() ? $wpdb->prefix . 'li_tag_relationships' : 'li_tag_relationships' );
+}
+
+
+/**
+ * Gets current URL with parameters
+ * 
+ */
+function get_current_url ( )
+{
+    return ( is_ssl() ? 'https://' : 'http://' ) . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'] . $_SERVER['QUERY_STRING'];
 }
 
 ?>

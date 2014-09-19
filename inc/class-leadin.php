@@ -54,17 +54,17 @@ class WPLeadIn {
     }
 
     /**
-     * Adds LeadIn link to top-level admin bar
+     * Adds Leadin link to top-level admin bar
      */
     function add_leadin_link_to_admin_bar( $wp_admin_bar ) {
         global $wp_version;
 
         $args = array(
             'id'     => 'leadin-admin-menu',
-            'title'  => '<span class="ab-icon" '. ( $wp_version < 3.8 && !is_plugin_active('mp6/mp6.php') ? ' style="margin-top: 3px;"' : ''). '><img src="/wp-content/plugins/leadin/images/leadin-svg-icon.svg" style="height:16px; width:16px;"></span><span class="ab-label">LeadIn</span>', // alter the title of existing node
+            'title'  => '<span class="ab-icon" '. ( $wp_version < 3.8 && !is_plugin_active('mp6/mp6.php') ? ' style="margin-top: 3px;"' : ''). '><img src="/wp-content/plugins/leadin/images/leadin-svg-icon.svg" style="height:16px; width:16px;"></span><span class="ab-label">Leadin</span>', // alter the title of existing node
             'parent' => FALSE,   // set parent to false to make it a top level (parent) node
             'href' => get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_stats',
-            'meta' => array('title' => 'LeadIn')
+            'meta' => array('title' => 'Leadin')
         );
 
         $wp_admin_bar->add_node( $args );
@@ -210,7 +210,7 @@ class WPLeadIn {
     }
 
     /**
-     * Check whether or not a LeadIn power-up is active.
+     * Check whether or not a Leadin power-up is active.
      *
      * @param string $power_up The slug of a power-up
      * @return bool
@@ -289,7 +289,7 @@ class WPLeadIn {
 }
 
 //=============================================
-// LeadIn Init
+// Leadin Init
 //=============================================
 
 global $li_wp_admin;

@@ -44,7 +44,7 @@ class WPLeadInBetaAdmin extends WPLeadInAdmin {
         // Need to use the santize function from the main admin class because that is where leadin_options is set
         add_settings_section(
             $this->power_up_settings_section,
-            $this->power_up_icon . 'LeadIn Beta Program',
+            $this->power_up_icon . 'Leadin Beta Program',
             array($this, 'beta_tester_callback'),
             LEADIN_ADMIN_PATH
         );
@@ -69,7 +69,7 @@ class WPLeadInBetaAdmin extends WPLeadInAdmin {
 
             printf(
                 '<tr><td><label for="beta_tester"><input id="beta_tester" type="checkbox" name="leadin_options[beta_tester]" value="1"' . checked( 1, ( isset ( $options['beta_tester']) ? $options['beta_tester'] : 0 ), false ) . '/>' . 
-                'Yes, I\'d like to participate in the LeadIn Beta Program</label></td></tr>'
+                'Yes, I\'d like to participate in the Leadin Beta Program</label></td></tr>'
             );
 
         echo '</table>';

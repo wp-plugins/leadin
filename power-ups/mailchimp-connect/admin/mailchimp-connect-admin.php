@@ -105,7 +105,7 @@ class WPMailChimpConnectAdmin extends WPLeadInAdmin {
                             echo '<td class="synced-list-cell"><span class="icon-tag"></span> ' . $synced_list->tag_text . '</td>';
                             echo '<td class="synced-list-cell"><span class="synced-list-arrow">&#8594;</span></td>';
                             echo '<td class="synced-list-cell"><span class="icon-envelope"></span> ' . $tag_synced_list['list_name'] . '</td>';
-                            echo '<td class="synced-list-edit"><a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts&action=edit_tag&tag=' . $synced_list->tag_id . '">edit</a></td>';
+                            echo '<td class="synced-list-edit"><a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts&action=edit_tag&tag=' . $synced_list->tag_id . '">edit tag</a></td>';
                         echo '</tr>';
 
                         $synced_list_count++;
@@ -114,14 +114,12 @@ class WPMailChimpConnectAdmin extends WPLeadInAdmin {
             }
             echo '</table>';
 
-            if ( ! $synced_list_count )
-                echo "<p>You don't have any MailChimp lists synced with LeadIn yet...</p>";
-            
-            echo '<p><a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts&action=manage_tags' . '">Manage tags</a></p>';
+            if ( ! $synced_list_count ) {
+                echo '<p>MailChimp connected succesfully! <a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts&action=manage_tags">Select a tag to send contacts to MailChimp</a>.</p>';
+            } else {
+                echo '<p><a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts&action=manage_tags">Edit your tags</a> or <a href="http://admin.mailchimp.com/lists/new-list/" target="_blank">Create a new list on MailChimp.com</a></p>';
+            }
         }
-
-        if ( $li_mls_api_key )
-            echo '<p style="padding-top: 10px;"><a href="http://admin.mailchimp.com/lists/new-list/" target="_blank">Create a new list on MailChimp.com</a></p>';
     }
 
     function li_get_synced_list_for_esp ( $esp_name, $output_type = 'OBJECT' )

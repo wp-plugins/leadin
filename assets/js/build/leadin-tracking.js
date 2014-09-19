@@ -398,7 +398,7 @@ function leadin_submit_form ( $form, $ )
 
 	$this.find('.li_used').removeClass('li_used'); // Clean up added classes
 
-	// Save submission into database if email is present and form is not ignore, send LeadIn email, and submit form as usual
+	// Save submission into database if email is present and form is not ignore, send Leadin email, and submit form as usual
 	if ( lead_email )
 	{
 		if ( ignore_form )
@@ -602,6 +602,10 @@ function ignore_field ( label, value )
 		if ( isInt(value_no_spaces) && value_no_spaces.length >= 16 )
 			bool_ignore_field = true;
 	}
+
+	// Hack for the form parser sometimes rolling up all form fields into one massive label
+	if ( label.length > 250 )
+		bool_ignore_field = true;
 
 	if ( bool_ignore_field )
 	{

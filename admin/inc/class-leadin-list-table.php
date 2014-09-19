@@ -172,8 +172,8 @@ class LI_List_Table extends WP_List_Table {
             'add_tag_to_selected'        => 'Add a tag to selected ' . $contact_type,
             'remove_tag_from_all'        => 'Remove a tag from all ' . $filtered . $contact_type . ' in list',
             'remove_tag_from_selected'   => 'Remove a tag from selected ' . $contact_type,
-            'delete_all'                 => 'Delete all ' . $contact_type . ' from LeadIn',
-            'delete_selected'            => 'Delete selected ' . $contact_type . ' from LeadIn'
+            'delete_all'                 => 'Delete all ' . $contact_type . ' from Leadin',
+            'delete_selected'            => 'Delete selected ' . $contact_type . ' from Leadin'
         );
 
         return $actions;
@@ -439,10 +439,14 @@ class LI_List_Table extends WP_List_Table {
 
                 $url = leadin_strip_params_from_url($lead->lead_source);
 
+                $redirect_url = '';
+                if ( isset($_GET['contact_type']) || isset($_GET['filter_action']) || isset($_GET['filter_form']) || isset($_GET['filter_content']) || isset($_GET['num_pageviews']) || isset($_GET['s']) )
+                    $redirect_url = urlencode(get_current_url());
+
                 $lead_array = array(
                     'ID' => $lead->lead_id,
                     'hashkey' => $lead->hashkey,
-                    'email' => sprintf('<a href="?page=%s&action=%s&lead=%s">' . "<img class='pull-left leadin-contact-avatar leadin-dynamic-avatar_" . substr($lead->lead_id, -1) . "' src='https://api.hubapi.com/socialintel/v1/avatars?email=" . $lead->lead_email . "' width='35' height='35'/> " . '</a>', $_REQUEST['page'], 'view', $lead->lead_id) .  sprintf('<a href="?page=%s&action=%s&lead=%s"><b>' . $lead->lead_email . '</b></a>', $_REQUEST['page'], 'view', $lead->lead_id),
+                    'email' => sprintf('<a href="?page=%s&action=%s&lead=%s%s">' . "<img class='pull-left leadin-contact-avatar leadin-dynamic-avatar_" . substr($lead->lead_id, -1) . "' src='https://api.hubapi.com/socialintel/v1/avatars?email=" . $lead->lead_email . "' width='35' height='35'/> " . '</a>', $_REQUEST['page'], 'view', $lead->lead_id, ( $redirect_url ? '&redirect_to=' .  $redirect_url : '' )) .  sprintf('<a href="?page=%s&action=%s&lead=%s%s"><b>' . $lead->lead_email . '</b></a>', $_REQUEST['page'], 'view', $lead->lead_id, ( $redirect_url ? '&redirect_to=' .  $redirect_url : '' )),
                     'visits' => ( !isset($lead->visits) ? 1 : $lead->visits ),
                     'submissions' => $lead->lead_form_submissions,
                     'pageviews' => $lead->lead_pageviews,

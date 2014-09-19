@@ -1,6 +1,6 @@
 <?php
 /**
-	* Power-up Name: Subscribe Pop-up
+	* Power-up Name: Pop-up Form
 	* Power-up Class: WPLeadInSubscribe
 	* Power-up Menu Text: 
 	* Power-up Slug: subscribe_widget
@@ -94,7 +94,8 @@ class WPLeadInSubscribe extends WPLeadIn {
 			$opt = array(
 				'li_susbscibe_installed' 			=> '1',
 				'li_subscribe_vex_class' 			=> ( isset($options['li_subscribe_vex_class']) ? $options['li_subscribe_vex_class'] : 'vex-theme-bottom-right-corner'),
-				'li_subscribe_heading' 				=> ( isset($options['li_subscribe_heading']) ? $options['li_subscribe_heading'] : 'Sign up for my newsletter to get new posts by email'),
+				'li_subscribe_heading' 				=> ( isset($options['li_subscribe_heading']) ? $options['li_subscribe_heading'] : 'Sign up for email updates'),
+				'li_subscribe_text' 				=> ( isset($options['li_subscribe_text']) ? $options['li_subscribe_text'] : ''),
 				'li_subscribe_btn_label' 			=> ( isset($options['li_subscribe_btn_label']) ? $options['li_subscribe_btn_label'] : 'SUBSCRIBE'),
 				'li_subscribe_name_fields' 			=> ( isset($options['li_subscribe_name_fields']) ? $options['li_subscribe_name_fields'] : '0'),
 				'li_subscribe_phone_field' 			=> ( isset($options['li_subscribe_phone_field']) ? $options['li_subscribe_phone_field'] : '0'),
@@ -129,7 +130,8 @@ class WPLeadInSubscribe extends WPLeadIn {
 
 	    // Settings for the subscribe plugin injected into footer and pulled via jQuery on the front end
 	    echo '<input id="leadin-subscribe-vex-class" value="' . ( isset($options['li_subscribe_vex_class']) ? $options['li_subscribe_vex_class'] : 'vex-theme-bottom-right-corner' )  . '" type="hidden"/>';
-	    echo '<input id="leadin-subscribe-heading" value="' . ( isset($options['li_subscribe_heading']) ? $options['li_subscribe_heading'] : 'Sign up for my newsletter to get new posts by email' )  . '" type="hidden"/>';
+	    echo '<input id="leadin-subscribe-heading" value="' . ( isset($options['li_subscribe_heading']) ? $options['li_subscribe_heading'] : 'Sign up for email updates' )  . '" type="hidden"/>';
+	    echo '<input id="leadin-subscribe-text" value="' . ( isset($options['li_subscribe_text']) ? $options['li_subscribe_text'] : '' )  . '" type="hidden"/>';
 	    echo '<input id="leadin-subscribe-btn-label" value="' . ( isset($options['li_subscribe_btn_label']) ? $options['li_subscribe_btn_label'] : 'SUBSCRIBE' )  . '" type="hidden"/>';
 	    echo '<input id="leadin-subscribe-name-fields" value="' . ( isset($options['li_subscribe_name_fields']) ? $options['li_subscribe_name_fields'] : '0' )  . '" type="hidden"/>';
 	    echo '<input id="leadin-subscribe-phone-field" value="' . ( isset($options['li_subscribe_phone_field']) ? $options['li_subscribe_phone_field'] : '0' )  . '" type="hidden"/>';

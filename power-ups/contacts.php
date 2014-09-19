@@ -72,7 +72,7 @@ class WPLeadInContacts extends WPLeadIn {
 }
 
 //=============================================
-// LeadIn Init
+// Leadin Init
 //=============================================
 
 global $leadin_contacts;

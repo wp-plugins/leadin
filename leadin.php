@@ -1,9 +1,9 @@
 <?php
 /*
-Plugin Name: LeadIn
+Plugin Name: Leadin
 Plugin URI: http://leadin.com
-Description: LeadIn is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
-Version: 2.0.2
+Description: Leadin is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
+Version: 2.1.0
 Author: Andy Cook, Nelson Joyce
 Author URI: http://leadin.com
 License: GPL2
@@ -26,10 +26,13 @@ if ( !defined('LEADIN_DB_VERSION') )
 	define('LEADIN_DB_VERSION', '2.0.0');
 
 if ( !defined('LEADIN_PLUGIN_VERSION') )
-	define('LEADIN_PLUGIN_VERSION', '2.0.2');
+	define('LEADIN_PLUGIN_VERSION', '2.1.0');
 
 if ( !defined('MIXPANEL_PROJECT_TOKEN') )
     define('MIXPANEL_PROJECT_TOKEN', 'a9615503ec58a6bce2c646a58390eac1');
+
+if ( !defined('MC_KEY') )
+    define('MC_KEY', '934aaed05049dde737d308be26167eef-us3');
 
 //=============================================
 // Include Needed Files
@@ -54,10 +57,10 @@ require_once(LEADIN_PLUGIN_DIR . '/power-ups/beta-program.php');
 // Hooks & Filters
 //=============================================
 
-// Activate + install LeadIn
+// Activate + install Leadin
 register_activation_hook( __FILE__, 'activate_leadin');
 
-// Deactivate LeadIn
+// Deactivate Leadin
 register_deactivation_hook( __FILE__, 'deactivate_leadin');
 
 // Activate on newly created wpmu blog
@@ -99,7 +102,7 @@ function activate_leadin ( $network_wide )
 }
 
 /**
- * Check LeadIn installation and set options
+ * Check Leadin installation and set options
  */
 function add_leadin_defaults ( )
 {
@@ -113,6 +116,8 @@ function add_leadin_defaults ( )
 			'li_installed'				=> 1,
 			'li_db_version'				=> LEADIN_DB_VERSION,
 			'li_email' 					=> get_bloginfo('admin_email'),
+			'li_updates_subscription'	=> 1,
+			'onboarding_step'			=> 1,
 			'onboarding_complete'		=> 0,
 			'ignore_settings_popup'		=> 0,
 			'data_recovered'			=> 1,
@@ -151,7 +156,7 @@ function add_leadin_defaults ( )
 }
 
 /**
- * Deactivate LeadIn plugin hook
+ * Deactivate Leadin plugin hook
  */
 function deactivate_leadin ( $network_wide )
 {
@@ -204,7 +209,7 @@ function leadin_init ()
 //=============================================
 
 /**
- * Creates or updates the LeadIn tables
+ * Creates or updates the Leadin tables
  */
 function leadin_db_install ()
 {
@@ -290,10 +295,10 @@ add_action( 'plugins_loaded', 'leadin_init', 14 );
 
 if ( is_admin() ) 
 {
-	// Activate + install LeadIn
+	// Activate + install Leadin
 	register_activation_hook( __FILE__, 'activate_leadin');
 
-	// Deactivate LeadIn
+	// Deactivate Leadin
 	register_deactivation_hook( __FILE__, 'deactivate_leadin');
 
 	// Activate on newly created wpmu blog

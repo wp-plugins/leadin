@@ -400,6 +400,12 @@ jQuery(document).ready( function ( $ ) {
 	$('#leadin-contact-status').change( function ( e ) {
 		$('#leadin-contact-status-button').addClass('button-primary');
 	});
+
+	$('input[name=popup-position]:radio').change( function ( e ) {
+		$('#btn-activate-subscribe').attr('href', window.location.href + '&leadin_action=activate&power_up=subscribe_widget&redirect_to=' + encodeURIComponent(window.location.href + '&activate_popup=true&popup_position=' + $("input:radio[name='popup-position']:checked").val()));
+	});
+
+	console.log('in admin');
 });
 jQuery(document).ready( function ( $ ) {
 	
