@@ -62,6 +62,9 @@ function leadin_log_pageview ()
 {
 	global $wpdb;
 
+	if ( leadin_ignore_logged_in_user() )
+		return FALSE;
+
 	$hash 		= $_POST['li_id'];
 	$title 		= $_POST['li_title'];
 	$url 		= $_POST['li_url'];
@@ -97,6 +100,9 @@ function leadin_insert_lead ()
 {
 	global $wpdb;
 
+	if ( leadin_ignore_logged_in_user() )
+		return FALSE;
+
 	$hashkey 	= $_POST['li_id'];
 	$ipaddress 	= $_SERVER['REMOTE_ADDR'];
 	$source 	= ( isset($_POST['li_referrer']) ? $_POST['li_referrer'] : '' );
@@ -127,6 +133,9 @@ add_action('wp_ajax_nopriv_leadin_insert_lead', 'leadin_insert_lead'); // Call w
 function leadin_insert_form_submission ()
 {
 	global $wpdb;
+
+	if ( leadin_ignore_logged_in_user() )
+		return FALSE;
 
 	$submission_hash 		= $_POST['li_submission_id'];
 	$hashkey 				= $_POST['li_id'];
@@ -419,12 +428,18 @@ function leadin_get_form_selectors ( )
 	}
 
 	$fuzzy_selectors = array();
-	foreach ( $tagger->selectors as $key => $selector )
+	if ( count($tagger->selectors) )
 	{
-		if ( strstr($selector, $_POST['search_term']) )
+		foreach ( $tagger->selectors as $key => $selector )
 		{
-			if ( ! in_array($selector, $fuzzy_selectors) && $selector )
-				array_push($fuzzy_selectors, $selector);
+			if ( $selector )
+			{
+				if ( strstr($selector, $_POST['search_term']) )
+				{
+					if ( ! in_array($selector, $fuzzy_selectors) && $selector )
+						array_push($fuzzy_selectors, $selector);
+				}
+			}
 		}
 	}
 

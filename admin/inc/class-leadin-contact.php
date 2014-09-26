@@ -157,7 +157,7 @@ class LI_Contact {
 		$q = $wpdb->prepare("
 			SELECT 
 				form_date AS event_date, 
-				DATE_FORMAT(form_date, %s) AS form_date, 
+				DATE_FORMAT(DATE_SUB(form_date, INTERVAL %d HOUR), %s) AS form_date, 
 				form_page_title, 
 				form_page_url, 
 				form_fields
@@ -165,7 +165,7 @@ class LI_Contact {
 				$wpdb->li_submissions 
 			WHERE 
 				form_deleted = 0 AND 
-				lead_hashkey = %s ORDER BY event_date DESC", '%b %D %l:%i%p', $hashkey);
+				lead_hashkey = %s ORDER BY event_date DESC", $wpdb->db_hour_offset, '%b %D %l:%i%p', $hashkey);
 		
 		$submissions = $wpdb->get_results($q, $output_type);
 
@@ -187,14 +187,14 @@ class LI_Contact {
 			SELECT 
 				pageview_id,
 				pageview_date AS event_date,
-				DATE_FORMAT(pageview_date, %s) AS pageview_day, 
-				DATE_FORMAT(pageview_date, %s) AS pageview_date, 
+				DATE_FORMAT(DATE_SUB(pageview_date, INTERVAL %d HOUR), %s) AS pageview_day, 
+				DATE_FORMAT(DATE_SUB(pageview_date, INTERVAL %d HOUR), %s) AS pageview_date, 
 				lead_hashkey, pageview_title, pageview_url, pageview_source, pageview_session_start 
 			FROM 
 				$wpdb->li_pageviews 
 			WHERE 
 				pageview_deleted = 0 AND
-				lead_hashkey LIKE %s ORDER BY event_date DESC", '%b %D', '%b %D %l:%i%p', $hashkey);
+				lead_hashkey LIKE %s ORDER BY event_date DESC", $wpdb->db_hour_offset, '%b %D', $wpdb->db_hour_offset, '%b %D %l:%i%p', $hashkey);
 		
 		$pageviews = $wpdb->get_results($q, $output_type);
 
@@ -214,13 +214,13 @@ class LI_Contact {
 
 		$q = $wpdb->prepare("
 			SELECT 
-				DATE_FORMAT(lead_date, %s) AS lead_date,
+				DATE_FORMAT(DATE_SUB(lead_date, INTERVAL %d HOUR), %s) AS lead_date,
 				lead_id,
 				lead_ip, 
 				lead_email
 			FROM 
 				$wpdb->li_leads 
-			WHERE hashkey LIKE %s", '%b %D %l:%i%p', $hashkey);
+			WHERE hashkey LIKE %s", $wpdb->db_hour_offset, '%b %D %l:%i%p', $hashkey);
 
 		$contact_details = $wpdb->get_row($q, $output_type);
 
@@ -371,7 +371,10 @@ class LI_Contact {
 	 */
 	function sort_by_event_date ( $a, $b ) 
 	{
-		return $a['event_date'] < $b['event_date'];
+		$val_a = strtotime($a['event_date']);
+		$val_b = strtotime($b['event_date']);
+
+		return $val_a < $val_b;
 	}
 }
 ?>

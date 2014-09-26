@@ -203,9 +203,7 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
             $li_contact->history->tags = $li_contact->get_contact_tags($li_contact->hashkey);
         }
 
-        if ( isset($_GET['post_id']) )
-            echo '<a href="' . get_bloginfo('wpurl') . '/wp-admin/post.php?post=' . $_GET['post_id'] . '&action=edit#li_analytics-meta">&larr; All Viewers</a>';
-        else if ( isset($_GET['stats_dashboard']) )
+        if ( isset($_GET['stats_dashboard']) )
             echo '<a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_stats">&larr; Stat Dashboard</a>';
         else
         {
@@ -216,13 +214,13 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                     $url_parts = parse_url(urldecode($_GET['redirect_to']));
                     parse_str($url_parts['query'], $url_vars);
 
-                    if ( isset($url_vars['contact_type']) )
+                    if ( isset($url_vars['contact_type']) && $url_vars['contact_type'] )
                         echo '<a href="' . $_GET['redirect_to'] . '">&larr; All ' . ucwords($url_vars['contact_type']) . '</a>';
+                    else
+                        echo '<a href="' . $_GET['redirect_to'] . '">&larr; All Contacts</a>';
                 }
                 else
-                {
                     echo '<a href="' . $_GET['redirect_to'] . '">&larr; All Contacts</a>';
-                }
                 
             }
             else
@@ -316,20 +314,26 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                                     echo '<div class="event-content">';
                                         echo '<p class="event-title">Traffic Source: ' . ( $pageview['pageview_source'] ? '<a href="' . $pageview['pageview_source'] . '">' . leadin_strip_params_from_url($pageview['pageview_source']) : 'Direct' ) . '</a></p>';
                                         $url_parts = parse_url($pageview['pageview_source']);
-                                        if ( $url_parts['query'] )
+                                        if ( isset($url_parts['query']) )
                                         {
-                                            parse_str($url_parts['query'], $url_vars);
-                                            if ( count($url_vars) )
+                                            if ( $url_parts['query'] )
                                             {
-                                                echo '<ul class="event-detail fields">';
-                                                    foreach ( $url_vars as $key => $value )
-                                                    {
-                                                        echo '<li class="field">';
-                                                            echo '<label class="field-label">' . $key . ':</label>';
-                                                            echo '<p class="field-value">' . nl2br($value) . '</p>';
-                                                        echo '</li>';
-                                                    }
-                                                echo '</ul>';
+                                                parse_str($url_parts['query'], $url_vars);
+                                                if ( count($url_vars) )
+                                                {
+                                                    echo '<ul class="event-detail fields">';
+                                                        foreach ( $url_vars as $key => $value )
+                                                        {
+                                                            if ( ! $value )
+                                                                continue;
+                                                            
+                                                            echo '<li class="field">';
+                                                                echo '<label class="field-label">' . $key . ':</label>';
+                                                                echo '<p class="field-value">' . nl2br($value) . '</p>';
+                                                            echo '</li>';
+                                                        }
+                                                    echo '</ul>';
+                                                }
                                             }
                                         }
                                         
@@ -509,6 +513,11 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                                                     echo 'It looks like you haven\'t setup your ' . $esp_name_readable . ' integration yet...<br/><br/>';
                                                     echo '<a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_settings' . $settings_page_anchor_id . '">Setup your ' . $esp_name_readable . ' integration</a>';
                                                 }
+                                                else if ( ${'leadin_' . $power_up_slug . '_wp'}->admin->invalid_key )
+                                                {
+                                                    echo 'It looks like your ' . $esp_name_readable . ' API key is invalid...<br/><br/>';
+                                                    echo '<p><a href="http://admin.mailchimp.com/account/api/" target="_blank">Get your API key from MailChimp.com</a> then try copying and pasting it again in <a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_settings' . $settings_page_anchor_id . '">Leadin → Settings</a></p>';
+                                                }
                                                 else if ( count($lists) )
                                                 {
                                                     foreach ( $lists as $list )
@@ -541,7 +550,7 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                                                 }
                                                 else
                                                 {
-                                                    echo 'It looks like you don\'t have any ' . $esp_name_readable . 'lists yet...<br/><br/>';
+                                                    echo 'It looks like you don\'t have any ' . $esp_name_readable . ' lists yet...<br/><br/>';
                                                     echo '<a href="' . $esp_list_url . '" target="_blank">Create a list on ' . $esp_url . '.com</a>';
                                                 }
                                             echo '</fieldset>';

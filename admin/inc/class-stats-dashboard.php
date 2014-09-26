@@ -65,12 +65,23 @@ class LI_StatsDashboard {
 	function get_data_last_30_days_graph ()
 	{
 		global $wpdb;
-		$q = "SELECT DATE(lead_date) as lead_date, COUNT(DISTINCT hashkey) contacts FROM $wpdb->li_leads WHERE lead_email != '' GROUP BY DATE(lead_date)";
+		
+		$q = "
+            SELECT 
+                COUNT(DISTINCT hashkey) AS total_contacts
+            FROM 
+                $wpdb->li_leads
+            WHERE
+                lead_email != '' AND lead_deleted = 0 AND hashkey != '' ";
+
+        $this->total_contacts = $wpdb->get_var($q);
+
+
+        $q = "SELECT DATE(lead_date) as lead_date, COUNT(DISTINCT hashkey) contacts FROM $wpdb->li_leads WHERE lead_email != '' AND hashkey != '' AND lead_deleted = 0 GROUP BY DATE(lead_date)";
 		$contacts = $wpdb->get_results($q);
 
 		for ( $i = count($contacts)-1; $i >= 0; $i-- )
 		{
-			$this->total_contacts += ( $contacts[$i]->contacts ? $contacts[$i]->contacts : 0);
 			$this->best_day_ever = ( $contacts[$i]->contacts && $contacts[$i]->contacts > $this->best_day_ever ? $contacts[$i]->contacts : $this->best_day_ever);
 		}
 

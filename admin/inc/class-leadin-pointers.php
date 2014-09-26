@@ -59,7 +59,7 @@ class LI_Pointers {
 		$nonce = wp_create_nonce( 'wpseo_activate_tracking' );
 
 		$content = '<h3>' . __( 'So close...', 'leadin' ) . '</h3>';
-		$content .= '<p>' . __( 'Leadin needs just a bit more info to get your contact tracking up and running. click on \'Go to settings\' to complete the setup.', 'leadin' ) . '</p>';
+		$content .= '<p>' . __( 'Leadin needs just a bit more info to get your contact tracking up and running. Click on \'Go to settings\' to complete the setup.', 'leadin' ) . '</p>';
 		
 		$opt_arr = array(
 			'content'  => $content,

@@ -68,7 +68,7 @@ class WPLeadInBetaAdmin extends WPLeadInAdmin {
             echo '</div>';
 
             printf(
-                '<tr><td><label for="beta_tester"><input id="beta_tester" type="checkbox" name="leadin_options[beta_tester]" value="1"' . checked( 1, ( isset ( $options['beta_tester']) ? $options['beta_tester'] : 0 ), false ) . '/>' . 
+                '<tr><td><label for="beta_tester_input"><input id="beta_tester_input" type="checkbox" name="leadin_options[beta_tester]" value="1"' . checked( 1, ( isset ( $options['beta_tester']) ? $options['beta_tester'] : 0 ), false ) . '/>' . 
                 'Yes, I\'d like to participate in the Leadin Beta Program</label></td></tr>'
             );
 

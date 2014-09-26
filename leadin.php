@@ -3,7 +3,7 @@
 Plugin Name: Leadin
 Plugin URI: http://leadin.com
 Description: Leadin is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
-Version: 2.1.0
+Version: 2.2.0
 Author: Andy Cook, Nelson Joyce
 Author URI: http://leadin.com
 License: GPL2
@@ -26,13 +26,16 @@ if ( !defined('LEADIN_DB_VERSION') )
 	define('LEADIN_DB_VERSION', '2.0.0');
 
 if ( !defined('LEADIN_PLUGIN_VERSION') )
-	define('LEADIN_PLUGIN_VERSION', '2.1.0');
+	define('LEADIN_PLUGIN_VERSION', '2.2.0');
 
 if ( !defined('MIXPANEL_PROJECT_TOKEN') )
     define('MIXPANEL_PROJECT_TOKEN', 'a9615503ec58a6bce2c646a58390eac1');
 
 if ( !defined('MC_KEY') )
     define('MC_KEY', '934aaed05049dde737d308be26167eef-us3');
+
+if ( !defined('LEADIN_SOURCE') )
+    define('LEADIN_SOURCE', 'plugin directory');
 
 //=============================================
 // Include Needed Files
@@ -138,6 +141,8 @@ function add_leadin_defaults ( )
 		        ('Contacted', 'contacted', '', '', 3),
 		        ('Customers', 'customers', '', '', 4)", "");
 		$wpdb->query($q);
+
+		leadin_track_plugin_registration_hook(TRUE);
 	}
 
 	$leadin_active_power_ups = get_option('leadin_active_power_ups');
@@ -151,8 +156,6 @@ function add_leadin_defaults ( )
 
 		update_option('leadin_active_power_ups', serialize($auto_activate));
 	}
-
-    leadin_track_plugin_registration_hook(TRUE);
 }
 
 /**

@@ -14,6 +14,7 @@
 	* Auto Activate: Yes
 	* Permanently Enabled: Yes
 	* Hidden: No
+	* cURL Required: No
 */
 
 //=============================================

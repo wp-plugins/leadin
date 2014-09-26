@@ -12,6 +12,7 @@ class WPLeadIn {
     function __construct ()
     {
         leadin_set_wpdb_tables();
+        leadin_set_mysql_timezone_offset();
 
         $this->power_ups = self::get_available_power_ups();
         add_action('admin_bar_menu', array($this, 'add_leadin_link_to_admin_bar'), 999);
@@ -98,6 +99,7 @@ class WPLeadIn {
                 $power_up->permanent        = ( $headers['permanent'] == 'Yes' ? 1 : 0 );
                 $power_up->auto_activate    = ( $headers['auto_activate'] == 'Yes' ? 1 : 0 );
                 $power_up->hidden           = ( $headers['hidden'] == 'Yes' ? 1 : 0 );
+                $power_up->curl_required    = ( $headers['curl_required'] == 'Yes' ? 1 : 0 );
                 $power_up->activated        = $headers['activated'];
 
                 // Set the small icons HTML for the settings page
@@ -151,7 +153,8 @@ class WPLeadIn {
             'auto_activate'     => 'Auto Activate',
             'permanent'         => 'Permanently Enabled',
             'power_up_tags'     => 'Power-up Tags',
-            'hidden'            => 'Hidden'
+            'hidden'            => 'Hidden',
+            'curl_required'     => 'cURL Required'
         );
 
         $file = self::get_power_up_path( self::get_power_up_slug( $power_up ) );

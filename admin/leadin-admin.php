@@ -170,6 +170,7 @@ class WPLeadInAdmin {
         }
 
         // Set the plugin version
+        leadin_update_user();
         leadin_update_option('leadin_options', 'leadin_version', LEADIN_PLUGIN_VERSION);
     }
     
@@ -480,7 +481,15 @@ class WPLeadInAdmin {
             LEADIN_ADMIN_PATH,
             'leadin_settings_section'
         );
-        
+
+        add_settings_field(
+            'li_do_not_track',
+            'Do not track logged in',
+            array($this, 'li_do_not_track_callback'),
+            LEADIN_ADMIN_PATH,
+            'leadin_settings_section'
+        );
+
         add_filter(
             'update_option_leadin_options',
             array($this, 'update_option_leadin_options_callback'),
@@ -510,7 +519,6 @@ class WPLeadInAdmin {
         $delete_flags_fixed         = ( isset($options['delete_flags_fixed']) ? $options['delete_flags_fixed'] : 0 );
         $converted_to_tags          = ( isset($options['converted_to_tags']) ? $options['converted_to_tags'] : 0 );
         $leadin_version             = ( isset($options['leadin_version']) ? $options['leadin_version'] : LEADIN_PLUGIN_VERSION );
-        $beta_tester                = ( isset($options['beta_tester']) ? $options['beta_tester'] : 0 );
         
         printf(
             '<input id="li_installed" type="hidden" name="leadin_options[li_installed]" value="%d"/>',
@@ -555,11 +563,6 @@ class WPLeadInAdmin {
         printf(
             '<input id="leadin_version" type="hidden" name="leadin_options[leadin_version]" value="%s"/>',
             $leadin_version
-        );
-
-        printf(
-            '<input id="beta_tester" type="hidden" name="leadin_options[beta_tester]" value="%d"/>',
-            $beta_tester
         );
     }
 
@@ -638,6 +641,8 @@ class WPLeadInAdmin {
             
             <?php if ( $li_options['onboarding_step'] == 1 ) : ?>
 
+                <?php leadin_track_plugin_activity('Onboarding Step 2 - Get Contact Reports'); ?>
+
                 <ol class="oboarding-steps-names">
                     <li class="oboarding-step-name completed">Activate Leadin</li>
                     <li class="oboarding-step-name active">Get Contact Reports</li>
@@ -651,8 +656,10 @@ class WPLeadInAdmin {
                             <div>
                                 <?php settings_fields('leadin_settings_options'); ?>
                                 <?php $this->li_email_callback(); ?>
-                                <br>
-                                <label for="li_updates_subscription"><input type="checkbox" id="li_updates_subscription" name="li_updates_subscription" checked/>Keep me up to date with security and feature updates</label>
+                                <?php if ( function_exists('curl_init') && function_exists('curl_setopt') ) : ?>
+                                    <br>
+                                    <label for="li_updates_subscription"><input type="checkbox" id="li_updates_subscription" name="li_updates_subscription" checked/>Keep me up to date with security and feature updates</label>
+                                <?php endif; ?>
                             </div>
                             <?php $this->print_hidden_settings_fields();  ?>
                             <input type="hidden" id="next_onboarding_step" name="next_onboarding_step" value="2">
@@ -662,6 +669,8 @@ class WPLeadInAdmin {
                 </div>
 
             <?php elseif ( $li_options['onboarding_step'] == 2 ) : ?>
+
+                <?php leadin_track_plugin_activity('Onboarding Step 3 - Grow Your Contact List'); ?>
 
                 <ol class="oboarding-steps-names">
                     <li class="oboarding-step-name completed">Activate Leadin</li>
@@ -718,11 +727,17 @@ class WPLeadInAdmin {
                     }
 
                     leadin_update_option('leadin_subscribe_options', 'li_subscribe_vex_class', $vex_class_option);
+                    leadin_track_plugin_activity('Onboarding Popup Activated');
                 }
+                else
+                    leadin_track_plugin_activity('Onboarding Popup Not Activated');
 
                 // Update the onboarding settings
                 if ( ! isset($options['onboarding_complete']) || ! $options['onboarding_complete'] )
+                {
                     leadin_update_option('leadin_options', 'onboarding_complete', 1);
+                    leadin_track_plugin_activity('Onboarding Complete');
+                }
             ?>
 
             <ol class="oboarding-steps-names">
@@ -832,11 +847,29 @@ class WPLeadInAdmin {
 
         if( isset( $input['beta_tester'] ) )
         {
-            $new_input['beta_tester'] = sanitize_text_field($input['beta_tester']);
+            $new_input['beta_tester'] = $input['beta_tester'];
             leadin_set_beta_tester_property(TRUE);
         }
         else
             leadin_set_beta_tester_property(FALSE);
+
+        $user_roles = get_editable_roles();
+        if ( count($user_roles) )
+        {
+            //print_r($user_roles);
+            foreach ( $user_roles as $key => $role )
+            {
+                $role_id = 'li_do_not_track_' . $key;
+
+                if( isset( $input[$role_id] ) )
+                {
+                    $new_input[$role_id] = $input[$role_id];
+                }
+            }
+        }
+
+        if( isset( $input['li_subscribe_template_home'] ) )
+            $new_input['li_subscribe_template_home'] = sanitize_text_field( $input['li_subscribe_template_home'] );
 
         return $new_input;
     }
@@ -853,6 +886,28 @@ class WPLeadInAdmin {
             '<input id="li_email" type="text" id="title" name="leadin_options[li_email]" value="%s" size="50"/><br/><span class="description">Separate multiple emails with commas. Leave blank to disable email notifications.</span>',
             $li_email
         );    
+    }
+
+   /**
+     * Prints do not track checkboxes for settings page
+     */
+    function li_do_not_track_callback ()
+    {
+        $options = get_option('leadin_options');
+     
+        $user_roles = get_editable_roles();
+        //print_r($user_roles);
+        if ( count($user_roles) )
+        {
+            foreach ( $user_roles as $key => $role )
+            {
+                $role_id = 'li_do_not_track_' . $key;
+                printf(
+                    '<p><input id="' . $role_id . '" type="checkbox" name="leadin_options[' . $role_id . ']" value="1"' . checked( 1, ( isset($options[$role_id]) ? $options[$role_id] : '0' ), FALSE ) . '/>' . 
+                    '<label for="' . $role_id . '">' . $role['name'] . 's' . '</label></p>'
+                );
+            }
+        }
     }
 
     /**
@@ -911,13 +966,18 @@ class WPLeadInAdmin {
                         </div>
                         <h2><?php echo $power_up->power_up_name; ?></h2>
                         <p><?php echo $power_up->description; ?></p>
-                        <p><a href="<?php echo $power_up->link_uri; ?>" target="_blank">Learn more</a></p>
+                        <p><a href="<?php echo $power_up->link_uri; ?>" target="_blank">Learn more</a></p>  
+
                         <?php if ( $power_up->activated ) : ?>
                             <?php if ( ! $power_up->permanent ) : ?>
                                 <a href="<?php echo get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_power_ups&leadin_action=deactivate&power_up=' . $power_up->slug; ?>" class="button button-secondary button-large">Deactivate</a>
                             <?php endif; ?>
                         <?php else : ?>
-                            <a href="<?php echo get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_power_ups&leadin_action=activate&power_up=' . $power_up->slug; ?>" class="button button-primary button-large">Activate</a>
+                            <?php if ( ( $power_up->curl_required && function_exists('curl_init') && function_exists('curl_setopt') ) || ! $power_up->curl_required ) : ?>
+                                <a href="<?php echo get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_power_ups&leadin_action=activate&power_up=' . $power_up->slug; ?>" class="button button-primary button-large">Activate</a>
+                            <?php else : ?>
+                                <p><a href="http://stackoverflow.com/questions/2939820/how-to-enable-curl-installed-ubuntu-lamp-stack" target="_blank">Install cURL</a> to use this power-up.</p>
+                            <?php endif; ?>
                         <?php endif; ?>
 
                         <?php if ( $power_up->activated || $power_up->permanent ) : ?>

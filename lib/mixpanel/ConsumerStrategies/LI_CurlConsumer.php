@@ -59,7 +59,7 @@ class LI_ConsumerStrategies_CurlConsumer extends LI_ConsumerStrategies_AbstractC
         $this->_fork = array_key_exists('fork', $options) ? ($options['fork'] == true) : false;
 
         // ensure the environment is workable for the given settings
-        if ($this->_fork == true) {
+        /*if ($this->_fork == true) {
             $exists = function_exists('exec');
             if (!$exists) {
                 throw new Exception('The "exec" function must exist to use the cURL consumer in "fork" mode. Try setting fork = false or use another consumer.');
@@ -73,7 +73,7 @@ class LI_ConsumerStrategies_CurlConsumer extends LI_ConsumerStrategies_AbstractC
             if (!function_exists('curl_init')) {
                 throw new Exception('The cURL PHP extension is required to use the cURL consumer with fork = false. Try setting fork = true or use another consumer.');
             }
-        }
+        }*/
     }
 
 
