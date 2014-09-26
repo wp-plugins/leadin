@@ -8,6 +8,7 @@ class WPMailChimpConnectAdmin extends WPLeadInAdmin {
     var $power_up_icon;
     var $options;
     var $authed = FALSE;
+    var $invalid_key = FALSE;
 
     /**
      * Class constructor
@@ -24,6 +25,9 @@ class WPMailChimpConnectAdmin extends WPLeadInAdmin {
             add_action('admin_init', array($this, 'leadin_mls_build_settings_page'));
             $this->options = get_option('leadin_mls_options');
             $this->authed = ( isset($this->options['li_mls_api_key']) && $this->options['li_mls_api_key'] ? TRUE : FALSE );
+
+            if ( $this->authed )
+                $this->invalid_key = $this->li_mls_check_invalid_api_key($this->options['li_mls_api_key']);
         }
     }
 
@@ -66,7 +70,7 @@ class WPMailChimpConnectAdmin extends WPLeadInAdmin {
     }
 
     /**
-     * Prints email input for settings page
+     * Prints API key input for settings page
      */
     function li_mls_api_key_callback ()
     {
@@ -82,7 +86,7 @@ class WPMailChimpConnectAdmin extends WPLeadInAdmin {
     }
 
     /**
-     * Prints email input for settings page
+     * Prints synced lists out for settings page in format  Tag Name → ESP list
      */
     function li_print_synced_lists ()
     {
@@ -122,6 +126,11 @@ class WPMailChimpConnectAdmin extends WPLeadInAdmin {
         }
     }
 
+    /**
+     * Get synced list for the ESP from the WordPress database
+     *
+     * @return array/object    
+     */
     function li_get_synced_list_for_esp ( $esp_name, $output_type = 'OBJECT' )
     {
         global $wpdb;
@@ -168,23 +177,37 @@ class WPMailChimpConnectAdmin extends WPLeadInAdmin {
         echo '<p><a href="http://admin.mailchimp.com/lists/new-list/" target="_blank">Create a new list on MailChimp.com</a></p>';
     }
 
+    /**
+     * Format API-returned lists into parseable format on front end
+     *
+     * @return array    
+     */
     function li_get_lists ( )
     {
         $lists = $this->li_mls_get_mailchimp_lists($this->options['li_mls_api_key']);
         
         $sanitized_lists = array();
-        foreach ( $lists['data'] as $list )
+        if ( count($lists['data']) )
         {
-            $list_obj = (Object)NULL;
-            $list_obj->id = $list['id'];
-            $list_obj->name = $list['name'];
+            foreach ( $lists['data'] as $list )
+            {
+                $list_obj = (Object)NULL;
+                $list_obj->id = $list['id'];
+                $list_obj->name = $list['name'];
 
-            array_push($sanitized_lists, $list_obj);;
+                array_push($sanitized_lists, $list_obj);;
+            }
         }
         
         return $sanitized_lists;
     }
 
+    /**
+     * Get lists from MailChimp account
+     *
+     * @param string
+     * @return array    
+     */
     function li_mls_get_mailchimp_lists ( $api_key )
     {
         $MailChimp = new LI_MailChimp($api_key);
@@ -198,6 +221,26 @@ class WPMailChimpConnectAdmin extends WPLeadInAdmin {
 
         return $lists;
     }
+
+    /**
+     * Use MailChimp API key to try to grab corresponding user profile to check validity of key
+     *
+     * @param string
+     * @return bool    
+     */
+    function li_mls_check_invalid_api_key ( $api_key )
+    {
+        $MailChimp = new LI_MailChimp($api_key);
+
+        $user_profile = $MailChimp->call("users/profile");
+
+        if ( $user_profile )
+            $invalid_key = FALSE;
+        else
+            $invalid_key = TRUE;
+
+        return $invalid_key;
+    } 
 }
 
 ?>

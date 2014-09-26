@@ -344,15 +344,24 @@ ignore_date.setTime(ignore_date.getTime() + (60 * 60 * 24 * 14 * 1000));
 jQuery(document).ready( function ( $ ) {
     var li_subscribe_flag = $.cookie('li_subscribe');
 
-    if ( !leadin_subscribe_check_mobile($) )
+    var preview_subscribe = leadin_get_parameter_by_name('preview-subscribe');
+
+    if ( !leadin_subscribe_check_mobile($) && ! preview_subscribe )
     {
-        if ( !li_subscribe_flag )
+        if ( ! li_subscribe_flag )
         {
             leadin_check_visitor_status($.cookie("li_hash"), function ( data ) {
                 if ( data != 'vex_set' )
                 {
                     $.cookie("li_subscribe", 'show', {path: "/", domain: ""});
-                    bind_leadin_subscribe_widget();
+                    bind_leadin_subscribe_widget(
+                        $('#leadin-subscribe-heading').val(),
+                        $('#leadin-subscribe-text').val(),
+                        $('#leadin-subscribe-name-fields').val(),
+                        $('#leadin-subscribe-phone-field').val(),
+                        $('#leadin-subscribe-btn-label').val(),
+                        $('#leadin-subscribe-vex-class').val()
+                    );
                 }
                 else
                 {
@@ -363,12 +372,34 @@ jQuery(document).ready( function ( $ ) {
         else
         {
             if ( li_subscribe_flag == 'show' )
-                bind_leadin_subscribe_widget();
+            {
+                bind_leadin_subscribe_widget(
+                    $('#leadin-subscribe-heading').val(),
+                    $('#leadin-subscribe-text').val(),
+                    $('#leadin-subscribe-name-fields').val(),
+                    $('#leadin-subscribe-phone-field').val(),
+                    $('#leadin-subscribe-btn-label').val(),
+                    $('#leadin-subscribe-vex-class').val()
+                );   
+            }
         }
+    }
+    else if ( preview_subscribe )
+    {
+        bind_leadin_subscribe_widget(
+            leadin_get_parameter_by_name('lis_heading'),
+            leadin_get_parameter_by_name('lis_desc'),
+            leadin_get_parameter_by_name('lis_show_names'),
+            leadin_get_parameter_by_name('lis_show_phone'),
+            leadin_get_parameter_by_name('lis_btn_label'),
+            leadin_get_parameter_by_name('lis_vex_class')
+        );
+
+        subscribe.open();
     }
 });
 
-function bind_leadin_subscribe_widget () 
+function bind_leadin_subscribe_widget ( lis_heading, lis_desc, lis_show_names, lis_show_phone, lis_btn_label, lis_vex_class ) 
 {
     (function(){
         var $ = jQuery;
@@ -393,12 +424,12 @@ function bind_leadin_subscribe_widget ()
 
             subscribe.vex = vex.dialog.open({
                 showCloseButton: true,
-                className: 'leadin-subscribe ' + $('#leadin-subscribe-vex-class').val(),
-                message: '<h4>' + $('#leadin-subscribe-heading').val() + '</h4>' + '<p>' + $('#leadin-subscribe-text').val() + '</p>',
+                className: 'leadin-subscribe ' + lis_vex_class,
+                message: '<h4>' + lis_heading + '</h4>' + '<p>' + lis_desc + '</p>',
                 input: '<input id="leadin-subscribe-email" name="email" type="email" placeholder="Email address" />' +
-                    (($('#leadin-subscribe-name-fields').val()==0) ? '' : '<input id="leadin-subscribe-fname" name="fname" type="text" placeholder="First Name" /><input id="leadin-subscribe-lname" name="lname" type="text" placeholder="Last Name"  />') +
-                    (($('#leadin-subscribe-phone-field').val()==0) ? '' : '<input id="leadin-subscribe-phone" name="phone" type="tel" placeholder="Phone" />'),
-                buttons: [$.extend({}, vex.dialog.buttons.YES, { text: ( $('#leadin-subscribe-btn-label').val() ? $('#leadin-subscribe-btn-label').val() : 'SUBSCRIBE' ) })],
+                    ( parseInt(lis_show_names) ? '<input id="leadin-subscribe-fname" name="fname" type="text" placeholder="First Name" /><input id="leadin-subscribe-lname" name="lname" type="text" placeholder="Last Name"  />' : '' ) +
+                    ( parseInt(lis_show_phone) ? '<input id="leadin-subscribe-phone" name="phone" type="tel" placeholder="Phone" />' : '' ),
+                buttons: [$.extend({}, vex.dialog.buttons.YES, { text: ( lis_btn_label ? lis_btn_label : 'SUBSCRIBE' ) })],
                 onSubmit: function ( data )
                 {
                     $subscribe_form = $(this);
@@ -487,4 +518,12 @@ function leadin_subscribe_show ()
             //alert(error_data);
         }
     });
+}
+
+function leadin_get_parameter_by_name ( name ) 
+{
+    name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
+    var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
+        results = regex.exec(location.search);
+    return results == null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
 }

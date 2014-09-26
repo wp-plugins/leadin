@@ -117,16 +117,42 @@ function leadin_register_user ()
     $leadin_user = leadin_get_current_user();
     
     // @push mixpanel event for updated email
-    
+
     $mp = new LI_Mixpanel(MIXPANEL_PROJECT_TOKEN);
     $mp->identify($leadin_user['user_id']);
     $mp->createAlias( $leadin_user['user_id'],  $leadin_user['alias']);
     $mp->people->set( $leadin_user['user_id'], array(
-        '$email'            => $leadin_user['email'],
-        '$wp-url'           => $leadin_user['wp_url'],
-        '$wp-version'       => $leadin_user['wp_version'],
-        '$li-version'       => $leadin_user['li_version']
+        '$email'        => $leadin_user['email'],
+        '$wp-url'       => $leadin_user['wp_url'],
+        '$wp-version'   => $leadin_user['wp_version'],
+        '$li-version'   => $leadin_user['li_version']
     ));
+
+    $mp->people->setOnce( $leadin_user['user_id'], array(
+        '$li-source'    => LEADIN_SOURCE
+    ));
+
+    return true;
+}
+
+/**
+ * Register Leadin user
+ *
+ * @return  bool
+ */
+function leadin_update_user ()
+{
+    $leadin_user = leadin_get_current_user();
+ 
+    // @push mixpanel event for updated email
+
+    $mp = new LI_Mixpanel(MIXPANEL_PROJECT_TOKEN);
+    $mp->people->set( $leadin_user['user_id'], array(
+        '$wp-version'   => $leadin_user['wp_version'],
+        '$li-version'   => $leadin_user['li_version']
+    ));
+
+    leadin_track_plugin_activity("Upgraded Plugin");
 
     return true;
 }
@@ -154,6 +180,8 @@ function leadin_subscribe_user_updates ()
         "merge_vars"        => array('EMAIL' => $leadin_user['email'], 'WEBSITE' => get_site_url() )
     ));
 
+    leadin_track_plugin_activity('Onboarding Opted-into User Updates');
+
     return $contact_synced;
 }
 
@@ -172,6 +200,22 @@ function leadin_set_beta_tester_property ( $beta_tester )
 }
 
 /**
+ * Set the status property (activated, deactivated, bad url)
+ *
+ * @return  bool
+ */
+function leadin_set_install_status ( $activated )
+{
+    $leadin_user = leadin_get_current_user();
+
+    $mp = new LI_Mixpanel(MIXPANEL_PROJECT_TOKEN);
+    $mp->people->set( $leadin_user['user_id'], array(
+        '$li-status'  => $activated
+    ));
+}
+
+
+/**
  * Send Mixpanel event when plugin is activated/deactivated
  *
  * @param   bool
@@ -184,10 +228,12 @@ function leadin_track_plugin_registration_hook ( $activated )
     {
         leadin_register_user();
         leadin_track_plugin_activity("Activated Plugin");
+        leadin_set_install_status('activated');
     }
     else
     {
         leadin_track_plugin_activity("Deactivated Plugin");
+        leadin_set_install_status('deactivated');
     }
 
     return TRUE;
@@ -801,14 +847,62 @@ function leadin_set_wpdb_tables ()
     $wpdb->li_tag_relationships = ( is_multisite() ? $wpdb->prefix . 'li_tag_relationships' : 'li_tag_relationships' );
 }
 
+/**
+ * Calculates the hour difference between MySQL timestamps and the current local WordPress time
+ * 
+ */
+function leadin_set_mysql_timezone_offset ()
+{
+    global $wpdb;
+
+    $mysql_timestamp = $wpdb->get_var("SELECT CURRENT_TIMESTAMP");
+    $diff = strtotime($mysql_timestamp) - strtotime(current_time('Y-m-d H:i:s'));
+    $hours = $diff / (60 * 60);
+
+    $wpdb->db_hour_offset = $hours;
+}
+
 
 /**
  * Gets current URL with parameters
  * 
  */
-function get_current_url ( )
+function leadin_get_current_url ( )
 {
     return ( is_ssl() ? 'https://' : 'http://' ) . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'] . $_SERVER['QUERY_STRING'];
+}
+
+
+/**
+ * Returns the user role for the current user
+ * 
+ */
+function leadin_get_user_role ()
+{
+    global $current_user;
+
+    $user_roles = $current_user->roles;
+    $user_role = array_shift($user_roles);
+
+    return $user_role;
+}
+
+/**
+ * Checks whether or not to ignore the logged in user in the Leadin tracking scripts
+ * 
+ */
+function leadin_ignore_logged_in_user ()
+{
+    // ignore logged in users if defined in settings
+    if ( is_user_logged_in() )
+    {
+        if ( array_key_exists('li_do_not_track_' . leadin_get_user_role(), get_option('leadin_options')) )
+            return TRUE;
+        else
+            return FALSE;
+    }
+    else
+        return FALSE;
 }
 
 ?>

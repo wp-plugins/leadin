@@ -399,17 +399,17 @@ class LI_List_Table extends WP_List_Table {
             $q =  $wpdb->prepare("
                 SELECT 
                     l.lead_id AS lead_id, 
-                    LOWER(DATE_FORMAT(l.lead_date, %s)) AS lead_date, l.lead_ip, l.lead_source, l.lead_email, l.hashkey,
+                    LOWER(DATE_SUB(l.lead_date, INTERVAL %d HOUR)) AS lead_date, l.lead_ip, l.lead_source, l.lead_email, l.hashkey,
                     COUNT(DISTINCT s.form_id) AS lead_form_submissions,
                     COUNT(DISTINCT p.pageview_id) AS lead_pageviews,
-                    LOWER(DATE_FORMAT(MAX(p.pageview_date), %s)) AS last_visit,
+                    LOWER(DATE_SUB(MAX(p.pageview_date), INTERVAL %d HOUR)) AS last_visit,
                     ( SELECT COUNT(DISTINCT pageview_id) FROM $wpdb->li_pageviews WHERE lead_hashkey = l.hashkey AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS visits,
                     ( SELECT MIN(pageview_source) AS pageview_source FROM $wpdb->li_pageviews WHERE lead_hashkey = l.hashkey AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS pageview_source 
                 FROM 
                     $wpdb->li_leads l
                 LEFT JOIN $wpdb->li_submissions s ON l.hashkey = s.lead_hashkey
                 LEFT JOIN $wpdb->li_pageviews p ON l.hashkey = p.lead_hashkey 
-                WHERE l.lead_email != '' AND l.lead_deleted = 0 AND l.hashkey != '' ", '%Y/%m/%d %l:%i%p', '%Y/%m/%d %l:%i%p');
+                WHERE l.lead_email != '' AND l.lead_deleted = 0 AND l.hashkey != '' ", $wpdb->db_hour_offset, $wpdb->db_hour_offset);
 
             $q .= $mysql_contact_type_filter;
             $q .= ( $mysql_search_filter ? $mysql_search_filter : "" );
@@ -441,7 +441,7 @@ class LI_List_Table extends WP_List_Table {
 
                 $redirect_url = '';
                 if ( isset($_GET['contact_type']) || isset($_GET['filter_action']) || isset($_GET['filter_form']) || isset($_GET['filter_content']) || isset($_GET['num_pageviews']) || isset($_GET['s']) )
-                    $redirect_url = urlencode(get_current_url());
+                    $redirect_url = urlencode(leadin_get_current_url());
 
                 $lead_array = array(
                     'ID' => $lead->lead_id,
@@ -450,9 +450,9 @@ class LI_List_Table extends WP_List_Table {
                     'visits' => ( !isset($lead->visits) ? 1 : $lead->visits ),
                     'submissions' => $lead->lead_form_submissions,
                     'pageviews' => $lead->lead_pageviews,
-                    'date' => $lead->lead_date,
+                    'date' => date('Y-m-d g:ia', strtotime($lead->lead_date)),
                     'source' => ( $lead->pageview_source ? "<a title='Visit page' href='" . $lead->pageview_source . "' target='_blank'>" . leadin_strip_params_from_url($lead->pageview_source) . "</a>" : 'Direct' ),
-                    'last_visit' => $lead->last_visit,
+                    'last_visit' => date('Y-m-d g:ia', strtotime($lead->last_visit)),
                     'source' => ( $lead->lead_source ? "<a title='Visit page' href='" . $lead->lead_source . "' target='_blank'>" . leadin_strip_params_from_url($lead->lead_source) . "</a>" : 'Direct' )
                 );
                 
@@ -638,8 +638,7 @@ class LI_List_Table extends WP_List_Table {
         $hidden = array();
         $sortable = $this->get_sortable_columns();
         $this->_column_headers = array($columns, $hidden, $sortable);
-        
-        
+                
         $orderby = ( !empty($_REQUEST['orderby']) ? $_REQUEST['orderby'] : 'last_visit' );
         $order = ( !empty($_REQUEST['order']) ? $_REQUEST['order'] : 'desc' );
 
@@ -670,9 +669,13 @@ class LI_List_Table extends WP_List_Table {
         $orderby = ( !empty($_REQUEST['orderby']) ? $_REQUEST['orderby'] : 'last_visit' );
         $order = ( !empty($_REQUEST['order']) ? $_REQUEST['order'] : 'desc' );
 
-        if ( $a[$orderby] == $b[$orderby] )
+        // Timestamp columns need to be convereted to integers to sort correctly
+        $val_a = ( $orderby == 'last_visit' || $orderby == 'date' ? strtotime($a[$orderby]) : $a[$orderby] );
+        $val_b = ( $orderby == 'last_visit' || $orderby == 'date' ? strtotime($b[$orderby]) : $b[$orderby] );
+
+        if ( $val_a == $val_b )
             $result = 0;
-        else if ( $a[$orderby] < $b[$orderby] )
+        else if ( $val_a < $val_b )
             $result = -1;
         else
             $result = 1;

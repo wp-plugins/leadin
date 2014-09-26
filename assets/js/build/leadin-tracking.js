@@ -584,13 +584,13 @@ function ignore_field ( label, value )
 	if ( label.toLowerCase().indexOf('expiration') != -1 || label.toLowerCase().indexOf('expiry') != -1)
 		bool_ignore_field = true;
 
-	if ( label.toLowerCase().indexOf('month') != -1 || label.toLowerCase().indexOf('mm') != -1 || label.toLowerCase().indexOf('yy') != -1 || label.toLowerCase().indexOf('year') != -1 )
+	if ( label.toLowerCase() == 'month' || label.toLowerCase() == 'mm' || label.toLowerCase() == 'yy' || label.toLowerCase() == 'yyyy' || label.toLowerCase() == 'year' )
 		bool_ignore_field = true;
 
 	if ( label.toLowerCase().indexOf('cvv') != -1 || label.toLowerCase().indexOf('cvc') != -1 || label.toLowerCase().indexOf('secure code') != -1 || label.toLowerCase().indexOf('security code') != -1 )
 		bool_ignore_field = true;
 
-	if ( value.toLowerCase().indexOf('visa') != -1 || value.toLowerCase().indexOf('mastercard') != -1 || value.toLowerCase().indexOf('american express') != -1 || value.toLowerCase().indexOf('amex') != -1 || value.toLowerCase().indexOf('discover') != -1 )
+	if ( value.toLowerCase() == 'visa' || value.toLowerCase() == 'mastercard' || value.toLowerCase() == 'american express' || value.toLowerCase() == 'amex' || value.toLowerCase() == 'discover' )
 		bool_ignore_field = true;
 
 	// Check if value has integers, strip out spaces, then ignore anything with a credit card length (>16) or an expiration/cvv length (<5)
