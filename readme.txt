@@ -3,7 +3,7 @@ Contributors: andygcook, nelsonjoyce
 Tags:  crm, contacts, lead tracking, click tracking, visitor tracking, analytics, marketing automation, inbound marketing, subscription, marketing, lead generation, mailchimp, constant contact, newsletter, popup, popover, email list, email, contacts database, contact form, forms, form widget, popup form
 Requires at least: 3.7
 Tested up to: 4.0
-Stable tag: 2.2.0
+Stable tag: 2.2.1
 
 Leadin is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
 
@@ -21,6 +21,10 @@ When a person submits a form on your WordPress site, you want to know more about
 2. Leadin automatically identifies and watches each existing form on your site for submissions.
 3. Once someone fills out any other form on your site, Leadin will identify that person with their email address. and add them to your contact list.
 4. You'll also receive an email with a link to the new contact record with all of their visit history.
+
+If you don't enjoy reading about how it works, watch this video from Brian Duffy explaining how he uses Leadin for <a href="http://wpapplied.com/track-visitors-wordpress-leadin-plugin">WPApplied</a>.
+
+[youtube http://www.youtube.com/watch?v=SGrsyWV988U]
 
 = Multisite Compatible =
 
@@ -103,8 +107,23 @@ You betcha! Leadin should work just fine on Multisite right out-of-the-box witho
 
 == Changelog ==
 
-- Current version: 2.2.0
-- Current version release: 2014-09-25
+- Current version: 2.2.1
+- Current version release: 2014-10-01
+
+= 2.2.1 (2014.10.01) =
+= Enhancements =
+- Added video from WPApplied to readme file
+
+- Bug fixes
+- Page view filters now work in the all contacts list
+- Subscription confirmation box didn't work in settings page if the "homepage" checkbox was unchecked
+- Leadin menu link no longer shows up in the front-end menu bar for non-logged in users
+- Stopped selecting duplicate tags on a contact in the timeline view
+- Select inputs did not pull down the text and instead used the value. Fixed and use text now for selected option
+- Timezones with a database offset on the contact timeline were not correctly fixed in last update
+- Fix to ignore all cURL calls if script isn't present on the server
+- Disable beta program is cURL does not exist on the server
+- Fixed “<- All contacts” link showing up next to back link on a specific contact type in timeline view
 
 = 2.2.0 (2014.09.25) =
 = Enhancements =
@@ -114,7 +133,7 @@ You betcha! Leadin should work just fine on Multisite right out-of-the-box witho
 - Email headers for contact notificatons come from the person who filled in the form
 - Added traffic source URL parameters to contact notification emails
 
--Bug fixes
+- Bug fixes
 - Leadin now accounts for timezones descrepency on some MySQL databases and offsets to local time
 - Filters are now persistent when clicking the link back to the contact list from a contact timeline
 - cURL dependency no longer prints the raw error to the screen on installation and gracefully disables cURL-dependant features

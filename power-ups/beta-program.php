@@ -61,6 +61,9 @@ class WPLeadInBeta extends WPLeadIn {
 	 */
 	public function admin_init ( )
 	{
+		if ( ! function_exists('curl_init') )
+            return false;
+		
 		$admin_class = get_class($this) . 'Admin';
 		$this->admin = new $admin_class($this->icon_small);
 	}

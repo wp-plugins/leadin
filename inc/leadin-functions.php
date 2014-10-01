@@ -114,6 +114,10 @@ function leadin_get_current_user ()
  */
 function leadin_register_user ()
 {
+    if ( ! function_exists('curl_init') )
+        return false;
+    
+
     $leadin_user = leadin_get_current_user();
     
     // @push mixpanel event for updated email
@@ -142,12 +146,15 @@ function leadin_register_user ()
  */
 function leadin_update_user ()
 {
+    if ( ! function_exists('curl_init') )
+        return false;
+
     $leadin_user = leadin_get_current_user();
  
-    // @push mixpanel event for updated email
-
     $mp = new LI_Mixpanel(MIXPANEL_PROJECT_TOKEN);
     $mp->people->set( $leadin_user['user_id'], array(
+        "distinct_id"   => md5(get_bloginfo('wpurl')),
+        '$wp-url'       => get_bloginfo('wpurl'),
         '$wp-version'   => $leadin_user['wp_version'],
         '$li-version'   => $leadin_user['li_version']
     ));
@@ -192,6 +199,10 @@ function leadin_subscribe_user_updates ()
  */
 function leadin_set_beta_tester_property ( $beta_tester )
 {
+    if ( ! function_exists('curl_init') )
+        return false;
+    
+    
     $leadin_user = leadin_get_current_user();
     $mp = new LI_Mixpanel(MIXPANEL_PROJECT_TOKEN);
     $mp->people->set( $leadin_user['user_id'], array(
@@ -206,6 +217,9 @@ function leadin_set_beta_tester_property ( $beta_tester )
  */
 function leadin_set_install_status ( $activated )
 {
+    if ( ! function_exists('curl_init') )
+        return false;
+
     $leadin_user = leadin_get_current_user();
 
     $mp = new LI_Mixpanel(MIXPANEL_PROJECT_TOKEN);
@@ -248,6 +262,10 @@ function leadin_track_plugin_registration_hook ( $activated )
  */
 function leadin_track_plugin_activity ( $activity_desc, $custom_properties = array() )
 {   
+    if ( ! function_exists('curl_init') )
+        return false;
+    
+
     $leadin_user = leadin_get_current_user();
 
     global $wp_version;

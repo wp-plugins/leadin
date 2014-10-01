@@ -164,6 +164,7 @@ class LI_Tags_Table extends WP_List_Table {
                 $wpdb->li_tags lt
             WHERE
                 lt.tag_deleted = 0
+            GROUP BY lt.tag_slug 
             ORDER BY lt.tag_order ASC", "");
 
         $tags = $wpdb->get_results($q);

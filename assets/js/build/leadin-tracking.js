@@ -200,6 +200,7 @@ function leadin_submit_form ( $form, $ )
 
 	// Excludes hidden input fields + submit inputs
 	$this.find('input[type!="submit"], textarea').not('input[type="hidden"], input[type="radio"], input[type="password"]').each( function ( index ) { 
+
 		var $element = $(this);
 		var $value = $element.val();
 
@@ -389,7 +390,11 @@ function leadin_submit_form ( $form, $ )
 		}
 		else
 		{
-			select_value = $select.val();
+			if ( $select.find('option:selected').text() )
+
+				select_value = $select.find('option:selected').text();
+			else
+				select_value = $select.val();
 		}
 
 		if ( ! ignore_field($select_label, select_value) )
