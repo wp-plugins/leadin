@@ -411,7 +411,7 @@ function leadin_get_form_selectors ( )
 	$tagger = new LI_Tag_Editor();
 
 	// Add in the custom form fields
-	$q = $wpdb->prepare("SELECT tag_form_selectors FROM $wpdb->li_tags WHERE tag_form_selectors != ''", "");
+	$q = "SELECT tag_form_selectors FROM $wpdb->li_tags WHERE tag_form_selectors != ''";
 	$tags = $wpdb->get_results($q);
 
 	// Get all the form selectors synced with a list 
@@ -432,7 +432,7 @@ function leadin_get_form_selectors ( )
 	{
 		foreach ( $tagger->selectors as $key => $selector )
 		{
-			if ( $selector )
+			if ( $selector && $_POST['search_term'] )
 			{
 				if ( strstr($selector, $_POST['search_term']) )
 				{

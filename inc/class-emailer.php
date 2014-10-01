@@ -331,8 +331,16 @@ class LI_Emailer {
             'token' => MIXPANEL_PROJECT_TOKEN
         );
 
-        $leadin_user_properties = leadin_get_current_user();
+        $leadin_user = leadin_get_current_user();
+        $leadin_user_properties = array(
+            'distinct_id'   => $leadin_user['user_id'],
+            '$wp-url'       => $leadin_user['wp_url'],
+            '$wp-version'   => $leadin_user['wp_version'],
+            '$li-version'   => $leadin_user['li_version'] 
+        );
+
         $properties = array_merge($url_properties, $leadin_user_properties);
+
         $params = array ( 'event' => 'Contact Notification Opened', 'properties' => $properties );
 
         return 'http://api.mixpanel.com/track/?data=' . base64_encode(json_encode($params)) . '&ip=1&img=1';

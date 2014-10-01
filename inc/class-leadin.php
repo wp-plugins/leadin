@@ -15,7 +15,9 @@ class WPLeadIn {
         leadin_set_mysql_timezone_offset();
 
         $this->power_ups = self::get_available_power_ups();
-        add_action('admin_bar_menu', array($this, 'add_leadin_link_to_admin_bar'), 999);
+
+        if ( is_user_logged_in() )
+            add_action('admin_bar_menu', array($this, 'add_leadin_link_to_admin_bar'), 999);
         
         if ( is_admin()  )
         {

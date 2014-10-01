@@ -156,7 +156,7 @@ class LI_Contact {
 
 		$q = $wpdb->prepare("
 			SELECT 
-				form_date AS event_date, 
+				DATE_SUB(form_date, INTERVAL %d HOUR) AS event_date, 
 				DATE_FORMAT(DATE_SUB(form_date, INTERVAL %d HOUR), %s) AS form_date, 
 				form_page_title, 
 				form_page_url, 
@@ -165,7 +165,7 @@ class LI_Contact {
 				$wpdb->li_submissions 
 			WHERE 
 				form_deleted = 0 AND 
-				lead_hashkey = %s ORDER BY event_date DESC", $wpdb->db_hour_offset, '%b %D %l:%i%p', $hashkey);
+				lead_hashkey = %s ORDER BY event_date DESC", $wpdb->db_hour_offset, $wpdb->db_hour_offset, '%b %D %l:%i%p', $hashkey);
 		
 		$submissions = $wpdb->get_results($q, $output_type);
 
@@ -186,7 +186,7 @@ class LI_Contact {
 		$q = $wpdb->prepare("
 			SELECT 
 				pageview_id,
-				pageview_date AS event_date,
+				DATE_SUB(pageview_date, INTERVAL %d HOUR) AS event_date,
 				DATE_FORMAT(DATE_SUB(pageview_date, INTERVAL %d HOUR), %s) AS pageview_day, 
 				DATE_FORMAT(DATE_SUB(pageview_date, INTERVAL %d HOUR), %s) AS pageview_date, 
 				lead_hashkey, pageview_title, pageview_url, pageview_source, pageview_session_start 
@@ -194,7 +194,7 @@ class LI_Contact {
 				$wpdb->li_pageviews 
 			WHERE 
 				pageview_deleted = 0 AND
-				lead_hashkey LIKE %s ORDER BY event_date DESC", $wpdb->db_hour_offset, '%b %D', $wpdb->db_hour_offset, '%b %D %l:%i%p', $hashkey);
+				lead_hashkey LIKE %s ORDER BY event_date DESC", $wpdb->db_hour_offset, $wpdb->db_hour_offset, '%b %D', $wpdb->db_hour_offset, '%b %D %l:%i%p', $hashkey);
 		
 		$pageviews = $wpdb->get_results($q, $output_type);
 
@@ -247,6 +247,7 @@ class LI_Contact {
             	$wpdb->li_tag_relationships ltr ON lt.tag_id = ltr.tag_id AND ltr.contact_hashkey = %s
             WHERE 
                 lt.tag_deleted = 0 
+            GROUP BY lt.tag_slug 
             ORDER BY lt.tag_order ASC", $hashkey);
 
 		$tags = $wpdb->get_results($q, $output_type);

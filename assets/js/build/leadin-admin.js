@@ -304,7 +304,7 @@ b!==!1&&d.redraw();D(c,f)},setTooltipPoints:function(a){var b=[],c,d,e=this.xAxi
 (h?h.wrappedClientX||h.clientX:g))/2)),g):g;c>=0&&c<=d;)j[c++]=e}this.tooltipPoints=j}},show:function(){this.setVisible(!0)},hide:function(){this.setVisible(!1)},select:function(a){this.selected=a=a===t?!this.selected:a;if(this.checkbox)this.checkbox.checked=a;D(this,a?"select":"unselect")},drawTracker:S.drawTrackerGraph});q(R,{Axis:la,Chart:Ya,Color:ya,Point:Ea,Tick:Sa,Renderer:Za,Series:O,SVGElement:P,SVGRenderer:ta,arrayMin:Na,arrayMax:Ba,charts:V,dateFormat:cb,format:Ia,pathAnim:ub,getOptions:function(){return E},
 hasBidiBug:Nb,isTouchDevice:Jb,numberFormat:Ga,seriesTypes:F,setOptions:function(a){E=w(!0,E,a);Cb();return E},addEvent:K,removeEvent:W,createElement:Y,discardElement:Pa,css:G,each:p,extend:q,map:Ua,merge:w,pick:m,splat:qa,extendClass:ka,pInt:z,wrap:Ma,svg:aa,canvas:fa,vml:!aa&&!fa,product:"Highcharts",version:"4.0.1"})})();
 jQuery(document).ready( function ( $ ) {
-	
+
 	$("#filter_action").select2(
 		
 	);
@@ -349,13 +349,14 @@ jQuery(document).ready( function ( $ ) {
 	    
 	    },
 	    initSelection: function(element, callback) {
+	    	
 	    	if ( $('#filter_content').val() )
 	    	{
 	    		$('#filter_content').select2("data", {id: $('#filter_content').val(), text: $('#filter_content').val()});
 	    	}
 	    	else
 	    	{
-	    		$('#filter_content').select2("data", {id: '', text: 'any page'});
+	    		$('#filter_content').select2("data", {id: 'any page', text: 'any page'});
 	    	}
 	    }
 	});
@@ -386,13 +387,14 @@ jQuery(document).ready( function ( $ ) {
 	    
 	    },
 	    initSelection: function(element, callback) {
+	    	
 	    	if ( $('#filter_form').val() )
 	    	{
 	    		$('#filter_form').select2("data", {id: $('#filter_form').val(), text: $('#filter_form').val()});
 	    	}
 	    	else
 	    	{
-	    		$('#filter_form').select2("data", {id: '', text: 'any form'});
+	    		$('#filter_form').select2("data", {id: 'any form', text: 'any form'});
 	    	}
 	    }
 	});
