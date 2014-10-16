@@ -338,7 +338,7 @@ function leadin_check_visitor_status ()
 	$hash 	= $_POST['li_id'];
 
 	// SELECT whether the hashkey is tied to the li_tags list that is for the subscriber
-	$q = $wpdb->prepare("SELECT contact_hashkey FROM $wpdb->li_tag_relationships ltr, $wpdb->li_tags lt WHERE lt.tag_form_selectors LIKE '%vex-dialog-form%' AND lt.tag_id = ltr.tag_id AND ltr.contact_hashkey = %s AND lt.tag_deleted = 0", $hash);
+	$q = $wpdb->prepare("SELECT contact_hashkey FROM $wpdb->li_tag_relationships ltr, $wpdb->li_tags lt WHERE lt.tag_form_selectors LIKE '%%%s%%' AND lt.tag_id = ltr.tag_id AND ltr.contact_hashkey = %s AND lt.tag_deleted = 0", 'vex-dialog-form', $hash);
 	$vex_set = $wpdb->get_var($q);
 
 	if ( $vex_set )

@@ -153,7 +153,7 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
             $new_input['li_subscribe_template_archives'] = sanitize_text_field( $input['li_subscribe_template_archives'] );
 
         if( isset( $input['li_subscribe_confirmation'] ) )
-            $new_input['li_subscribe_confirmation'] = sanitize_text_field( $input['li_subscribe_template_home'] );
+            $new_input['li_subscribe_confirmation'] = sanitize_text_field( $input['li_subscribe_confirmation'] );
         else
             $new_input['li_subscribe_confirmation'] = '0';
 
@@ -254,15 +254,6 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
     function li_subscribe_templates_callback ()
     {
         $options = $this->options;
-
-        // If none of the values are set it's safe to assume the user hasn't toggled any yet so we should default them all
-        if ( ! isset ($options['li_subscribe_template_posts']) && ! isset ($options['li_subscribe_template_pages']) && ! isset ($options['li_subscribe_template_archives']) && ! isset ($options['li_subscribe_template_home']) )
-        {
-            $options['li_subscribe_template_posts']     = 1;
-            $options['li_subscribe_template_pages']     = 1;
-            $options['li_subscribe_template_archives']  = 1;
-            $options['li_subscribe_template_home']      = 1;
-        }
 
         printf(
             '<p><input id="li_subscribe_template_posts" type="checkbox" name="leadin_subscribe_options[li_subscribe_template_posts]" value="1"' . checked( 1, ( isset($options['li_subscribe_template_posts']) ? $options['li_subscribe_template_posts'] : '0' ), false ) . '/>' . 

@@ -133,7 +133,8 @@ function leadin_register_user ()
     ));
 
     $mp->people->setOnce( $leadin_user['user_id'], array(
-        '$li-source'    => LEADIN_SOURCE
+        '$li-source'    => LEADIN_SOURCE,
+        '$created'      => date('Y-m-d H:i:s')
     ));
 
     return true;
@@ -215,17 +216,24 @@ function leadin_set_beta_tester_property ( $beta_tester )
  *
  * @return  bool
  */
-function leadin_set_install_status ( $activated )
+function leadin_set_install_status ( $li_status )
 {
     if ( ! function_exists('curl_init') )
         return false;
 
     $leadin_user = leadin_get_current_user();
 
+    $properties = array(
+        '$li-status'  => $li_status
+    );
+
+    if ( $li_status == 'activated' )
+        $properties['$last_activated'] = date('Y-m-d H:i:s'); 
+    else
+        $properties['$last_deactivated'] = date('Y-m-d H:i:s');
+
     $mp = new LI_Mixpanel(MIXPANEL_PROJECT_TOKEN);
-    $mp->people->set( $leadin_user['user_id'], array(
-        '$li-status'  => $activated
-    ));
+    $mp->people->set( $leadin_user['user_id'], $properties);
 }
 
 
@@ -874,7 +882,7 @@ function leadin_set_mysql_timezone_offset ()
     global $wpdb;
 
     $mysql_timestamp = $wpdb->get_var("SELECT CURRENT_TIMESTAMP");
-    $diff = strtotime($mysql_timestamp) - strtotime(current_time('Y-m-d H:i:s'));
+    $diff = strtotime($mysql_timestamp) - strtotime(current_time('mysql'));
     $hours = $diff / (60 * 60);
 
     $wpdb->db_hour_offset = $hours;
@@ -887,7 +895,7 @@ function leadin_set_mysql_timezone_offset ()
  */
 function leadin_get_current_url ( )
 {
-    return ( is_ssl() ? 'https://' : 'http://' ) . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'] . $_SERVER['QUERY_STRING'];
+    return ( is_ssl() ? 'https://' : 'http://' ) . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
 }
 
 

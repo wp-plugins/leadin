@@ -132,7 +132,8 @@ class LI_StatsDashboard {
 				lead_id, 
 				lead_email, 
 				( SELECT COUNT(*) FROM $wpdb->li_pageviews WHERE lead_hashkey = lh ) as pageviews,
-				( SELECT MIN(pageview_source) AS pageview_source FROM $wpdb->li_pageviews WHERE lead_hashkey = lh AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS lead_source 
+				( SELECT MIN(pageview_source) AS pageview_source FROM $wpdb->li_pageviews WHERE lead_hashkey = lh AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS lead_source,
+				( SELECT MIN(pageview_url) AS pageview_url FROM $wpdb->li_pageviews WHERE lead_hashkey = lh AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS lead_origin_url 
 			FROM 
 				$wpdb->li_leads ll, $wpdb->li_pageviews lpv
 			WHERE 
@@ -153,7 +154,8 @@ class LI_StatsDashboard {
 				lead_id, 
 				lead_email, 
 				( SELECT COUNT(*) FROM $wpdb->li_pageviews WHERE lead_hashkey = lh ) as pageviews, 
-				( SELECT MIN(pageview_source) AS pageview_source FROM $wpdb->li_pageviews WHERE lead_hashkey = lh AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS lead_source 
+				( SELECT MIN(pageview_source) AS pageview_source FROM $wpdb->li_pageviews WHERE lead_hashkey = lh AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS lead_source,
+				( SELECT MIN(pageview_url) AS pageview_url FROM $wpdb->li_pageviews WHERE lead_hashkey = lh AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS lead_origin_url 
 			FROM 
 				$wpdb->li_leads ll, li_pageviews lpv
 			WHERE 
@@ -169,17 +171,18 @@ class LI_StatsDashboard {
 		global $wpdb;
 
 		$q = "SELECT hashkey lh,
-			( SELECT MIN(pageview_source) AS pageview_source FROM $wpdb->li_pageviews WHERE lead_hashkey = lh AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS lead_source 
+			( SELECT MIN(pageview_source) AS pageview_source FROM $wpdb->li_pageviews WHERE lead_hashkey = lh AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS lead_source,
+			( SELECT MIN(pageview_url) AS pageview_url FROM $wpdb->li_pageviews WHERE lead_hashkey = lh AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS lead_origin_url 
 		 FROM 
 		 	$wpdb->li_leads
 		 WHERE 
-		 	lead_date BETWEEN CURDATE() - INTERVAL 30 DAY AND CURDATE() AND lead_email != ''";
-		 	
+		 	lead_date BETWEEN CURDATE() - INTERVAL 30 DAY AND NOW() AND lead_email != ''";
+	
 		$contacts = $wpdb->get_results($q);
 
 		foreach ( $contacts as $contact ) 
 		{
-			$source = $this->check_lead_source($contact->lead_source);
+			$source = $this->check_lead_source($contact->lead_source, $contact->lead_origin_url);
 
 			switch ( $source )
 		    {
@@ -212,7 +215,7 @@ class LI_StatsDashboard {
 		$this->max_source = max(array($this->organic_count, $this->referral_count, $this->social_count, $this->email_count, $this->paid_count, $this->direct_count));
 	}
 
-	function check_lead_source ( $source )
+	function check_lead_source ( $source, $origin_url = '' )
 	{
 		if ( $source )
 		{
@@ -259,7 +262,42 @@ class LI_StatsDashboard {
 			    return 'referral';
 		}
 		else
+		{
+			$decoded_origin_url = urldecode($origin_url);
+
+			if ( stristr($decoded_origin_url, 'utm_medium=cpc') || stristr($decoded_origin_url, 'utm_medium=ppc') || stristr($decoded_origin_url, 'aclk') || stristr($decoded_origin_url, 'gclid') )
+				return 'paid';
+
+			if ( stristr($decoded_origin_url, 'utm_') )
+			{
+				$url = $decoded_origin_url;
+				$url_parts = parse_url($url);
+				parse_str($url_parts['query'], $path_parts);
+
+				if ( isset($path_parts['adurl']) )
+					return 'paid';
+
+				if ( isset($path_parts['utm_medium']) )
+				{
+					if ( $path_parts['utm_medium'] == 'cpc' || $path_parts['utm_medium'] == 'ppc' )
+						return 'paid';
+
+					if ( $path_parts['utm_medium'] == 'social' )
+						return 'social';
+
+					if ( $path_parts['utm_medium'] == 'email' )
+						return 'email';
+				}
+
+				if ( isset($path_parts['utm_source']) )
+				{
+					if ( stristr($path_parts['utm_source'], 'email') ) 
+						return 'email';
+				}
+			}
+
 			return 'direct';
+		}
 	}
 
 	function print_readable_source ( $source )

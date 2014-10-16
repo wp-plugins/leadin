@@ -154,7 +154,9 @@ class WPLeadInSubscribe extends WPLeadIn {
 
 		$options = $this->options;
 
-		// If none of the values are set it's safe to assume the user hasn't toggled any yet so we should default them all
+		if ( ! isset ($options['li_subscribe_template_posts']) && ! isset ($options['li_subscribe_template_pages']) && ! isset ($options['li_subscribe_template_archives']) && ! isset ($options['li_subscribe_template_home']) )
+			return FALSE;
+
 		if ( isset ($options['li_subscribe_template_posts']) || isset ($options['li_subscribe_template_pages']) || isset ($options['li_subscribe_template_archives']) || isset ($options['li_subscribe_template_home']) )
 		{
 			// disable pop-up on posts if setting not set
@@ -173,6 +175,8 @@ class WPLeadInSubscribe extends WPLeadIn {
 			if ( $_SERVER["REQUEST_URI"] == '/' && ! isset ($options['li_subscribe_template_home']) )
 				return FALSE;
 		}
+		
+
 
 		if ( ! is_admin() && $pagenow != 'wp-login.php' )
 		{

@@ -324,8 +324,6 @@ class WPLeadInAdmin {
                     $new_contacts_postbox .= '<th>original source</th>';
                 $new_contacts_postbox .= '</tr>';
 
-                
-
                 foreach ( $this->stats_dashboard->new_contacts as $contact )
                 {
                     $new_contacts_postbox .= '<tr>';
@@ -333,7 +331,7 @@ class WPLeadInAdmin {
                             $new_contacts_postbox .= '<a href="?page=leadin_contacts&action=view&lead=' . $contact->lead_id . '&stats_dashboard=1"><img class="lazy pull-left leadin-contact-avatar leadin-dynamic-avatar_' . substr($contact->lead_id, -1) .'" src="https://api.hubapi.com/socialintel/v1/avatars?email=' . $contact->lead_email . '" width="35" height="35"><b>' . $contact->lead_email . '</b></a>';
                         $new_contacts_postbox .= '</td>';
                         $new_contacts_postbox .= '<td class="">' . $contact->pageviews . '</td>';
-                        $new_contacts_postbox .= '<td class="">' . $this->stats_dashboard->print_readable_source($this->stats_dashboard->check_lead_source($contact->lead_source)) . '</td>';
+                        $new_contacts_postbox .= '<td class="">' . $this->stats_dashboard->print_readable_source($this->stats_dashboard->check_lead_source($contact->lead_source, $contact->lead_origin_url)) . '</td>';
                     $new_contacts_postbox .= '</tr>';
                 }
 
@@ -368,7 +366,7 @@ class WPLeadInAdmin {
                             $returning_contacts_postbox .= '<a href="?page=leadin_contacts&action=view&lead=' . $contact->lead_id . '&stats_dashboard=1"><img class="lazy pull-left leadin-contact-avatar leadin-dynamic-avatar_' . substr($contact->lead_id, -1) .'" src="https://api.hubapi.com/socialintel/v1/avatars?email=' . $contact->lead_email . '" width="35" height="35"><b>' . $contact->lead_email . '</b></a>';
                         $returning_contacts_postbox .= '</td>';
                         $returning_contacts_postbox .= '<td class="">' . $contact->pageviews . '</td>';
-                        $returning_contacts_postbox .= '<td class="">' . $this->stats_dashboard->print_readable_source($this->stats_dashboard->check_lead_source($contact->lead_source)) . '</td>';
+                        $returning_contacts_postbox .= '<td class="">' . $this->stats_dashboard->print_readable_source($this->stats_dashboard->check_lead_source($contact->lead_source, $contact->lead_origin_url)) . '</td>';
                     $returning_contacts_postbox .= '</tr>';
                 }
 
@@ -748,7 +746,7 @@ class WPLeadInAdmin {
             <div class="oboarding-step">
                 <h2 class="oboarding-step-title">Setup Complete!<br>Leadin is waiting for your first form submission.</h2>
                 <div class="oboarding-step-content">
-                    <p class="oboarding-step-description">Leadin is setup and waiting for a form submission. Once Leadin detects a from submission, a new contact will be added to your contacts list. We reccommend filling out a form on your site to test that Leadin is working correctly.</p>
+                    <p class="oboarding-step-description">Leadin is setup and waiting for a form submission. Once Leadin detects a form submission, a new contact will be added to your contacts list. We recommend filling out a form on your site to test that Leadin is working correctly.</p>
                     <form id="li-onboarding-form" method="post" action="options.php">
                         <?php $this->print_hidden_settings_fields();  ?>
                         <a href="<?php echo get_admin_url() . 'admin.php?page=leadin_settings'; ?>" class="button button-primary button-big"><?php esc_attr_e('Complete Setup'); ?></a>
