@@ -3,7 +3,7 @@ Contributors: andygcook, nelsonjoyce
 Tags:  crm, contacts, lead tracking, click tracking, visitor tracking, analytics, marketing automation, inbound marketing, subscription, marketing, lead generation, mailchimp, constant contact, newsletter, popup, popover, email list, email, contacts database, contact form, forms, form widget, popup form
 Requires at least: 3.7
 Tested up to: 4.0
-Stable tag: 2.2.1
+Stable tag: 2.2.2
 
 Leadin is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
 
@@ -80,7 +80,6 @@ To ensure quality we've tested the most popular WordPress form builder plugins.
 - Formidable
 - Ninja Forms
 - Contact Form Clean and Simple
-- SumoMe
 - HubSpot
 - Native WordPress comment forms
 - Most custom forms
@@ -90,6 +89,7 @@ To ensure quality we've tested the most popular WordPress form builder plugins.
 - Wufoo
 - Easy Contact Forms
 - Disqus comments
+- SumoMe
 - Forms contained in an iFrame
 
 = Does Leadin work on Multisite? =
@@ -107,8 +107,20 @@ You betcha! Leadin should work just fine on Multisite right out-of-the-box witho
 
 == Changelog ==
 
-- Current version: 2.2.1
-- Current version release: 2014-10-01
+- Current version: 2.2.2
+- Current version release: 2014-10-16
+
+= 2.2.2 (2014.10.16) =
+= Enhancements =
+- Leadin now include the utm_ tags from the original first page view when parsing the sources
+
+- Bug fixes
+- Unchecking all the template checkboxes for the popup then saving no longer rechecks them all
+- Added in current_time fix for older versions of WordPress
+- Retooled tag editor to only pull down unique selectors
+- Contact list now will go back to the previous page when clicking the back link
+- Fixed mysterious bug where popup ignored new visitors
+- NOW the subscription confirmation stays checked/uncheckedon save (Thanks Kate!)
 
 = 2.2.1 (2014.10.01) =
 = Enhancements =

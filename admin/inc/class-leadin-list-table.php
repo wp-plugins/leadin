@@ -440,7 +440,7 @@ class LI_List_Table extends WP_List_Table {
                 $url = leadin_strip_params_from_url($lead->lead_source);
 
                 $redirect_url = '';
-                if ( isset($_GET['contact_type']) || isset($_GET['filter_action']) || isset($_GET['filter_form']) || isset($_GET['filter_content']) || isset($_GET['num_pageviews']) || isset($_GET['s']) )
+                if ( isset($_GET['contact_type']) || isset($_GET['filter_action']) || isset($_GET['filter_form']) || isset($_GET['filter_content']) || isset($_GET['num_pageviews']) || isset($_GET['s']) || isset($_GET['paged']) )
                     $redirect_url = urlencode(leadin_get_current_url());
 
                 $lead_array = array(
@@ -524,7 +524,7 @@ class LI_List_Table extends WP_List_Table {
         $q = "
             SELECT 
                 lt.tag_text, lt.tag_slug, lt.tag_synced_lists, lt.tag_form_selectors, lt.tag_order, lt.tag_id,
-                ( SELECT COUNT(DISTINCT contact_hashkey) FROM $wpdb->li_tag_relationships, $wpdb->li_leads WHERE tag_id = lt.tag_id AND tag_relationship_deleted = 0 AND contact_hashkey != '' AND $wpdb->li_leads.hashkey = $wpdb->li_tag_relationships.contact_hashkey GROUP BY tag_id ) AS tag_count
+                ( SELECT COUNT(DISTINCT contact_hashkey) FROM $wpdb->li_tag_relationships ltr, $wpdb->li_leads ll WHERE ltr.tag_id = lt.tag_id AND ltr.tag_relationship_deleted = 0 AND ltr.contact_hashkey != '' AND ll.hashkey = ltr.contact_hashkey AND ll.hashkey != '' AND ll.lead_deleted = 0 GROUP BY tag_id ) AS tag_count
             FROM 
                 $wpdb->li_tags lt
             WHERE 

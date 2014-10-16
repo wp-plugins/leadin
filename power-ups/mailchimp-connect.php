@@ -111,6 +111,8 @@ class WPMailChimpConnect extends WPLeadIn {
                 )
             ));
 
+            leadin_track_plugin_activity('Contact Pushed to List', array('esp_connector' => 'mailchimp'));
+
             return $contact_synced;
         }
 
@@ -136,6 +138,8 @@ class WPMailChimpConnect extends WPLeadIn {
                 "send_goodbye" => FALSE,
                 "send_notify" => FALSE
             ));
+
+            leadin_track_plugin_activity('Contact Removed from List', array('esp_connector' => 'mailchimp'));
 
             return $contact_removed;
         }
@@ -169,6 +173,8 @@ class WPMailChimpConnect extends WPLeadIn {
                 'double_optin' => FALSE,
                 "batch" => $batch_contacts
             ));
+
+            leadin_track_plugin_activity('Bulk Contacts Pushed to List', array('esp_connector' => 'mailchimp'));
 
             return $list_updated;
         }

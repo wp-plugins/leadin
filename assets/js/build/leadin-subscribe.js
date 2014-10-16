@@ -408,6 +408,12 @@ function bind_leadin_subscribe_widget ( lis_heading, lis_desc, lis_show_names, l
         subscribe.vex = undefined;
 
         subscribe.init = function() {
+            if ($(window).scrollTop() + $(window).height() > $(document).height() / 2) {
+                subscribe.open();
+            } else {
+                //subscribe.close();
+            }
+            
             $(window).scroll(function() {
                 if ($(window).scrollTop() + $(window).height() > $(document).height() / 2) {
                     subscribe.open();

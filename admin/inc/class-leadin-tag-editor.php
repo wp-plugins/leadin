@@ -55,7 +55,7 @@ class LI_Tag_Editor {
 			{
 				foreach ( explode(',', $class->form_selector_classes) as $class_selector )
 				{
-					if ( ! in_array($class_selector, $selectors) && $class_selector )
+					if ( ! in_array('.' . $class_selector, $selectors) && $class_selector )
 						array_push($selectors, '.' . $class_selector);
 				}
 			}
@@ -68,7 +68,7 @@ class LI_Tag_Editor {
 		{
 			foreach ( $ids as $id )
 			{
-				if ( ! in_array($id->form_selector_id, $selectors) && $id->form_selector_id )
+				if ( ! in_array('#' . $id->form_selector_id, $selectors) && $id->form_selector_id )
 					array_push($selectors, '#' . $id->form_selector_id);
 			}
 		}

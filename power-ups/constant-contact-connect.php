@@ -112,7 +112,11 @@ class WPConstantContactConnect extends WPLeadIn {
 			}
 
 			if ( $this->cc_id )
+			{
+				leadin_track_plugin_activity('Contact Pushed to List', array('esp_connector' => 'constant_contact'));
+
 				return $this->constant_contact->add_subscription($this->cc_id, $list_id, 'ACTION_BY_CLIENT');
+			}
 			else
 			{
 				$contact = array();
@@ -130,6 +134,8 @@ class WPConstantContactConnect extends WPLeadIn {
 
 				if ( $phone )
 					$contact['WorkPhone'] = $phone;
+
+				leadin_track_plugin_activity('Contact Pushed to List', array('esp_connector' => 'constant_contact'));
 
 				return $this->constant_contact->add_contact($contact, array($list_id));
 			}
@@ -154,7 +160,11 @@ class WPConstantContactConnect extends WPLeadIn {
 			$cc_id = $this->constant_contact->search_contact_by_email($email);
 
 			if ( $cc_id )
+			{
+				leadin_track_plugin_activity('Contact Removed from List', array('esp_connector' => 'constant_contact'));
+
 				return $this->constant_contact->remove_subscription($cc_id, $list_id);
+			}
 			else
 				return FALSE;
 	    }

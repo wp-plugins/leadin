@@ -3,7 +3,7 @@
 Plugin Name: Leadin
 Plugin URI: http://leadin.com
 Description: Leadin is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
-Version: 2.2.1
+Version: 2.2.2
 Author: Andy Cook, Nelson Joyce
 Author URI: http://leadin.com
 License: GPL2
@@ -26,10 +26,10 @@ if ( !defined('LEADIN_DB_VERSION') )
 	define('LEADIN_DB_VERSION', '2.0.0');
 
 if ( !defined('LEADIN_PLUGIN_VERSION') )
-	define('LEADIN_PLUGIN_VERSION', '2.2.1');
+	define('LEADIN_PLUGIN_VERSION', '2.2.2');
 
 if ( !defined('MIXPANEL_PROJECT_TOKEN') )
-    define('MIXPANEL_PROJECT_TOKEN', 'a9615503ec58a6bce2c646a58390eac1');
+    define('MIXPANEL_PROJECT_TOKEN', 'c2ad133b991102f633df3aec96485bab');
 
 if ( !defined('MC_KEY') )
     define('MC_KEY', '934aaed05049dde737d308be26167eef-us3');
@@ -92,6 +92,7 @@ function activate_leadin ( $network_wide )
 			switch_to_blog($blog_id);
 			add_leadin_defaults();
 			$activated[] = $blog_id;
+			leadin_track_plugin_registration_hook(TRUE);
 		}
  
 		// Switch back to the current blog
@@ -101,7 +102,11 @@ function activate_leadin ( $network_wide )
 		update_site_option('leadin_activated', $activated);
 	}
 	else
+	{
+		leadin_track_plugin_registration_hook(TRUE);
+
 		add_leadin_defaults();
+	}
 }
 
 /**
@@ -141,8 +146,6 @@ function add_leadin_defaults ( )
 		        ('Contacted', 'contacted', '', '', 3),
 		        ('Customers', 'customers', '', '', 4)", "");
 		$wpdb->query($q);
-
-		leadin_track_plugin_registration_hook(TRUE);
 	}
 
 	$leadin_active_power_ups = get_option('leadin_active_power_ups');
@@ -250,7 +253,7 @@ function leadin_db_install ()
 		  `blog_id` int(11) unsigned NOT NULL,
 		  PRIMARY KEY (`pageview_id`),
 		  KEY `lead_hashkey` (`lead_hashkey`)
-		) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=1;
+		) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1;
 
 		CREATE TABLE " . $multisite_prefix . "li_submissions (
 		  `form_id` int(11) unsigned NOT NULL AUTO_INCREMENT,

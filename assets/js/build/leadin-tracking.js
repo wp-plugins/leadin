@@ -210,6 +210,13 @@ function leadin_submit_form ( $form, $ )
 		// Check if input has an attached lable using for= tag
 		var $label = $("label[for='" + $element.attr('id') + "']").text();
 		
+		// Ninja Forms hack
+		if ($label.length == 0) 
+		{
+			if ( $('#' + $element.attr('id') + "_label").length )
+				$label = $('#' + $element.attr('id') + "_label").text();
+		}
+
 		// Check for label in same container immediately before input
 		if ($label.length == 0) 
 		{
@@ -391,7 +398,6 @@ function leadin_submit_form ( $form, $ )
 		else
 		{
 			if ( $select.find('option:selected').text() )
-
 				select_value = $select.find('option:selected').text();
 			else
 				select_value = $select.val();
