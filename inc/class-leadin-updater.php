@@ -17,9 +17,13 @@ class WPLeadInUpdater {
 	/**
 	 * Class constructor
 	 */
-	function __construct ()
+	function __construct ( $update_type = 'beta' )
 	{
-		$this->api_url = 'http://leadin.com/plugins/index.php';
+		if ( $update_type == 'beta' )
+			$this->api_url = 'http://leadin.com/plugins/index.php';
+		else if ( $update_type == 'premium' )
+			$this->api_url = 'http://leadin.com/paid/index.php';
+
 		$this->plugin_slug = LEADIN_PLUGIN_SLUG;
 
 		//=============================================

@@ -229,7 +229,7 @@ class WPConstantContactConnectAdmin extends WPLeadInAdmin {
         if ( ! $synced_list_count )
                 echo "<p>You don't have any Constant Contact lists synced with Leadin yet...</p>";
             
-        echo '<p><a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts&action=manage_tags' . '">Manage tags</a></p>';
+        echo '<p><a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_tags' . '">Manage tags</a></p>';
 
         echo '<p style="padding-top: 10px;"><a href="https://login.constantcontact.com/login/login.sdo?goto=https://ui.constantcontact.com/rnavmap/distui/contacts" target="_blank">Create a new list on ConstantContact.com</a></p>';
     }

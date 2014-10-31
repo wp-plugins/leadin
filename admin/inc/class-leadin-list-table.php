@@ -89,7 +89,7 @@ class LI_List_Table extends WP_List_Table {
     {
         //Build row actions
         $actions = array(
-            'view'    => sprintf('<div style="clear:both;"></div><a href="?page=%s&action=%s&lead=%s">View</a>',$_REQUEST['page'],'view',$item['ID']),
+            'view'    => sprintf('<div style="clear:both; padding-top: 4px;"></div><a href="?page=%s&action=%s&lead=%s">View</a>',$_REQUEST['page'],'view',$item['ID']),
             'delete'  => sprintf('<a href="?page=%s&action=%s&lead=%s">Delete</a>',$_REQUEST['page'],'delete',$item['ID'])
         );
         
@@ -335,7 +335,7 @@ class LI_List_Table extends WP_List_Table {
         if ( isset($_GET['s']) )
         {
             $search_query = $_GET['s'];
-            $mysql_search_filter = $wpdb->prepare(" AND ( l.lead_email LIKE '%%%s%%' OR l.lead_source LIKE '%%%s%%' ) ", like_escape($search_query), like_escape($search_query));
+            $mysql_search_filter = $wpdb->prepare(" AND ( l.lead_email LIKE '%%%s%%' OR l.lead_source LIKE '%%%s%%' ) ", $wpdb->esc_like($search_query), $wpdb->esc_like($search_query));
         }
         
         $filtered_contacts = array();
@@ -399,7 +399,7 @@ class LI_List_Table extends WP_List_Table {
             $q =  $wpdb->prepare("
                 SELECT 
                     l.lead_id AS lead_id, 
-                    LOWER(DATE_SUB(l.lead_date, INTERVAL %d HOUR)) AS lead_date, l.lead_ip, l.lead_source, l.lead_email, l.hashkey,
+                    LOWER(DATE_SUB(l.lead_date, INTERVAL %d HOUR)) AS lead_date, l.lead_ip, l.lead_source, l.lead_email, l.hashkey, l.lead_first_name, l.lead_last_name,
                     COUNT(DISTINCT s.form_id) AS lead_form_submissions,
                     COUNT(DISTINCT p.pageview_id) AS lead_pageviews,
                     LOWER(DATE_SUB(MAX(p.pageview_date), INTERVAL %d HOUR)) AS last_visit,
@@ -446,7 +446,7 @@ class LI_List_Table extends WP_List_Table {
                 $lead_array = array(
                     'ID' => $lead->lead_id,
                     'hashkey' => $lead->hashkey,
-                    'email' => sprintf('<a href="?page=%s&action=%s&lead=%s%s">' . "<img class='pull-left leadin-contact-avatar leadin-dynamic-avatar_" . substr($lead->lead_id, -1) . "' src='https://api.hubapi.com/socialintel/v1/avatars?email=" . $lead->lead_email . "' width='35' height='35'/> " . '</a>', $_REQUEST['page'], 'view', $lead->lead_id, ( $redirect_url ? '&redirect_to=' .  $redirect_url : '' )) .  sprintf('<a href="?page=%s&action=%s&lead=%s%s"><b>' . $lead->lead_email . '</b></a>', $_REQUEST['page'], 'view', $lead->lead_id, ( $redirect_url ? '&redirect_to=' .  $redirect_url : '' )),
+                    'email' => sprintf('<a href="?page=%s&action=%s&lead=%s%s">' . "<img class='pull-left leadin-contact-avatar leadin-dynamic-avatar_" . substr($lead->lead_id, -1) . "' src='https://api.hubapi.com/socialintel/v1/avatars?email=" . $lead->lead_email . "' width='35' height='35' style='margin-top: 2px;'/> " . '</a>', $_REQUEST['page'], 'view', $lead->lead_id, ( $redirect_url ? '&redirect_to=' .  $redirect_url : '' )) .  sprintf('<a href="?page=%s&action=%s&lead=%s%s">%s' . $lead->lead_email . '</a>', $_REQUEST['page'], 'view', $lead->lead_id, ( $redirect_url ? '&redirect_to=' .  $redirect_url : '' ), ( strlen($lead->lead_first_name) || strlen($lead->lead_last_name)? '<b>' . $lead->lead_first_name . ' ' . $lead->lead_last_name . '</b><br>' : '' )),
                     'visits' => ( !isset($lead->visits) ? 1 : $lead->visits ),
                     'submissions' => $lead->lead_form_submissions,
                     'pageviews' => $lead->lead_pageviews,
@@ -581,7 +581,7 @@ class LI_List_Table extends WP_List_Table {
             }
         echo "</ul>";
 
-        echo "<a href='" . get_bloginfo('wpurl') . "/wp-admin/admin.php?page=leadin_contacts&action=manage_tags" . "' class='button'>Manage tags</a>";
+        echo "<a href='" . get_bloginfo('wpurl') . "/wp-admin/admin.php?page=leadin_tags" . "' class='button'>Manage tags</a>";
     }
 
 

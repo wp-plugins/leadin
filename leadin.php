@@ -3,7 +3,7 @@
 Plugin Name: Leadin
 Plugin URI: http://leadin.com
 Description: Leadin is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
-Version: 2.2.2
+Version: 2.2.3
 Author: Andy Cook, Nelson Joyce
 Author URI: http://leadin.com
 License: GPL2
@@ -23,19 +23,19 @@ if ( !defined('LEADIN_PLUGIN_SLUG') )
 	define('LEADIN_PLUGIN_SLUG', basename(dirname(__FILE__)));
 
 if ( !defined('LEADIN_DB_VERSION') )
-	define('LEADIN_DB_VERSION', '2.0.0');
+	define('LEADIN_DB_VERSION', '2.2.3');
 
 if ( !defined('LEADIN_PLUGIN_VERSION') )
-	define('LEADIN_PLUGIN_VERSION', '2.2.2');
+	define('LEADIN_PLUGIN_VERSION', '2.2.3');
 
 if ( !defined('MIXPANEL_PROJECT_TOKEN') )
-    define('MIXPANEL_PROJECT_TOKEN', 'c2ad133b991102f633df3aec96485bab');
+    define('MIXPANEL_PROJECT_TOKEN', 'a9615503ec58a6bce2c646a58390eac1');
 
 if ( !defined('MC_KEY') )
     define('MC_KEY', '934aaed05049dde737d308be26167eef-us3');
 
 if ( !defined('LEADIN_SOURCE') )
-    define('LEADIN_SOURCE', 'plugin directory');
+    define('LEADIN_SOURCE', 'leadin.com');
 
 //=============================================
 // Include Needed Files
@@ -68,6 +68,45 @@ register_deactivation_hook( __FILE__, 'deactivate_leadin');
 
 // Activate on newly created wpmu blog
 add_action('wpmu_new_blog', 'activate_leadin_on_new_blog', 10, 6);
+
+if ( isset($_GET['error']) && $_GET['error'] == 'true' )
+{
+	if ( isset($_GET['plugin']) && $_GET['plugin'] == ( LEADIN_PLUGIN_SLUG != 'leadin' ? 'leadin/leadin.php' : 'leadin-premium/leadin-premium.php' ) )
+	{
+		if ( function_exists('activate_leadin') )
+		{
+			include_once(ABSPATH . 'wp-admin/includes/plugin.php');
+			include_once(ABSPATH . 'wp-includes/pluggable.php');
+
+			add_action( 'admin_notices', 'deactivate_leadin_notice' );		
+		}
+	}
+}
+
+/**
+ * Throws an error for when the premium version and the free version are activated in tandem
+ */
+function deactivate_leadin_notice () 
+{
+    ?>
+    <div id="message" class="error">
+        <?php 
+        _e( 
+        	'<p>' .
+        		'<b>There was a slight error while activating Leadin Premium, but don\'t panic... there\'s an easy fix.</b>' .
+        	'</p>' .
+        	'<p>' .
+        		'Leadin and Leadin Premium are like two rival siblings - they don\'t play nice together. ' . 
+        		'Deactivate <b>Leadin</b> and then try activating <b>Leadin Premium</b> again, and everything should start working fine.' .
+        	'</p>' .
+        	'<p>' . 
+        		'If you run into any issues and can\'t get Leadin Premium working, please email us for help - <a href="mailto:support@leadin.com">support@leadin.com</a>',
+         'my-text-domain' 
+        ); 
+        ?>
+    </div>
+    <?php
+}
 
 /**
  * Activate the plugin
@@ -131,7 +170,8 @@ function add_leadin_defaults ( )
 			'data_recovered'			=> 1,
 			'delete_flags_fixed'		=> 1,
 			'beta_tester'				=> 0,
-			'converted_to_tags'			=> 1
+			'converted_to_tags'			=> 1,
+			'names_added_to_contacts'	=> 1
 		);
 		
 		update_option('leadin_options', $opt);
@@ -233,13 +273,17 @@ function leadin_db_install ()
 		  `lead_ip` varchar(40) DEFAULT NULL,
 		  `lead_source` text,
 		  `lead_email` varchar(255) DEFAULT NULL,
+		  `lead_first_name` varchar(255) NOT NULL,
+  		  `lead_last_name` varchar(255) NOT NULL,
 		  `lead_status` set('contact','lead','comment','subscribe','contacted','customer') NOT NULL DEFAULT 'contact',
 		  `merged_hashkeys` text,
 		  `lead_deleted` int(1) NOT NULL DEFAULT '0',
 		  `blog_id` int(11) unsigned NOT NULL,
+		  `company_data` mediumtext NOT NULL,
+  		  `social_data` mediumtext NOT NULL,
 		  PRIMARY KEY (`lead_id`),
 		  KEY `hashkey` (`hashkey`)
-		) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1;
+		) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=1;
 
 		CREATE TABLE " . $multisite_prefix . "li_pageviews (
 		  `pageview_id` int(11) unsigned NOT NULL AUTO_INCREMENT,
@@ -253,7 +297,7 @@ function leadin_db_install ()
 		  `blog_id` int(11) unsigned NOT NULL,
 		  PRIMARY KEY (`pageview_id`),
 		  KEY `lead_hashkey` (`lead_hashkey`)
-		) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1;
+		) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=1;
 
 		CREATE TABLE " . $multisite_prefix . "li_submissions (
 		  `form_id` int(11) unsigned NOT NULL AUTO_INCREMENT,
@@ -269,7 +313,7 @@ function leadin_db_install ()
 		  `blog_id` int(11) unsigned NOT NULL,
 		  PRIMARY KEY (`form_id`),
 		  KEY `lead_hashkey` (`lead_hashkey`)
-		) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1;
+		) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=1;
 
 		CREATE TABLE " . $multisite_prefix . "li_tags (
 		  `tag_id` int(11) unsigned NOT NULL AUTO_INCREMENT,
@@ -281,7 +325,7 @@ function leadin_db_install ()
 		  `blog_id` int(11) unsigned NOT NULL,
 		  `tag_deleted` int(1) NOT NULL,
 		  PRIMARY KEY (`tag_id`)
-		) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1;
+		) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=1;
 
 		CREATE TABLE " . $multisite_prefix . "li_tag_relationships (
 		  `tag_relationship_id` int(11) unsigned NOT NULL AUTO_INCREMENT,
@@ -290,7 +334,7 @@ function leadin_db_install ()
 		  `tag_relationship_deleted` int(1) unsigned NOT NULL,
 		  `blog_id` int(11) unsigned NOT NULL,
 		  PRIMARY KEY (`tag_relationship_id`)
-		) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1;";
+		) ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=1;";
 
 	dbDelta($sql);
 

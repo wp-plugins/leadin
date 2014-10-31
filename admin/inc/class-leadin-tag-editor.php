@@ -145,6 +145,8 @@ class LI_Tag_Editor {
 			UPDATE $wpdb->li_tags 
 			SET tag_deleted = 1
 			WHERE tag_id = %d", $tag_id);
+
+		echo $q;
 		
 		$result = $wpdb->query($q);
 
