@@ -11,6 +11,8 @@ class WPLeadIn {
      */
     function __construct ()
     {
+        global $pagenow;
+
         leadin_set_wpdb_tables();
         leadin_set_mysql_timezone_offset();
 
@@ -18,8 +20,8 @@ class WPLeadIn {
 
         if ( is_user_logged_in() )
             add_action('admin_bar_menu', array($this, 'add_leadin_link_to_admin_bar'), 999);
-        
-        if ( is_admin()  )
+ 
+        if ( is_admin() )
         {
             if ( ! defined('DOING_AJAX') || ! DOING_AJAX )
             {
@@ -29,9 +31,10 @@ class WPLeadIn {
         }
         else
         {
-
-            add_action('wp_enqueue_scripts', array($this, 'add_leadin_frontend_scripts'));
-            // Get all the power-ups and instantiate them
+            if ( in_array($GLOBALS['pagenow'], array('wp-login.php', 'wp-register.php')) )
+                add_action('login_enqueue_scripts', array($this, 'add_leadin_frontend_scripts'));
+            else
+                add_action('wp_enqueue_scripts', array($this, 'add_leadin_frontend_scripts'));
         }
     }
 

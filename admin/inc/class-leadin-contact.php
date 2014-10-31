@@ -64,6 +64,20 @@ class LI_Contact {
 		$total_submissions = 0;
 		$new_session = TRUE;
 
+		$array_tags = array();
+		if ( count($tags) )
+		{
+			foreach ( $tags as $tag )
+			{
+				array_push($array_tags, array (
+						'form_hashkey' => $tag->form_hashkey, 
+						'tag_text' => $tag->tag_text,
+						'tag_slug' => $tag->tag_slug
+					)
+				);
+			}
+		}
+		
 		foreach ( $events_array as $event_name => $event )
 		{
 			// Create a new session array if pageview started a new session
@@ -105,18 +119,45 @@ class LI_Contact {
 			}
 			else
 			{
-				$cur_event = $count;
-				$sessions['session_' . $cur_array]['events']['event_' . $cur_event] = array();
-				$sessions['session_' . $cur_array]['events']['event_' . $cur_event]['event_type'] = 'form';
-				$sessions['session_' . $cur_array]['events']['event_' . $cur_event]['event_date'] = $event['event_date'];
-				$sessions['session_' . $cur_array]['events']['event_' . $cur_event]['activities'][] = $event;
-
 				// Set the first submission if it's not set and then leave it alone
 				if ( ! isset($lead->last_submission) )
 					$lead->last_submission = $event['event_date'];
 
 				// Always overwrite the last_submission date which will end as last submission date
 				$lead->first_submission = $event['event_date'];
+
+				$event['form_name'] = 'form';
+				if ( $event['form_selector_id'] )
+					$event['form_name'] = '#' . $event['form_selector_id'];
+				else if ( $event['form_selector_classes'] )
+				{
+					if ( strstr($event['form_selector_classes'], ',') )
+					{
+						$classes = explode(',', $event['form_selector_classes']);
+						$event['form_name'] = ( isset($classes[0]) ? '.' . $classes[0] : 'form' );
+					}
+					else
+						$event['form_name'] = '.' . $event['form_selector_classes'];
+				}
+
+				// Run through all the tags and see if the form_hashkey triggered the tag relationship
+				$form_tags = array();
+				if ( count($array_tags) )
+				{
+					foreach ( $array_tags as $at )
+					{
+						if ( $at['form_hashkey'] == $event['form_hashkey'] )
+							array_push($form_tags, $at);
+					}
+				}
+
+				$cur_event = $count;
+				$sessions['session_' . $cur_array]['events']['event_' . $cur_event] = array();
+				$sessions['session_' . $cur_array]['events']['event_' . $cur_event]['event_type'] 	= 'form';
+				$sessions['session_' . $cur_array]['events']['event_' . $cur_event]['event_date'] 	= $event['event_date'];
+				$sessions['session_' . $cur_array]['events']['event_' . $cur_event]['form_name'] 	= $event['form_name'];
+				$sessions['session_' . $cur_array]['events']['event_' . $cur_event]['form_tags'] 	= $form_tags;
+				$sessions['session_' . $cur_array]['events']['event_' . $cur_event]['activities'][] = $event;
 
 				// Used for $lead->total_submissions
 				$total_submissions++;
@@ -159,8 +200,11 @@ class LI_Contact {
 				DATE_SUB(form_date, INTERVAL %d HOUR) AS event_date, 
 				DATE_FORMAT(DATE_SUB(form_date, INTERVAL %d HOUR), %s) AS form_date, 
 				form_page_title, 
+				form_hashkey,
 				form_page_url, 
-				form_fields
+				form_fields,
+				form_selector_id,
+				form_selector_classes
 			FROM 
 				$wpdb->li_submissions 
 			WHERE 
@@ -217,7 +261,9 @@ class LI_Contact {
 				DATE_FORMAT(DATE_SUB(lead_date, INTERVAL %d HOUR), %s) AS lead_date,
 				lead_id,
 				lead_ip, 
-				lead_email
+				lead_email,
+				lead_first_name, 
+				lead_last_name
 			FROM 
 				$wpdb->li_leads 
 			WHERE hashkey LIKE %s", $wpdb->db_hour_offset, '%b %D %l:%i%p', $hashkey);
@@ -240,7 +286,7 @@ class LI_Contact {
 
 		$q = $wpdb->prepare("
             SELECT 
-                lt.tag_text, lt.tag_slug, lt.tag_order, lt.tag_id, ( ltr.tag_id IS NOT NULL AND ltr.tag_relationship_deleted = 0 ) AS tag_set
+                lt.tag_text, lt.tag_slug, lt.tag_order, lt.tag_id, ( ltr.tag_id IS NOT NULL AND ltr.tag_relationship_deleted = 0 ) AS tag_set, lt.tag_form_selectors, ltr.form_hashkey
             FROM 
                 $wpdb->li_tags lt
             LEFT OUTER JOIN 

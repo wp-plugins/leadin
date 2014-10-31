@@ -3,7 +3,7 @@ Contributors: andygcook, nelsonjoyce
 Tags:  crm, contacts, lead tracking, click tracking, visitor tracking, analytics, marketing automation, inbound marketing, subscription, marketing, lead generation, mailchimp, constant contact, newsletter, popup, popover, email list, email, contacts database, contact form, forms, form widget, popup form
 Requires at least: 3.7
 Tested up to: 4.0
-Stable tag: 2.2.2
+Stable tag: 2.2.3
 
 Leadin is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
 
@@ -107,8 +107,22 @@ You betcha! Leadin should work just fine on Multisite right out-of-the-box witho
 
 == Changelog ==
 
-- Current version: 2.2.2
-- Current version release: 2014-10-16
+- Current version: 2.2.3
+- Current version release: 2014-10-31
+
+= 2.2.3 (2014.10.31) =
+= Enhancements =
+- Added "Tags" link to sidebar menu
+- Added the applied tags on form submission timeline events
+- Added the form selector on submission events in the timeline
+- Added language in the subject of the contact notification emails to indicate returning vs. new visitors
+- Leadin will now detect first names + last names and store them on the contact + push to ESP connectors
+- Retroactively apply names to all contacts where possible
+
+- Bug fixes
+- If a contact changes their email, Leadin will now push the new email to the ESP connectors
+- Added safeguards into all third party libraries to see if they are included already in the WordPress admin
+- Added default Javascript values to the popup form if the get_footer function isn't being called
 
 = 2.2.2 (2014.10.16) =
 = Enhancements =

@@ -653,6 +653,70 @@ function leadin_convert_statuses_to_tags ( )
     leadin_update_option('leadin_options', 'converted_to_tags', 1);
 }
 
+
+/** 
+ * Retroactively add the names to contacts based on past form submissions for 2.2.3 upgrade
+ *
+ */
+function leadin_set_names_retroactively ( )
+{
+    global $wpdb;
+
+    $q = "
+        SELECT 
+            ls_1.* 
+        FROM 
+            li_submissions ls_1
+        INNER JOIN
+        (
+            SELECT 
+                MAX(form_date) max_form_date, lead_hashkey
+            FROM 
+                li_submissions
+            WHERE 
+                LOWER(form_fields) LIKE '%name%'
+                AND form_deleted = 0
+            GROUP BY lead_hashkey
+        ) ls_2
+        ON 
+            ls_1.lead_hashkey = ls_2.lead_hashkey AND 
+            ls_1.form_date = ls_2.max_form_date
+        ORDER BY
+            ls_1.form_date DESC";
+
+    $submissions = $wpdb->get_results($q);
+
+    if ( count($submissions) )
+    {
+        foreach ( $submissions as $submission )
+        {
+            $contact_first_name = '';
+            $contact_last_name  = '';
+            $fields = json_decode(stripslashes($submission->form_fields), TRUE);
+            if ( count($fields) )
+            {
+                foreach ( $fields as $key => $field )
+                {
+                    $lower_label_text = strtolower($field['label']);
+                    if ( $lower_label_text == 'first' || $lower_label_text == 'first name' || $lower_label_text == 'name' || $lower_label_text == 'your name' || $lower_label_text == 'your first name' )
+                        $contact_first_name = $field['value'];
+
+                    if ( $lower_label_text == 'last' || $lower_label_text == 'last name' || $lower_label_text == 'your last name' || $lower_label_text == 'surname' )
+                        $contact_last_name = $field['value'];
+                }
+            }
+
+            if ( $contact_first_name || $contact_last_name )
+            {
+                $q = $wpdb->prepare("UPDATE $wpdb->li_leads SET lead_first_name = %s, lead_last_name = %s WHERE hashkey = %s", $contact_first_name, $contact_last_name, $submission->lead_hashkey);
+                $wpdb->query($q);
+            }
+        }
+    }
+
+    leadin_update_option('leadin_options', 'names_added_to_contacts', 1);
+}
+
 /**
  * Sorts the powerups into a predefined order in leadin.php line 416
  *
@@ -757,7 +821,7 @@ function leadin_is_weekend ( $date )
  * @param   int
  * @return  bool    successful insert
  */
-function leadin_apply_tag_to_contact ( $tag_id, $contact_hashkey )
+function leadin_apply_tag_to_contact ( $tag_id, $contact_hashkey, $form_hashkey )
 {
     global $wpdb;
 
@@ -766,7 +830,7 @@ function leadin_apply_tag_to_contact ( $tag_id, $contact_hashkey )
 
     if ( ! $exists )
     {
-        $q = $wpdb->prepare("INSERT INTO $wpdb->li_tag_relationships ( tag_id, contact_hashkey ) VALUES ( %d, %s )", $tag_id, $contact_hashkey);
+        $q = $wpdb->prepare("INSERT INTO $wpdb->li_tag_relationships ( tag_id, contact_hashkey, form_hashkey ) VALUES ( %d, %s, %s )", $tag_id, $contact_hashkey, $form_hashkey);
         return $wpdb->query($q);
     }
 }

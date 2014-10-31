@@ -18,7 +18,7 @@ function leadin_check_merged_contact ()
 	$stale_hash = $_POST['li_id'];
 
 	// Check if hashkey is in a merged contact
-	$q = $wpdb->prepare("SELECT hashkey, merged_hashkeys FROM $wpdb->li_leads WHERE merged_hashkeys LIKE '%%%s%%'", like_escape($stale_hash));
+	$q = $wpdb->prepare("SELECT hashkey, merged_hashkeys FROM $wpdb->li_leads WHERE merged_hashkeys LIKE '%%%s%%'", $wpdb->esc_like($stale_hash));
 	$row = $wpdb->get_row($q);
 
 	if ( isset($row->hashkey) && $stale_hash )
@@ -167,6 +167,15 @@ function leadin_insert_form_submission ()
 	$q = $wpdb->prepare("SELECT * FROM $wpdb->li_leads WHERE hashkey = %s AND lead_deleted = 0", $hashkey);
 	$contact = $wpdb->get_row($q);
 
+	// Check if either of the names field are set and a value was filled out that's different than the existing name field
+	$lead_first_name = $contact->lead_first_name;
+	if ( strlen($first_name) && $lead_first_name != $first_name )
+		$lead_first_name = $first_name;
+
+	$lead_last_name = $contact->lead_last_name;
+	if ( strlen($last_name) && $lead_last_name != $last_name )
+		$lead_last_name = $last_name;
+
 	// Check for existing contacts based on whether the email is present in the contacts table
 	$q = $wpdb->prepare("SELECT lead_email, hashkey, merged_hashkeys FROM $wpdb->li_leads WHERE lead_email = %s AND hashkey != %s AND lead_deleted = 0", $email, $hashkey);
 	$existing_contacts = $wpdb->get_results($q);
@@ -236,8 +245,8 @@ function leadin_insert_form_submission ()
 	    )
 	);
 
-	// Update the contact with the new email, status and merged hashkeys
-	$q = $wpdb->prepare("UPDATE $wpdb->li_leads SET lead_email = %s, merged_hashkeys = %s WHERE hashkey = %s", $email, $existing_contact_hashkeys, $hashkey);
+	// Update the contact with the new email, new names, status and merged hashkeys
+	$q = $wpdb->prepare("UPDATE $wpdb->li_leads SET lead_email = %s, lead_first_name = %s, lead_last_name = %s, merged_hashkeys = %s WHERE hashkey = %s", $email, $lead_first_name, $lead_last_name, $existing_contact_hashkeys, $hashkey);
 	$rows_updated = $wpdb->query($q);
 
 	// Apply the tag relationship to contacts for form id rules
@@ -250,11 +259,11 @@ function leadin_insert_form_submission ()
 		{
 			foreach ( $tagged_lists as $list )
 			{
-				$tag_added = leadin_apply_tag_to_contact($list->tag_id, $contact->hashkey);
+				$tag_added = leadin_apply_tag_to_contact($list->tag_id, $contact->hashkey, $submission_hash);
 
 				$contact_type = 'tagged contact';
 			
-				if ( $tag_added && $list->tag_synced_lists )
+				if ( ( $tag_added && $list->tag_synced_lists ) || ( $contact->lead_email != $email && $list->tag_synced_lists) )
 				{
 					foreach ( unserialize($list->tag_synced_lists) as $synced_list )
 					{
@@ -281,7 +290,7 @@ function leadin_insert_form_submission ()
 		{
 			foreach ( $tagged_lists as $list )
 			{
-				$tag_added = leadin_apply_tag_to_contact($list->tag_id, $contact->hashkey);
+				$tag_added = leadin_apply_tag_to_contact($list->tag_id, $contact->hashkey, $submission_hash);
 
 				$contact_type = 'tagged contact';
 			

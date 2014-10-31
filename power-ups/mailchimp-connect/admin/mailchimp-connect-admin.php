@@ -119,9 +119,9 @@ class WPMailChimpConnectAdmin extends WPLeadInAdmin {
             echo '</table>';
 
             if ( ! $synced_list_count ) {
-                echo '<p>MailChimp connected succesfully! <a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts&action=manage_tags">Select a tag to send contacts to MailChimp</a>.</p>';
+                echo '<p>MailChimp connected succesfully! <a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_tags">Select a tag to send contacts to MailChimp</a>.</p>';
             } else {
-                echo '<p><a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts&action=manage_tags">Edit your tags</a> or <a href="http://admin.mailchimp.com/lists/new-list/" target="_blank">Create a new list on MailChimp.com</a></p>';
+                echo '<p><a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_tags">Edit your tags</a> or <a href="http://admin.mailchimp.com/lists/new-list/" target="_blank">Create a new list on MailChimp.com</a></p>';
             }
         }
     }

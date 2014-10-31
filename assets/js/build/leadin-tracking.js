@@ -173,15 +173,21 @@ jQuery(function($){
 	if ( $.versioncompare($.fn.jquery, '1.7.0') != -1 )
 	{
 		$(document).on('submit', 'form', function( e ) {
-			var $form = $(this).closest('form');
-			leadin_submit_form($form, $);
+			if ( ! ( $(this).attr('id') == 'loginform' && $(this).attr('action').indexOf('wp-login.php') != -1 ) && ! ( $(this).attr('id') == 'lostpasswordform' && $(this).attr('action').indexOf('wp-login.php') != -1 ) )
+			{
+				var $form = $(this).closest('form');
+				leadin_submit_form($form, $);
+			}
 		});
 	}
 	else
 	{
 		$(document).bind('submit', 'form', function( e ) {
-			var $form = $(this).closest('form');
-			leadin_submit_form($form, $);
+			if ( ! ( $(this).attr('id') == 'loginform' && $(this).attr('action').indexOf('wp-login.php') != -1 ) && ! ( $(this).attr('id') == 'lostpasswordform' && $(this).attr('action').indexOf('wp-login.php') != -1 ) )
+			{
+				var $form = $(this).closest('form');
+				leadin_submit_form($form, $);
+			}
 		});
 	}
 });
@@ -300,24 +306,44 @@ function leadin_submit_form ( $form, $ )
 		$value = $value.replace("C:\\fakepath\\", "");
 
 		var $label_text = $.trim($label.replaceArray(["(", ")", "required", "Required", "*", ":"], [""]));
-
-		/*if ( $label_text.toLowerCase().indexOf('credit card') != -1 || $label_text.toLowerCase().indexOf('card number') != -1 )
-			ignore_form = true;*/
+		var lower_label_text = $label_text.toLowerCase();
 
 		if ( ! ignore_field($label_text, $value) )
 			push_form_field($label_text, $value, form_fields);
 
+		// Set email
 		if ( $value.indexOf('@') != -1 && $value.indexOf('.') != -1 && !lead_email )
 			lead_email = $value;
 
-		if ( $element.attr('id') == 'leadin-subscribe-fname')
-			lead_first_name = $value;
+		// Set first name 
+		if ( ! lead_first_name )
+		{
+			if ( lower_label_text == 'first' || lower_label_text == 'first name' || lower_label_text == 'name' || lower_label_text == 'your name' )
+				lead_first_name = $value;
+		}
 
-		if ( $element.attr('id') == 'leadin-subscribe-lname')
-			lead_last_name = $value;
+		// Set last name
+		if ( ! lead_last_name )
+		{
+			if ( lower_label_text == 'last' || lower_label_text == 'last name' || lower_label_text == 'your last name' || lower_label_text == 'surname' )
+				lead_last_name = $value;
+		}
 
-		if ( $element.attr('id') == 'leadin-subscribe-phone')
+		// Set phone number
+		if ( lower_label_text == 'phone' || lower_label_text == 'phone' )
 			lead_phone = $value;
+
+		/*
+			@TODO 
+				√ Look at contact labels for last 50 installations and look for patterns
+				√ Modify ajax methods to take in a first + last name
+				√ Roll in premium updates inside the interface for the contact records
+				√ Modify the contact list to show first + last names
+				- Retroactively try to parse out all the names from previous submissions
+					- What's the overhead for this going to look like on update
+		*/
+
+		
 	});
 
 	var radio_groups = [];
@@ -420,7 +446,6 @@ function leadin_submit_form ( $form, $ )
 		var submission_hash = Math.random().toString(36).slice(2);
 		var hashkey = $.cookie("li_hash");
 		var json_form_fields = JSON.stringify(form_fields);
-
 
 		var form_submission = {};
 		form_submission = {
