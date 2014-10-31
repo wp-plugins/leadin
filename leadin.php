@@ -3,7 +3,7 @@
 Plugin Name: Leadin
 Plugin URI: http://leadin.com
 Description: Leadin is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
-Version: 2.2.3
+Version: 2.2.4
 Author: Andy Cook, Nelson Joyce
 Author URI: http://leadin.com
 License: GPL2
@@ -23,10 +23,10 @@ if ( !defined('LEADIN_PLUGIN_SLUG') )
 	define('LEADIN_PLUGIN_SLUG', basename(dirname(__FILE__)));
 
 if ( !defined('LEADIN_DB_VERSION') )
-	define('LEADIN_DB_VERSION', '2.2.3');
+	define('LEADIN_DB_VERSION', '2.2.4');
 
 if ( !defined('LEADIN_PLUGIN_VERSION') )
-	define('LEADIN_PLUGIN_VERSION', '2.2.3');
+	define('LEADIN_PLUGIN_VERSION', '2.2.4');
 
 if ( !defined('MIXPANEL_PROJECT_TOKEN') )
     define('MIXPANEL_PROJECT_TOKEN', 'a9615503ec58a6bce2c646a58390eac1');
@@ -331,6 +331,7 @@ function leadin_db_install ()
 		  `tag_relationship_id` int(11) unsigned NOT NULL AUTO_INCREMENT,
 		  `tag_id` int(11) unsigned NOT NULL,
 		  `contact_hashkey` varchar(16) NOT NULL,
+  		  `form_hashkey` varchar(16) NOT NULL,
 		  `tag_relationship_deleted` int(1) unsigned NOT NULL,
 		  `blog_id` int(11) unsigned NOT NULL,
 		  PRIMARY KEY (`tag_relationship_id`)
