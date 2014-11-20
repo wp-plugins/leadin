@@ -602,7 +602,7 @@ class WPLeadInAdmin {
         <div class="leadin-contacts">
 
             <?php
-                $this->leadin_header('Manage Leadin Tags <a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts&action=add_tag" class="add-new-h2">Add New</a>', 'leadin-contacts__header');
+                $this->leadin_header('Manage Leadin Tags <a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_tags&action=add_tag" class="add-new-h2">Add New</a>', 'leadin-contacts__header');
             ?>
             
             <div class="">
@@ -963,7 +963,7 @@ class WPLeadInAdmin {
         if ( isset( $_POST['li_updates_subscription'] ) && $_POST['li_updates_subscription'] )
             leadin_subscribe_user_updates();
 
-        leadin_register_user();
+        //leadin_register_user();
     }
 
     /**

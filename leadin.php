@@ -3,7 +3,7 @@
 Plugin Name: Leadin
 Plugin URI: http://leadin.com
 Description: Leadin is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
-Version: 2.2.4
+Version: 2.2.5
 Author: Andy Cook, Nelson Joyce
 Author URI: http://leadin.com
 License: GPL2
@@ -26,7 +26,7 @@ if ( !defined('LEADIN_DB_VERSION') )
 	define('LEADIN_DB_VERSION', '2.2.4');
 
 if ( !defined('LEADIN_PLUGIN_VERSION') )
-	define('LEADIN_PLUGIN_VERSION', '2.2.4');
+	define('LEADIN_PLUGIN_VERSION', '2.2.5');
 
 if ( !defined('MIXPANEL_PROJECT_TOKEN') )
     define('MIXPANEL_PROJECT_TOKEN', 'a9615503ec58a6bce2c646a58390eac1');
@@ -131,7 +131,7 @@ function activate_leadin ( $network_wide )
 			switch_to_blog($blog_id);
 			add_leadin_defaults();
 			$activated[] = $blog_id;
-			leadin_track_plugin_registration_hook(TRUE);
+			//leadin_track_plugin_registration_hook(TRUE);
 		}
  
 		// Switch back to the current blog
@@ -142,7 +142,7 @@ function activate_leadin ( $network_wide )
 	}
 	else
 	{
-		leadin_track_plugin_registration_hook(TRUE);
+		//leadin_track_plugin_registration_hook(TRUE);
 
 		add_leadin_defaults();
 	}
@@ -219,14 +219,14 @@ function deactivate_leadin ( $network_wide )
 		foreach ( $blog_ids as $blog_id ) 
 		{
 			switch_to_blog($blog_id);
-			leadin_track_plugin_registration_hook(FALSE);
+			//leadin_track_plugin_registration_hook(FALSE);
 		}
  
 		// Switch back to the current blog
 		switch_to_blog($current_blog);
 	}
-	else
-		leadin_track_plugin_registration_hook(FALSE);
+	//else
+		//leadin_track_plugin_registration_hook(FALSE);
 }
 
 function activate_leadin_on_new_blog ( $blog_id, $user_id, $domain, $path, $site_id, $meta )

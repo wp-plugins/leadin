@@ -114,6 +114,9 @@ function leadin_get_current_user ()
  */
 function leadin_register_user ()
 {
+    //@MP hack
+    return FALSE;
+
     if ( ! function_exists('curl_init') )
         return false;
     
@@ -147,6 +150,9 @@ function leadin_register_user ()
  */
 function leadin_update_user ()
 {
+    //@MP hack
+    return FALSE;
+
     if ( ! function_exists('curl_init') )
         return false;
 
@@ -172,6 +178,9 @@ function leadin_update_user ()
  */
 function leadin_subscribe_user_updates ()
 {
+    //@MP hack
+    return FALSE;
+
     $leadin_user = leadin_get_current_user();
  
     // Sync to email to MailChimp
@@ -200,6 +209,9 @@ function leadin_subscribe_user_updates ()
  */
 function leadin_set_beta_tester_property ( $beta_tester )
 {
+    //@MP hack
+    return FALSE;
+
     if ( ! function_exists('curl_init') )
         return false;
     
@@ -218,6 +230,9 @@ function leadin_set_beta_tester_property ( $beta_tester )
  */
 function leadin_set_install_status ( $li_status )
 {
+    //@MP hack
+    return FALSE;
+
     if ( ! function_exists('curl_init') )
         return false;
 
@@ -246,6 +261,9 @@ function leadin_set_install_status ( $li_status )
  */
 function leadin_track_plugin_registration_hook ( $activated )
 {
+    //@MP hack
+    return FALSE;
+
     if ( $activated )
     {
         leadin_register_user();
@@ -270,9 +288,11 @@ function leadin_track_plugin_registration_hook ( $activated )
  */
 function leadin_track_plugin_activity ( $activity_desc, $custom_properties = array() )
 {   
+    //@MP hack
+    return FALSE;
+
     if ( ! function_exists('curl_init') )
         return false;
-    
 
     $leadin_user = leadin_get_current_user();
 
