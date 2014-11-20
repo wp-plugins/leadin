@@ -168,11 +168,11 @@ class LI_List_Table extends WP_List_Table {
         $contact_type   = strtolower($this->view_label);
         $filtered       =  ( isset($_GET['filter_action']) ? 'filtered ' : '' );
         $actions = array(
-            'add_tag_to_all'             => 'Add a tag to all ' . $filtered . $contact_type . ' in list',
-            'add_tag_to_selected'        => 'Add a tag to selected ' . $contact_type,
-            'remove_tag_from_all'        => 'Remove a tag from all ' . $filtered . $contact_type . ' in list',
-            'remove_tag_from_selected'   => 'Remove a tag from selected ' . $contact_type,
-            'delete_all'                 => 'Delete all ' . $contact_type . ' from Leadin',
+            'add_tag_to_all'             => 'Add a tag to every one tagged "' . $filtered . $contact_type . '"',
+            'add_tag_to_selected'        => 'Add a tag to selected "' . $contact_type,
+            'remove_tag_from_all'        => 'Remove a tag from every one tagged "' . $filtered . $contact_type . '"',
+            'remove_tag_from_selected'   => 'Remove a tag from selected "' . $contact_type . '"',
+            'delete_all'                 => 'Delete every one tagged "' . $contact_type . '" from Leadin',
             'delete_selected'            => 'Delete selected ' . $contact_type . ' from Leadin'
         );
 
