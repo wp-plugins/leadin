@@ -36,6 +36,8 @@ class WPLeadIn {
             else
                 add_action('wp_enqueue_scripts', array($this, 'add_leadin_frontend_scripts'));
         }
+
+        //add_action( 'admin_notices', array($this, 'deactivate_leadin_notice') );
     }
 
     //=============================================
@@ -208,8 +210,7 @@ class WPLeadIn {
             LEADIN_PLUGIN_DIR . '/power-ups/contacts.php', 
             LEADIN_PLUGIN_DIR . '/power-ups/subscribe-widget.php', 
             LEADIN_PLUGIN_DIR . '/power-ups/mailchimp-connect.php', 
-            LEADIN_PLUGIN_DIR . '/power-ups/constant-contact-connect.php',
-            LEADIN_PLUGIN_DIR . '/power-ups/beta-program.php'
+            LEADIN_PLUGIN_DIR . '/power-ups/constant-contact-connect.php'
         ));
 
         closedir( $dir );
@@ -242,7 +243,7 @@ class WPLeadIn {
             return array();
     }
 
-    public static function activate_power_up( $power_up_slug, $exit = TRUE )
+    public static function activate_power_up ( $power_up_slug, $exit = TRUE )
     {
         if ( ! strlen( $power_up_slug ) )
             return FALSE;
@@ -273,12 +274,12 @@ class WPLeadIn {
         }
     }
 
-    public static function deactivate_power_up( $power_up_slug, $exit = TRUE )
+    public static function deactivate_power_up ( $power_up_slug, $exit = TRUE )
     {
         if ( ! strlen( $power_up_slug ) )
             return FALSE;
 
-        // If it's already active, then don't do it again
+        // If it's already deactivated, then don't do it again
         $active = self::is_power_up_active($power_up_slug);
         if ( ! $active )
             return TRUE;
@@ -292,7 +293,61 @@ class WPLeadIn {
         {
             exit;
         }
+    }
 
+    /**
+     * Throws an error for when the premium version and the free version are activated in tandem
+     */
+    function deactivate_leadin_notice () 
+    {
+        ?>
+        <div id="message" class="update-nag">
+            <?php 
+            _e( 
+                '<p>' .
+                    '<a style="font-size: 14px; float: right; color: #ccc; text-decoration: none; margin-top: -15px;" href="#">&#10006;</a>' .
+                    '<b>Leadin Pro is now avaialble!</b>' .
+                '</p>' .
+                '<p>' . 
+                    'Leadin Pro includes all the features you\'ve come to love from our plugin along with some powerful new ones too. <a href="#">See all the features</a>' .
+                '</p>' .
+                '<p>' .
+                    'The launch of Leadin Pro also means that we are no longer supporting the version of Leadin hosted by the WordPress Plugin Directory.' . 
+                    'Read more about why we are making this change on <a href="http://leadin.com/the-move-to-pro">the Leadin blog</a>. ' . 
+                 '</p>' .
+                '<p>' . 
+                    'If you run have any questions or concerns, please feel free to email us - <a href="mailto:support@leadin.com">support@leadin.com</a>' .
+                '</p>' . 
+                '<p>' . 
+                    '<a class="button button-primary" href="http://leadin.com">Download Leadin Pro for Free</a> ' .
+                '</p>',
+             'my-text-domain' 
+            ); 
+            ?>
+        </div>
+        <?php
+    }
+
+    /* Display a notice that can be dismissed */
+
+    function example_admin_notice() {
+        global $current_user ;
+            $user_id = $current_user->ID;
+            /* Check that the user hasn't already clicked to ignore the message */
+        if ( ! get_user_meta($user_id, 'example_ignore_notice') ) {
+            echo '<div class="updated"><p>'; 
+            printf(__('This is an annoying nag message.  Why do people make these? | <a href="%1$s">Hide Notice</a>'), '?example_nag_ignore=0');
+            echo "</p></div>";
+        }
+    }
+
+    function example_nag_ignore() {
+        global $current_user;
+            $user_id = $current_user->ID;
+            /* If user clicks to ignore the notice, add that to their user meta */
+            if ( isset($_GET['example_nag_ignore']) && '0' == $_GET['example_nag_ignore'] ) {
+                 add_user_meta($user_id, 'example_ignore_notice', 'true', true);
+        }
     }
 }
 

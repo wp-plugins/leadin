@@ -119,11 +119,8 @@ class LI_Contact {
 			}
 			else
 			{
-				// Set the first submission if it's not set and then leave it alone
-				if ( ! isset($lead->last_submission) )
-					$lead->last_submission = $event['event_date'];
-
-				// Always overwrite the last_submission date which will end as last submission date
+				
+				// Always overwrite the first_submission date which will end as last submission date
 				$lead->first_submission = $event['event_date'];
 
 				$event['form_name'] = 'form';
@@ -158,6 +155,10 @@ class LI_Contact {
 				$sessions['session_' . $cur_array]['events']['event_' . $cur_event]['form_name'] 	= $event['form_name'];
 				$sessions['session_' . $cur_array]['events']['event_' . $cur_event]['form_tags'] 	= $form_tags;
 				$sessions['session_' . $cur_array]['events']['event_' . $cur_event]['activities'][] = $event;
+
+				// Set the first submission if it's not set and then leave it alone
+				if ( ! isset($lead->last_submission) )
+					$lead->last_submission = $sessions['session_' . $cur_array]['events']['event_' . $cur_event];
 
 				// Used for $lead->total_submissions
 				$total_submissions++;

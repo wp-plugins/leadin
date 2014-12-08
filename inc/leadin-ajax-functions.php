@@ -280,30 +280,35 @@ function leadin_insert_form_submission ()
 	}
 
 	// Apply the tag relationship to contacts for class rules
-	$form_classes = explode(',', $form_selector_classes);
-	foreach ( $form_classes as $class )
+	if ( $form_selector_classes )
+		$form_classes = explode(',', $form_selector_classes);
+
+	if ( count($form_classes) )
 	{
-		$q = $wpdb->prepare("SELECT tag_id, tag_synced_lists FROM $wpdb->li_tags WHERE tag_form_selectors LIKE '%%%s%%' AND tag_deleted = 0", '.' . $class);
-		$tagged_lists = $wpdb->get_results($q);
-
-		if ( count($tagged_lists) )
+		foreach ( $form_classes as $class )
 		{
-			foreach ( $tagged_lists as $list )
+			$q = $wpdb->prepare("SELECT tag_id, tag_synced_lists FROM $wpdb->li_tags WHERE tag_form_selectors LIKE '%%%s%%' AND tag_deleted = 0", '.' . $class);
+			$tagged_lists = $wpdb->get_results($q);
+
+			if ( count($tagged_lists) )
 			{
-				$tag_added = leadin_apply_tag_to_contact($list->tag_id, $contact->hashkey, $submission_hash);
-
-				$contact_type = 'tagged contact';
-			
-				if ( $tag_added && $list->tag_synced_lists )
+				foreach ( $tagged_lists as $list )
 				{
-					foreach ( unserialize($list->tag_synced_lists) as $synced_list )
-					{
-						// e.g. leadin_constant_contact_connect_wp
-						$leadin_esp_wp = 'leadin_' . $synced_list['esp'] . '_connect_wp';
-						global ${$leadin_esp_wp};
+					$tag_added = leadin_apply_tag_to_contact($list->tag_id, $contact->hashkey, $submission_hash);
 
-						if ( ${$leadin_esp_wp}->activated )
-							${$leadin_esp_wp}->push_contact_to_list($synced_list['list_id'], $email, $first_name, $last_name, $phone);
+					$contact_type = 'tagged contact';
+				
+					if ( $tag_added && $list->tag_synced_lists )
+					{
+						foreach ( unserialize($list->tag_synced_lists) as $synced_list )
+						{
+							// e.g. leadin_constant_contact_connect_wp
+							$leadin_esp_wp = 'leadin_' . $synced_list['esp'] . '_connect_wp';
+							global ${$leadin_esp_wp};
+
+							if ( ${$leadin_esp_wp}->activated )
+								${$leadin_esp_wp}->push_contact_to_list($synced_list['list_id'], $email, $first_name, $last_name, $phone);
+						}
 					}
 				}
 			}
@@ -326,8 +331,6 @@ function leadin_insert_form_submission ()
 	}
 	else if ( strstr($form_selector_id, 'commentform') )
 		$contact_type = 'comment';
-
-	leadin_track_plugin_activity("New lead", array("contact_type" => $contact_type));
 
 	return $rows_updated;
 }
@@ -372,7 +375,6 @@ add_action('wp_ajax_nopriv_leadin_check_visitor_status', 'leadin_check_visitor_s
  */
 function leadin_subscribe_show ()
 {
-	leadin_track_plugin_activity('widget shown');
 	die();
 }
 

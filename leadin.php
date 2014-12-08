@@ -3,7 +3,7 @@
 Plugin Name: Leadin
 Plugin URI: http://leadin.com
 Description: Leadin is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
-Version: 2.2.5
+Version: 2.2.6
 Author: Andy Cook, Nelson Joyce
 Author URI: http://leadin.com
 License: GPL2
@@ -26,10 +26,7 @@ if ( !defined('LEADIN_DB_VERSION') )
 	define('LEADIN_DB_VERSION', '2.2.4');
 
 if ( !defined('LEADIN_PLUGIN_VERSION') )
-	define('LEADIN_PLUGIN_VERSION', '2.2.5');
-
-if ( !defined('MIXPANEL_PROJECT_TOKEN') )
-    define('MIXPANEL_PROJECT_TOKEN', 'a9615503ec58a6bce2c646a58390eac1');
+	define('LEADIN_PLUGIN_VERSION', '2.2.6');
 
 if ( !defined('MC_KEY') )
     define('MC_KEY', '934aaed05049dde737d308be26167eef-us3');
@@ -47,14 +44,12 @@ require_once(LEADIN_PLUGIN_DIR . '/inc/class-emailer.php');
 require_once(LEADIN_PLUGIN_DIR . '/inc/class-leadin-updater.php');
 require_once(LEADIN_PLUGIN_DIR . '/admin/leadin-admin.php');
 
-require_once(LEADIN_PLUGIN_DIR . '/lib/mixpanel/LI_Mixpanel.php');
 require_once(LEADIN_PLUGIN_DIR . '/inc/class-leadin.php');
 
 require_once(LEADIN_PLUGIN_DIR . '/power-ups/subscribe-widget.php');
 require_once(LEADIN_PLUGIN_DIR . '/power-ups/contacts.php');
 require_once(LEADIN_PLUGIN_DIR . '/power-ups/mailchimp-connect.php');
 require_once(LEADIN_PLUGIN_DIR . '/power-ups/constant-contact-connect.php');
-require_once(LEADIN_PLUGIN_DIR . '/power-ups/beta-program.php');
 
 //=============================================
 // Hooks & Filters
@@ -68,45 +63,6 @@ register_deactivation_hook( __FILE__, 'deactivate_leadin');
 
 // Activate on newly created wpmu blog
 add_action('wpmu_new_blog', 'activate_leadin_on_new_blog', 10, 6);
-
-if ( isset($_GET['error']) && $_GET['error'] == 'true' )
-{
-	if ( isset($_GET['plugin']) && $_GET['plugin'] == ( LEADIN_PLUGIN_SLUG != 'leadin' ? 'leadin/leadin.php' : 'leadin-premium/leadin-premium.php' ) )
-	{
-		if ( function_exists('activate_leadin') )
-		{
-			include_once(ABSPATH . 'wp-admin/includes/plugin.php');
-			include_once(ABSPATH . 'wp-includes/pluggable.php');
-
-			add_action( 'admin_notices', 'deactivate_leadin_notice' );		
-		}
-	}
-}
-
-/**
- * Throws an error for when the premium version and the free version are activated in tandem
- */
-function deactivate_leadin_notice () 
-{
-    ?>
-    <div id="message" class="error">
-        <?php 
-        _e( 
-        	'<p>' .
-        		'<b>There was a slight error while activating Leadin Premium, but don\'t panic... there\'s an easy fix.</b>' .
-        	'</p>' .
-        	'<p>' .
-        		'Leadin and Leadin Premium are like two rival siblings - they don\'t play nice together. ' . 
-        		'Deactivate <b>Leadin</b> and then try activating <b>Leadin Premium</b> again, and everything should start working fine.' .
-        	'</p>' .
-        	'<p>' . 
-        		'If you run into any issues and can\'t get Leadin Premium working, please email us for help - <a href="mailto:support@leadin.com">support@leadin.com</a>',
-         'my-text-domain' 
-        ); 
-        ?>
-    </div>
-    <?php
-}
 
 /**
  * Activate the plugin
@@ -131,7 +87,6 @@ function activate_leadin ( $network_wide )
 			switch_to_blog($blog_id);
 			add_leadin_defaults();
 			$activated[] = $blog_id;
-			//leadin_track_plugin_registration_hook(TRUE);
 		}
  
 		// Switch back to the current blog
@@ -140,12 +95,8 @@ function activate_leadin ( $network_wide )
 		// Store the array for a later function
 		update_site_option('leadin_activated', $activated);
 	}
-	else
-	{
-		//leadin_track_plugin_registration_hook(TRUE);
 
-		add_leadin_defaults();
-	}
+	add_leadin_defaults();
 }
 
 /**
@@ -169,7 +120,6 @@ function add_leadin_defaults ( )
 			'ignore_settings_popup'		=> 0,
 			'data_recovered'			=> 1,
 			'delete_flags_fixed'		=> 1,
-			'beta_tester'				=> 0,
 			'converted_to_tags'			=> 1,
 			'names_added_to_contacts'	=> 1
 		);
@@ -193,8 +143,7 @@ function add_leadin_defaults ( )
 	if ( !$leadin_active_power_ups )
 	{
 		$auto_activate = array(
-			'contacts',
-			'beta_program'
+			'contacts'
 		);
 
 		update_option('leadin_active_power_ups', serialize($auto_activate));
@@ -219,14 +168,11 @@ function deactivate_leadin ( $network_wide )
 		foreach ( $blog_ids as $blog_id ) 
 		{
 			switch_to_blog($blog_id);
-			//leadin_track_plugin_registration_hook(FALSE);
 		}
  
 		// Switch back to the current blog
 		switch_to_blog($current_blog);
 	}
-	//else
-		//leadin_track_plugin_registration_hook(FALSE);
 }
 
 function activate_leadin_on_new_blog ( $blog_id, $user_id, $domain, $path, $site_id, $meta )
