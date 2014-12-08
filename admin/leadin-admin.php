@@ -79,16 +79,6 @@ class WPLeadInAdmin {
         {
             add_action('admin_footer', array($this, 'build_contacts_chart'));
         }
-
-        $updater_type = '';
-
-        if ( isset($options['premium']) && $options['premium'] )
-            $updater_type = 'premium';
-        else if ( isset($options['beta_tester']) && $options['beta_tester'] )
-            $updater_type = 'beta';
-
-        if ( $updater_type )
-            $li_wp_updater = new WPLeadInUpdater($updater_type);
     }
 
     function leadin_update_check ( )
@@ -101,35 +91,13 @@ class WPLeadInAdmin {
         if ( !$leadin_active_power_ups )
         {
             $auto_activate = array(
-                'contacts',
-                'beta_program'
+                'contacts'
             );
 
             update_option('leadin_active_power_ups', serialize($auto_activate));
         }
         else
         {
-            // 0.9.2 upgrade - set beta program power-up to auto-activate
-            $activated_power_ups = unserialize($leadin_active_power_ups);
-
-            // 0.9.3 bug fix for duplicate beta_program values being stored in the active power-ups array
-            if ( !in_array('beta_program', $activated_power_ups) )
-            {
-                $activated_power_ups[] = 'beta_program';
-                update_option('leadin_active_power_ups', serialize($activated_power_ups));
-            }
-            else 
-            {
-                $tmp = array_count_values($activated_power_ups);
-                $count = $tmp['beta_program'];
-
-                if ( $count > 1 )
-                {
-                    $activated_power_ups = array_unique($activated_power_ups);
-                    update_option('leadin_active_power_ups', serialize($activated_power_ups));
-                }
-            }
-
             // 2.0.1 upgrade - [plugin_slug]_list_sync changed to [plugin_slug]_connect
             $mailchimp_list_sync_key = array_search('mailchimp_list_sync', $activated_power_ups);
             if ( $mailchimp_list_sync_key !== FALSE )
@@ -186,7 +154,6 @@ class WPLeadInAdmin {
         }
 
         // Set the plugin version
-        leadin_update_user();
         leadin_update_option('leadin_options', 'leadin_version', LEADIN_PLUGIN_VERSION);
     }
     
@@ -260,8 +227,6 @@ class WPLeadInAdmin {
     {
         global $wp_version;
         $this->stats_dashboard = new LI_StatsDashboard();
-
-        leadin_track_plugin_activity("Loaded Stats Page");
 
         if ( !current_user_can( 'manage_categories' ) )
         {
@@ -381,12 +346,10 @@ class WPLeadInAdmin {
         echo '<div id="leadin" class="wrap '. ( $wp_version < 3.8 && !is_plugin_active('mp6/mp6.php')  ? 'pre-mp6' : ''). '">';
 
             if ( $this->action == 'edit_tag' || $this->action == 'add_tag' ) {
-                leadin_track_plugin_activity("Loaded Tag Editor");
                 $this->leadin_render_tag_editor();
             }
             else
             {
-                leadin_track_plugin_activity("Loaded Tag List");
                 $this->leadin_render_tag_list_page();
             }
 
@@ -962,8 +925,6 @@ class WPLeadInAdmin {
 
         if ( isset( $_POST['li_updates_subscription'] ) && $_POST['li_updates_subscription'] )
             leadin_subscribe_user_updates();
-
-        //leadin_register_user();
     }
 
     /**
@@ -993,7 +954,6 @@ class WPLeadInAdmin {
     {
         global  $wp_version;
 
-        leadin_track_plugin_activity("Loaded Onboarding Page");
         $li_options = get_option('leadin_options');
         
         echo '<div id="leadin" class="li-onboarding wrap '. ( $wp_version < 3.8 && !is_plugin_active('mp6/mp6.php') ? 'pre-mp6' : ''). '">';
@@ -1007,8 +967,6 @@ class WPLeadInAdmin {
         <?php if ( ! isset($_GET['activate_popup']) ) : ?>
             
             <?php if ( $li_options['onboarding_step'] == 1 ) : ?>
-
-                <?php leadin_track_plugin_activity('Onboarding Step 2 - Get Contact Reports'); ?>
 
                 <ol class="oboarding-steps-names">
                     <li class="oboarding-step-name completed">Activate Leadin</li>
@@ -1036,8 +994,6 @@ class WPLeadInAdmin {
                 </div>
 
             <?php elseif ( $li_options['onboarding_step'] == 2 ) : ?>
-
-                <?php leadin_track_plugin_activity('Onboarding Step 3 - Grow Your Contact List'); ?>
 
                 <ol class="oboarding-steps-names">
                     <li class="oboarding-step-name completed">Activate Leadin</li>
@@ -1094,16 +1050,12 @@ class WPLeadInAdmin {
                     }
 
                     leadin_update_option('leadin_subscribe_options', 'li_subscribe_vex_class', $vex_class_option);
-                    leadin_track_plugin_activity('Onboarding Popup Activated');
                 }
-                else
-                    leadin_track_plugin_activity('Onboarding Popup Not Activated');
 
                 // Update the onboarding settings
                 if ( ! isset($options['onboarding_complete']) || ! $options['onboarding_complete'] )
                 {
                     leadin_update_option('leadin_options', 'onboarding_complete', 1);
-                    leadin_track_plugin_activity('Onboarding Complete');
                 }
             ?>
 
@@ -1154,8 +1106,6 @@ class WPLeadInAdmin {
     function leadin_plugin_settings ()
     {
         global  $wp_version;
-        
-        leadin_track_plugin_activity("Loaded Settings Page");
 
         echo '<div id="leadin" class="li-settings wrap '. ( $wp_version < 3.8 && !is_plugin_active('mp6/mp6.php') ? 'pre-mp6' : ''). '">';
         
@@ -1222,14 +1172,6 @@ class WPLeadInAdmin {
         if( isset( $input['li_updates_subscription'] ) )
             $new_input['li_updates_subscription'] = $input['li_updates_subscription'];
 
-        if( isset( $input['beta_tester'] ) )
-        {
-            $new_input['beta_tester'] = $input['beta_tester'];
-            leadin_set_beta_tester_property(TRUE);
-        }
-        else
-            leadin_set_beta_tester_property(FALSE);
-
         $user_roles = get_editable_roles();
         if ( count($user_roles) )
         {
@@ -1293,8 +1235,6 @@ class WPLeadInAdmin {
     function leadin_power_ups_page ()
     {
         global  $wp_version;
-        
-        leadin_track_plugin_activity("Loaded Power-ups Page");
 
         if ( !current_user_can( 'manage_categories' ) )
         {
@@ -1415,7 +1355,6 @@ class WPLeadInAdmin {
                     
                     WPLeadIn::activate_power_up( $power_up, FALSE );
                     //ob_end_clean();
-                    leadin_track_plugin_activity($power_up . " power-up activated");
                     
                     if ( isset($_GET['redirect_to']) )
                         wp_redirect($_GET['redirect_to']);
@@ -1430,7 +1369,6 @@ class WPLeadInAdmin {
                     $power_up = stripslashes( $_GET['power_up'] );
                     
                     WPLeadIn::deactivate_power_up( $power_up, FALSE );
-                    leadin_track_plugin_activity($power_up . " power-up deactivated");
                     wp_redirect(get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_power_ups');
                     exit;
 

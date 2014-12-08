@@ -60,11 +60,9 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
         echo '<div id="leadin" class="wrap '. ( $wp_version < 3.8 && !is_plugin_active('mp6/mp6.php')  ? 'pre-mp6' : ''). '">';
 
             if ( $this->action != 'view' ) {
-                leadin_track_plugin_activity("Loaded Contact List Page");
                 $this->leadin_render_list_page();
             }
             else {
-                leadin_track_plugin_activity("Loaded Contact Detail Page");
                 $this->leadin_render_contact_detail($_GET['lead']);
             }
 
@@ -492,6 +490,7 @@ if ( isset($_POST['export-all']) || isset($_POST['export-selected']) )
 {
     global $wpdb;
     leadin_set_wpdb_tables();
+    leadin_set_mysql_timezone_offset();
 
     $sitename = sanitize_key(get_bloginfo('name'));
 
@@ -505,11 +504,11 @@ if ( isset($_POST['export-all']) || isset($_POST['export-selected']) )
     header('Content-Type: text/csv; charset=' . get_option('blog_charset'), TRUE);
 
     $column_headers = array(
-        'Email', 'Original source', 'Status', 'Visits', 'Page views', 'Forms',  'Last visit', 'Created on'
+        'Email', 'First Name', 'Last Name', 'Original source', 'Visits', 'Page views', 'Forms',  'Last visit', 'Created on'
     );
 
     $fields = array(
-        'lead_email', 'lead_source', 'visits', 'lead_pageviews', 'lead_form_submissions', 'last_visit', 'lead_date'
+        'lead_email', 'lead_first_name', 'lead_last_name', 'lead_source', 'visits', 'lead_pageviews', 'lead_form_submissions', 'last_visit', 'lead_date'
     );
 
     $headers = array();
@@ -594,19 +593,18 @@ if ( isset($_POST['export-all']) || isset($_POST['export-selected']) )
         $q =  $wpdb->prepare("
             SELECT 
                 l.lead_id AS lead_id, 
-                LOWER(DATE_FORMAT(l.lead_date, %s)) AS lead_date, l.lead_ip, l.lead_source, l.lead_email, l.hashkey,
+                LOWER(DATE_SUB(l.lead_date, INTERVAL %d HOUR)) AS lead_date, l.lead_ip, l.lead_source, l.lead_email, l.hashkey, l.lead_first_name, l.lead_last_name,
                 COUNT(DISTINCT s.form_id) AS lead_form_submissions,
                 COUNT(DISTINCT p.pageview_id) AS lead_pageviews,
-                LOWER(DATE_FORMAT(MAX(p.pageview_date), %s)) AS last_visit,
+                LOWER(DATE_SUB(MAX(p.pageview_date), INTERVAL %d HOUR)) AS last_visit,
                 ( SELECT COUNT(DISTINCT pageview_id) FROM $wpdb->li_pageviews WHERE lead_hashkey = l.hashkey AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS visits,
-                ( SELECT MAX(pageview_source) AS pageview_source FROM $wpdb->li_pageviews WHERE lead_hashkey = l.hashkey AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS pageview_source 
+                ( SELECT MIN(pageview_source) AS pageview_source FROM $wpdb->li_pageviews WHERE lead_hashkey = l.hashkey AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS pageview_source 
             FROM 
                 $wpdb->li_leads l
             LEFT JOIN $wpdb->li_submissions s ON l.hashkey = s.lead_hashkey
             LEFT JOIN $wpdb->li_pageviews p ON l.hashkey = p.lead_hashkey 
-            WHERE l.lead_email != '' AND l.lead_deleted = 0 " .
-            ( isset ($_POST['export-selected']) ? " AND l.lead_id IN ( " . $_POST['leadin_selected_contacts'] . " ) " : "" ) . 
-            " AND l.hashkey != '' ", '%Y/%m/%d %l:%i%p', '%Y/%m/%d %l:%i%p');
+            WHERE l.lead_email != '' AND l.lead_deleted = 0 AND l.hashkey != '' " .
+            ( isset ($_POST['export-selected']) ? " AND l.lead_id IN ( " . $_POST['leadin_selected_contacts'] . " ) " : "" ), $wpdb->db_hour_offset, $wpdb->db_hour_offset);
 
         $q .= $mysql_contact_type_filter;
         $q .= ( $mysql_search_filter ? $mysql_search_filter : "" );

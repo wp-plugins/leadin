@@ -43,18 +43,20 @@ class LI_Emailer {
         $options = get_option('leadin_options');
         $to = ( $options['li_email'] ? $options['li_email'] : get_bloginfo('admin_email') ); // Get email from plugin settings, if none set, use admin email
 
-        $return_status = '';
+        $tag_status = '';
+        if ( count($history->lead->last_submission['form_tags']) )
+            $tag_status = 'tagged as "' . $history->lead->last_submission['form_tags'][0]['tag_text'] . '" ';
+
+        $return_status = ( $tag_status ? '' : ' ' );
         if ( $history->lead->total_visits > 1 )
-            $return_status = ' by a returning visitor ';
+            $return_status = 'by a returning visitor ';
 
         if ( $history->lead->total_submissions > 1 )
-            $return_status = ' by a returning contact '; 
+            $return_status = 'by a returning contact ';
 
-        $subject = "Form submission " . $return_status . " on " . get_bloginfo('name') . " - " . $history->lead->lead_email;
+        $subject = "Form submission " . $tag_status . $return_status . "on " . get_bloginfo('name') . " - " . $history->lead->lead_email;
         $email_sent = wp_mail($to, $subject, $body, $headers);
 
-        if ( $email_sent )
-            leadin_track_plugin_activity('Contact Notification Sent');
 
         return $email_sent;
     }
@@ -82,7 +84,6 @@ class LI_Emailer {
     function build_submission_details ( $url ) {
         $format = '<table class="row submission-detail" style="border-spacing: 0;border-collapse: collapse;padding: 0px;vertical-align: top;text-align: left;width: 100%%;position: relative;display: block;"><tr style="padding: 0;vertical-align: top;text-align: left;"><td class="wrapper last" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 10px 20px 0px 0px;vertical-align: top;text-align: left;position: relative;padding-right: 0px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"><table class="twelve columns" style="border-spacing: 0;border-collapse: collapse;padding: 0;vertical-align: top;text-align: left;margin: 0 auto;width: 580px;"><tr style="padding: 0;vertical-align: top;text-align: left;"><td class="text-pad" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 0px 0px 10px;vertical-align: top;text-align: left;padding-left: 10px;padding-right: 10px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"><h3 style="color: #666;font-family: Helvetica, Arial, sans-serif;font-weight: normal;padding: 0;margin: 0;text-align: left;line-height: 1.3;word-break: normal;font-size: 18px;">New submission on <a href="%s" style="color: #2ba6cb;text-decoration: none;">%s</a></h3></td><td class="expander" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 0;vertical-align: top;text-align: left;visibility: hidden;width: 0px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"></td></tr></table></td></tr></table>' . "\r\n";
         $built_submission_details = sprintf($format, $url, get_bloginfo('name'));
-        $built_submission_details .= '<img src="' . $this->create_tracking_pixel() . '"/>';
 
         return $built_submission_details;
     }
@@ -353,31 +354,5 @@ class LI_Emailer {
         $powered_by .= "</td></tr></table></td><td class='expander' style='word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse !important;vertical-align: top;text-align: left;visibility: hidden;width: 0px;padding: 0;border: 0;' align='left' valign='top'></td></tr></table></td></tr></table>";
     
         return $powered_by;
-    }
-
-    /**
-     * Creates Mixpanel tracking email pixel
-     *
-     * @return  string      specs @ https://mixpanel.com/docs/api-documentation/pixel-based-event-tracking
-     */
-    function create_tracking_pixel ( )
-    {
-        $url_properties = array(
-            'token' => MIXPANEL_PROJECT_TOKEN
-        );
-
-        $leadin_user = leadin_get_current_user();
-        $leadin_user_properties = array(
-            'distinct_id'   => $leadin_user['user_id'],
-            '$wp-url'       => $leadin_user['wp_url'],
-            '$wp-version'   => $leadin_user['wp_version'],
-            '$li-version'   => $leadin_user['li_version'] 
-        );
-
-        $properties = array_merge($url_properties, $leadin_user_properties);
-
-        $params = array ( 'event' => 'Contact Notification Opened', 'properties' => $properties );
-
-        return 'http://api.mixpanel.com/track/?data=' . base64_encode(json_encode($params)) . '&ip=1&img=1';
     }
 }

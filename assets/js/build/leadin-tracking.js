@@ -331,19 +331,7 @@ function leadin_submit_form ( $form, $ )
 
 		// Set phone number
 		if ( lower_label_text == 'phone' || lower_label_text == 'phone' )
-			lead_phone = $value;
-
-		/*
-			@TODO 
-				√ Look at contact labels for last 50 installations and look for patterns
-				√ Modify ajax methods to take in a first + last name
-				√ Roll in premium updates inside the interface for the contact records
-				√ Modify the contact list to show first + last names
-				- Retroactively try to parse out all the names from previous submissions
-					- What's the overhead for this going to look like on update
-		*/
-
-		
+			lead_phone = $value;		
 	});
 
 	var radio_groups = [];
