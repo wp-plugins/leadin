@@ -98,6 +98,23 @@ class WPLeadInAdmin {
         }
         else
         {
+            // 0.9.2 upgrade - set beta program power-up to auto-activate
+            $activated_power_ups = unserialize($leadin_active_power_ups);
+
+            // 0.9.3 bug fix for duplicate beta_program values being stored in the active power-ups array
+            if ( !in_array('beta_program', $activated_power_ups) )
+            {
+                $activated_power_ups[] = 'beta_program';
+            }
+            else 
+            {
+                $tmp = array_count_values($activated_power_ups);
+                $count = $tmp['beta_program'];
+
+                if ( $count > 1 )
+                    $activated_power_ups = array_unique($activated_power_ups);
+            }
+
             // 2.0.1 upgrade - [plugin_slug]_list_sync changed to [plugin_slug]_connect
             $mailchimp_list_sync_key = array_search('mailchimp_list_sync', $activated_power_ups);
             if ( $mailchimp_list_sync_key !== FALSE )
@@ -112,6 +129,10 @@ class WPLeadInAdmin {
                 unset($activated_power_ups[$constant_contact_list_sync_key]);
                 $activated_power_ups[] = 'constant_contact_connect';
             }
+
+            // 2.2.7 bug fix for non active contacts power-ups
+            if ( !in_array('contacts', $activated_power_ups) )
+                $activated_power_ups[] = 'contacts';
 
             update_option('leadin_active_power_ups', serialize($activated_power_ups));
         }
