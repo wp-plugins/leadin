@@ -1133,13 +1133,18 @@ class WPLeadInAdmin {
         $this->leadin_header('Leadin Settings');
         
         ?>
-            <form method="post" action="options.php">
-                <?php 
-                    settings_fields('leadin_settings_options');
-                    do_settings_sections(LEADIN_ADMIN_PATH);
-                    submit_button('Save Settings');
-                ?>
-            </form>
+            <div class="leadin-settings__content">
+                <form method="post" action="options.php">
+                    <?php 
+                        settings_fields('leadin_settings_options');
+                        do_settings_sections(LEADIN_ADMIN_PATH);
+                        submit_button('Save Settings');
+                    ?>
+                </form>
+            </div>
+            <div class="leadin-settings__sidebar">
+                <a href="http://leadin.com/pro-upgrade?utm_campaign=repo_plugin"><img class="pro-upgrade-cta" src="<?php echo LEADIN_PATH; ?>/images/pro-upgrade-cta.png"></a>
+            </div>
         <?php
 
         $this->leadin_footer();
