@@ -3,7 +3,7 @@
 Plugin Name: Leadin
 Plugin URI: http://leadin.com
 Description: Leadin is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
-Version: 2.2.8
+Version: 2.2.9
 Author: Andy Cook, Nelson Joyce
 Author URI: http://leadin.com
 License: GPL2
@@ -26,7 +26,7 @@ if ( !defined('LEADIN_DB_VERSION') )
 	define('LEADIN_DB_VERSION', '2.2.4');
 
 if ( !defined('LEADIN_PLUGIN_VERSION') )
-	define('LEADIN_PLUGIN_VERSION', '2.2.8');
+	define('LEADIN_PLUGIN_VERSION', '2.2.9');
 
 if ( !defined('MC_KEY') )
     define('MC_KEY', '934aaed05049dde737d308be26167eef-us3');
@@ -54,15 +54,6 @@ require_once(LEADIN_PLUGIN_DIR . '/power-ups/constant-contact-connect.php');
 //=============================================
 // Hooks & Filters
 //=============================================
-
-// Activate + install Leadin
-register_activation_hook( __FILE__, 'activate_leadin');
-
-// Deactivate Leadin
-register_deactivation_hook( __FILE__, 'deactivate_leadin');
-
-// Activate on newly created wpmu blog
-add_action('wpmu_new_blog', 'activate_leadin_on_new_blog', 10, 6);
 
 /**
  * Activate the plugin
@@ -95,8 +86,10 @@ function activate_leadin ( $network_wide )
 		// Store the array for a later function
 		update_site_option('leadin_activated', $activated);
 	}
-
-	add_leadin_defaults();
+	else
+	{
+		add_leadin_defaults();
+	}
 }
 
 /**
@@ -124,7 +117,19 @@ function add_leadin_defaults ( )
 			'names_added_to_contacts'	=> 1
 		);
 		
-		update_option('leadin_options', $opt);
+		// this is a hack because multisite doesn't recognize local options using either update_option or update_site_option...
+		if ( is_multisite() )
+		{
+			$multisite_prefix = ( is_multisite() ? $wpdb->prefix : '' );
+			$q = $wpdb->prepare("
+				INSERT INTO " . $multisite_prefix . "options 
+			        ( option_name, option_value ) 
+			    VALUES ('leadin_options', %s)", serialize($opt));
+			$wpdb->query($q);
+		}
+		else
+			update_option('leadin_options', $opt);
+		
 		leadin_db_install();
 
 		$multisite_prefix = ( is_multisite() ? $wpdb->prefix : '' );

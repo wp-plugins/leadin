@@ -25,6 +25,8 @@ class WPLeadInBetaAdmin extends WPLeadInAdmin {
         
         if ( is_admin() )
         {
+            return FALSE;
+            
             $this->options = get_option('leadin_options');
 
             $this->power_up_icon = '<span class="dashicons dashicons-admin-generic"></span>';

@@ -183,7 +183,7 @@ class LI_Tags_Table extends WP_List_Table {
 
                 $tag_array = array(
                     'tag_id' => $tag->tag_id,
-                    'tag_count' => sprintf('<a href="?page=%s&contact_type=%s">%d</a>', $_REQUEST['page'], $tag->tag_slug, ( $tag->tag_count ? $tag->tag_count : 0 )),
+                    'tag_count' => sprintf('<a href="?page=%s&contact_type=%s">%d</a>', 'leadin_contacts', $tag->tag_slug, ( $tag->tag_count ? $tag->tag_count : 0 )),
                     'tag_text' => $tag->tag_text,
                     'tag_slug' => $tag->tag_slug,
                     'tag_form_selectors' => str_replace(',', '<br/>', $tag->tag_form_selectors),

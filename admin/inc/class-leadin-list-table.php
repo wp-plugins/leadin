@@ -210,6 +210,9 @@ class LI_List_Table extends WP_List_Table {
 
                 $ids_for_action = rtrim($ids_for_action, ',');
             }
+            else // default case for when it's not actually processing a bulk action
+                return FALSE;
+
 
             $q = $wpdb->prepare("SELECT hashkey FROM $wpdb->li_leads WHERE lead_id IN ( " . $ids_for_action . " ) ", "");
             $hashes = $wpdb->get_results($q);

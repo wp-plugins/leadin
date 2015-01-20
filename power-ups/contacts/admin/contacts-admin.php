@@ -317,7 +317,7 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                     echo '<h4 class="leain-meta-header leadin-premium-tag">Social Info</h4>';
                     echo '<table class="leadin-meta-table"><tbody>';
                         echo '<tr>';
-                            echo '<td><a href="http://leadin.com/pro-upgrade?utm_campaign=repo_plugin" target="_blank">Upgrade to Leadin Pro for free</a> to get social info</td>';
+                            echo '<td><a href="http://leadin.com/pro-upgrade/?utm_source=Leadin%20Repo%20Plugin&utm_medium=Contact%20Detail%20Screen&utm_campaign=Repo" target="_blank">Upgrade to Leadin Pro for free</a> to get social info</td>';
                         echo '</tr>';
                     echo '</tbody></table>';
                 echo '</div>'; // leadin-meta-section
@@ -325,7 +325,7 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                     echo '<h4 class="leain-meta-header leadin-premium-tag">Company Info</h4>';
                     echo '<table class="leadin-meta-table"><tbody>';
                         echo '<tr>';
-                            echo '<td><a href="http://leadin.com/pro-upgrade?utm_campaign=repo_plugin" target="_blank">Upgrade to Leadin Pro for free</a> to get company info</td>';
+                            echo '<td><a href="http://leadin.com/pro-upgrade/?utm_source=Leadin%20Repo%20Plugin&utm_medium=Contact%20Detail%20Screen&utm_campaign=Repo" target="_blank">Upgrade to Leadin Pro for free</a> to get company info</td>';
                         echo '</tr>';
                     echo '</tbody></table>';
                 echo '</div>'; // leadin-meta-section

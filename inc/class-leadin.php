@@ -19,15 +19,14 @@ class WPLeadIn {
         $this->power_ups = self::get_available_power_ups();
 
         if ( is_user_logged_in() )
+        {
             add_action('admin_bar_menu', array($this, 'add_leadin_link_to_admin_bar'), 999);
+        }
  
         if ( is_admin() )
         {
             if ( ! defined('DOING_AJAX') || ! DOING_AJAX )
-            {
-                if ( current_user_can('manage_options') )   
-                    $li_wp_admin = new WPLeadInAdmin($this->power_ups);
-            }
+                $li_wp_admin = new WPLeadInAdmin($this->power_ups);
         }
         else
         {
@@ -36,8 +35,6 @@ class WPLeadIn {
             else
                 add_action('wp_enqueue_scripts', array($this, 'add_leadin_frontend_scripts'));
         }
-
-        //add_action( 'admin_notices', array($this, 'deactivate_leadin_notice') );
     }
 
     //=============================================
@@ -64,8 +61,15 @@ class WPLeadIn {
     /**
      * Adds Leadin link to top-level admin bar
      */
-    function add_leadin_link_to_admin_bar( $wp_admin_bar ) {
+    function add_leadin_link_to_admin_bar ( $wp_admin_bar ) 
+    {
         global $wp_version;
+
+        if ( ! current_user_can('activate_plugins') )
+        {
+            if ( ! array_key_exists('li_grant_access_to_' . leadin_get_user_role(), get_option('leadin_options') ) )
+                return FALSE;
+        }
 
         $args = array(
             'id'     => 'leadin-admin-menu',
