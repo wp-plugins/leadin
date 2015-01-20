@@ -191,10 +191,32 @@ class WPLeadInAdmin {
 
         global $submenu;
         global  $wp_version;
+
+        // Block non-sanctioned users from accessing Leadin
+        $capability = 'activate_plugins';
+        if ( ! current_user_can('activate_plugins') )
+        {
+            if ( ! array_key_exists('li_grant_access_to_' . leadin_get_user_role(), $options ) )
+                return FALSE;
+            else
+            {
+                if ( current_user_can('manage_network') ) // super admin
+                    $capability = 'manage_network';
+                else if ( current_user_can('edit_pages') ) // editor
+                    $capability = 'edit_pages';
+                else if ( current_user_can('publish_posts') ) // author
+                    $capability = 'publish_posts';
+                else if ( current_user_can('edit_posts') ) // contributor
+                    $capability = 'edit_posts';
+                else if ( current_user_can('read') ) // subscriber
+                    $capability = 'read';
+
+            }
+        }
         
         self::check_admin_action();
 
-        add_menu_page('Leadin', 'Leadin', 'manage_categories', 'leadin_stats', array($this, 'leadin_build_stats_page'), LEADIN_PATH . '/images/' . ( $wp_version < 3.8 && !is_plugin_active('mp6/mp6.php') ? 'leadin-icon-32x32.png' : 'leadin-svg-icon.svg'), '25.100713');
+        add_menu_page('Leadin', 'Leadin', $capability, 'leadin_stats', array($this, 'leadin_build_stats_page'), LEADIN_PATH . '/images/' . ( $wp_version < 3.8 && !is_plugin_active('mp6/mp6.php') ? 'leadin-icon-32x32.png' : 'leadin-svg-icon.svg'), '25.100713');
 
         foreach ( $this->admin_power_ups as $power_up )
         {
@@ -204,13 +226,13 @@ class WPLeadInAdmin {
 
                 // Creates the menu icon for power-up if it's set. Overrides the main Leadin menu to hit the contacts power-up
                 if ( $power_up->menu_text )
-                    add_submenu_page('leadin_stats', $power_up->menu_text, $power_up->menu_text, 'manage_categories', 'leadin_' . $power_up->menu_link, array($power_up, 'power_up_setup_callback'));    
+                    add_submenu_page('leadin_stats', $power_up->menu_text, $power_up->menu_text, $capability, 'leadin_' . $power_up->menu_link, array($power_up, 'power_up_setup_callback'));    
             }
         }
 
-        add_submenu_page('leadin_stats', 'Tags', 'Tags', 'manage_categories', 'leadin_tags', array(&$this, 'leadin_build_tag_page'));
-        add_submenu_page('leadin_stats', 'Settings', 'Settings', 'manage_categories', 'leadin_settings', array(&$this, 'leadin_plugin_options'));
-        add_submenu_page('leadin_stats', 'Power-ups', 'Power-ups', 'manage_categories', 'leadin_power_ups', array(&$this, 'leadin_power_ups_page'));
+        add_submenu_page('leadin_stats', 'Tags', 'Tags', $capability, 'leadin_tags', array(&$this, 'leadin_build_tag_page'));
+        add_submenu_page('leadin_stats', 'Settings', 'Settings', 'activate_plugins', 'leadin_settings', array(&$this, 'leadin_plugin_options'));
+        add_submenu_page('leadin_stats', 'Power-ups', 'Power-ups', 'activate_plugins', 'leadin_power_ups', array(&$this, 'leadin_power_ups_page'));
         $submenu['leadin_stats'][0][0] = 'Stats';
 
         if ( !isset($_GET['page']) || $_GET['page'] != 'leadin_settings' )
@@ -249,11 +271,6 @@ class WPLeadInAdmin {
         global $wp_version;
         $this->stats_dashboard = new LI_StatsDashboard();
 
-        if ( !current_user_can( 'manage_categories' ) )
-        {
-            wp_die(__('You do not have sufficient permissions to access this page.'));
-        }
-
         echo '<div id="leadin" class="li-stats wrap '. ( $wp_version < 3.8 && !is_plugin_active('mp6/mp6.php') ? 'pre-mp6' : ''). '">';
         
         $this->leadin_header('Leadin Stats: ' . date('F j Y, g:ia', current_time('timestamp')), 'leadin-stats__header');
@@ -281,11 +298,6 @@ class WPLeadInAdmin {
     function leadin_build_tag_page ()
     {
         global $wp_version;
-
-        if ( !current_user_can( 'manage_categories' ) )
-        {
-            wp_die(__('You do not have sufficient permissions to access this page.'));
-        }
 
         if ( isset($_POST['tag_name']) )
         {
@@ -835,6 +847,14 @@ class WPLeadInAdmin {
             'leadin_settings_section'
         );
 
+        add_settings_field(
+            'li_grant_access',
+            'Grant Leadin access to',
+            array($this, 'li_grant_access_callback'),
+            LEADIN_ADMIN_PATH,
+            'leadin_settings_section'
+        );
+
         add_filter(
             'update_option_leadin_options',
             array($this, 'update_option_leadin_options_callback'),
@@ -953,10 +973,6 @@ class WPLeadInAdmin {
      */
     function leadin_plugin_options ()
     {
-        if ( !current_user_can( 'manage_categories' ) ) {
-            wp_die(__('You do not have sufficient permissions to access this page.'));
-        }
-
         $li_options = get_option('leadin_options');
         
         // Load onboarding if not complete
@@ -1134,7 +1150,7 @@ class WPLeadInAdmin {
         
         ?>
             <div class="leadin-settings__content">
-                <form method="post" action="options.php">
+                <form method="POST" action="options.php">
                     <?php 
                         settings_fields('leadin_settings_options');
                         do_settings_sections(LEADIN_ADMIN_PATH);
@@ -1143,7 +1159,7 @@ class WPLeadInAdmin {
                 </form>
             </div>
             <div class="leadin-settings__sidebar">
-                <a href="http://leadin.com/pro-upgrade?utm_campaign=repo_plugin"><img class="pro-upgrade-cta" src="<?php echo LEADIN_PATH; ?>/images/pro-upgrade-cta.png"></a>
+                <a href="http://leadin.com/pro-upgrade/?utm_source=Leadin%20Repo%20Plugin&utm_medium=Settings%20Banner&utm_campaign=Repo"><img class="pro-upgrade-cta" src="<?php echo LEADIN_PATH; ?>/images/pro-upgrade-cta.png"></a>
             </div>
         <?php
 
@@ -1204,12 +1220,14 @@ class WPLeadInAdmin {
             //print_r($user_roles);
             foreach ( $user_roles as $key => $role )
             {
-                $role_id = 'li_do_not_track_' . $key;
+                $role_id_tracking = 'li_do_not_track_' . $key;
+                $role_id_access = 'li_grant_access_to_' . $key;
 
-                if( isset( $input[$role_id] ) )
-                {
-                    $new_input[$role_id] = $input[$role_id];
-                }
+                if ( isset( $input[$role_id_tracking] ) )
+                    $new_input[$role_id_tracking] = $input[$role_id_tracking];
+
+                if ( isset( $input[$role_id_access] ) )
+                    $new_input[$role_id_access] = $input[$role_id_access];
             }
         }
 
@@ -1241,7 +1259,6 @@ class WPLeadInAdmin {
         $options = get_option('leadin_options');
      
         $user_roles = get_editable_roles();
-        //print_r($user_roles);
         if ( count($user_roles) )
         {
             foreach ( $user_roles as $key => $role )
@@ -1256,16 +1273,45 @@ class WPLeadInAdmin {
     }
 
     /**
+     * Prints checkboxes for toggling Leadin access to specific user roles
+     */
+    function li_grant_access_callback ()
+    {
+        $options = get_option('leadin_options');
+     
+        $user_roles = get_editable_roles();
+
+        // Show a disabled checkbox for administrative roles that always need to be enabled so users don't get locked out of the Leadin settings
+        echo '<p><input id="li_grant_access_to_administrator" type="checkbox" value="1" checked disabled/>';
+        echo '<label for="li_grant_access_to_administrator">Administrators</label></p>';
+
+        if ( count($user_roles) )
+        {
+            foreach ( $user_roles as $key => $role )
+            {
+                $admin_role = FALSE;
+                if ( isset($role['capabilities']['activate_plugins']) && $role['capabilities']['activate_plugins'] )
+                    $admin_role = TRUE;
+
+                $role_id = 'li_grant_access_to_' . $key;
+
+                if ( ! $admin_role )
+                {
+                    printf(
+                        '<p><input id="' . $role_id . '" type="checkbox" name="leadin_options[' . $role_id . ']" value="1"' . checked( 1, ( isset($options[$role_id]) ? $options[$role_id] : '0' ), FALSE ) . '/>' . 
+                        '<label for="' . $role_id . '">' . $role['name'] . 's' . '</label></p>'
+                    );
+                }
+            }
+        }
+    }
+
+    /**
      * Creates power-up page
      */
     function leadin_power_ups_page ()
     {
         global  $wp_version;
-
-        if ( !current_user_can( 'manage_categories' ) )
-        {
-            wp_die(__('You do not have sufficient permissions to access this page.'));
-        }
 
         echo '<div id="leadin" class="li-settings wrap '. ( $wp_version < 3.8 && !is_plugin_active('mp6/mp6.php') ? 'pre-mp6' : ''). '">';
         
@@ -1293,7 +1339,7 @@ class WPLeadInAdmin {
                             </div>
                             <h2>Content Stats</h2>
                             <p>See where all your conversions are coming from.</p>
-                            <p><a href="http://leadin.com/content-analytics-plugin-wordpress/" target="_blank">Learn more</a></p>
+                            <p><a href="http://leadin.com/wordpress-analytics-plugin/" target="_blank">Learn more</a></p>
                             <a href="<?php echo get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_stats'; ?>" class="button button-large">View Stats</a>
                         </li>
                         <?php $power_up_count++; ?>

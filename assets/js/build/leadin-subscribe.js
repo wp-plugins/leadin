@@ -465,7 +465,7 @@ function bind_leadin_subscribe_widget ( lis_heading, lis_desc, lis_show_names, l
                             '<h3>Thanks!<br>You should receive a confirmation email in your inbox shortly.</h3>' + 
                             '<div id="powered-by-leadin-thank-you">' +
                                 '<span class="powered-by">Powered by Leadin</span>' + 
-                                '<a href="http://leadin.com/wordpress-subscribe-widget/?utm_campaign=subscribe_widget&utm_medium=email&utm_source=' + window.location.host + '"><img alt="Leadin" height="20px" width="99px" src="' + document.location.protocol + '//leadin.com/wp-content/themes/LeadIn-WP-Theme/library/images/logos/Leadin_logo@2x.png" alt="leadin.com"/></a>' +
+                                '<a href="http://leadin.com/wordpress-subscribe-widget-plugin/?utm_campaign=subscribe_widget&utm_medium=email&utm_source=' + window.location.host + '"><img alt="Leadin" height="20px" width="99px" src="' + document.location.protocol + '//leadin.com/wp-content/themes/LeadIn-WP-Theme/library/images/logos/Leadin_logo@2x.png" alt="leadin.com"/></a>' +
                             '</div>'
                         ).css('text-align', 'center').fadeIn(250);
                     });
@@ -485,7 +485,7 @@ function bind_leadin_subscribe_widget ( lis_heading, lis_desc, lis_show_names, l
 
             //leadin_subscribe_show();
 
-            $('.leadin-subscribe form.vex-dialog-form').append('<a href="http://leadin.com/wordpress-subscribe-widget/?utm_campaign=subscribe_widget&utm_medium=widget&utm_source=' + document.URL + '" id="leadin-subscribe-powered-by" class="leadin-subscribe-powered-by">Powered by Leadin</a>');
+            $('.leadin-subscribe form.vex-dialog-form').append('<a href="http://leadin.com/wordpress-subscribe-widget-plugin/?utm_campaign=subscribe_widget&utm_medium=widget&utm_source=' + document.URL + '" id="leadin-subscribe-powered-by" class="leadin-subscribe-powered-by">Powered by Leadin</a>');
         };
 
         subscribe._open = function() {
