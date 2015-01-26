@@ -62,6 +62,10 @@ class WPLeadInAdmin {
         //=============================================
 
         $options = get_option('leadin_options');
+
+        if ( is_multisite() )
+            $options = leadin_check_multisite_missing_options($options);
+
         $this->action = $this->leadin_current_action();
 
         // If the plugin version matches the latest version escape the update function

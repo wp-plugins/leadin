@@ -71,7 +71,6 @@ class LI_MailChimp
             $result = curl_exec($ch);
             curl_close($ch);
 
-
         } else {
             $json_data = json_encode($args);
             $result    = file_get_contents($url, null, stream_context_create(array(

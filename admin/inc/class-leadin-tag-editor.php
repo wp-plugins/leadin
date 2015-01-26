@@ -196,7 +196,7 @@ class LI_Tag_Editor {
 	function get_contacts_in_tagged_list ( $tag_id = 0 )
 	{
 		global $wpdb;
-		$q = $wpdb->prepare("SELECT contact_hashkey, lead_email FROM $wpdb->li_tag_relationships ltr, $wpdb->li_leads ll WHERE ltr.contact_hashkey = ll.hashkey AND ltr.tag_id = %d", $tag_id);
+		$q = $wpdb->prepare("SELECT contact_hashkey, lead_email, lead_first_name, lead_last_name FROM $wpdb->li_tag_relationships ltr, $wpdb->li_leads ll WHERE ltr.contact_hashkey = ll.hashkey AND ltr.tag_id = %d AND ltr.tag_relationship_deleted = 0", $tag_id);
 		$contacts = $wpdb->get_results($q);
 		return $contacts;
 	}

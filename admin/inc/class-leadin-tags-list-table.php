@@ -156,7 +156,7 @@ class LI_Tags_Table extends WP_List_Table {
     {
         global $wpdb;
 
-        $q = $wpdb->prepare("
+        $q = "
             SELECT 
                 lt.tag_text, lt.tag_slug, lt.tag_synced_lists, lt.tag_form_selectors, lt.tag_order, lt.tag_id,
                 ( SELECT COUNT(DISTINCT contact_hashkey) FROM $wpdb->li_tag_relationships ltr, $wpdb->li_leads ll WHERE tag_id = lt.tag_id AND ltr.tag_relationship_deleted = 0 AND ltr.contact_hashkey != '' AND ll.hashkey = ltr.contact_hashkey AND ll.lead_deleted = 0 AND ll.hashkey != '' GROUP BY tag_id ) AS tag_count
@@ -165,7 +165,7 @@ class LI_Tags_Table extends WP_List_Table {
             WHERE
                 lt.tag_deleted = 0
             GROUP BY lt.tag_slug 
-            ORDER BY lt.tag_order ASC", "");
+            ORDER BY lt.tag_order ASC";
 
         $tags = $wpdb->get_results($q);
 
