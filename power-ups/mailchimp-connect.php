@@ -157,8 +157,20 @@ class WPMailChimpConnect extends WPLeadIn {
             $MailChimp = new LI_MailChimp($this->options['li_mls_api_key']);
 
             $batch_contacts = array();
-            foreach ( $contacts as $contact )
-                array_push($batch_contacts, array('email' => array('email' => $contact->lead_email)));
+            if ( count($contacts) )
+            {
+                foreach ( $contacts as $contact )
+                {
+                    array_push($batch_contacts, array(
+                        'email' => array('email' => $contact->lead_email), 
+                        'merge_vars' => array(
+                            'EMAIL' => $contact->lead_email,
+                            'FNAME' => $contact->lead_first_name,
+                            'LNAME' => $contact->lead_last_name
+                        ))
+                    );
+                }
+            }
 
             $list_updated = $MailChimp->call("lists/batch-subscribe", array(
                 "id" => $list_id,
@@ -167,7 +179,7 @@ class WPMailChimpConnect extends WPLeadIn {
                 "update_existing" => TRUE,
                 'replace_interests' => FALSE,
                 'double_optin' => FALSE,
-                "batch" => $batch_contacts
+                "batch" => $batch_contacts,
             ));
 
             return $list_updated;

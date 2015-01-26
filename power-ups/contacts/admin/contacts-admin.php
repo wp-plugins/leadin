@@ -505,6 +505,8 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
 if ( isset($_POST['export-all']) || isset($_POST['export-selected']) )
 {
     global $wpdb;
+    global $wp_version;
+
     leadin_set_wpdb_tables();
     leadin_set_mysql_timezone_offset();
 
@@ -542,8 +544,14 @@ if ( isset($_POST['export-all']) || isset($_POST['export-selected']) )
     // search filter
     if ( isset($_GET['s']) )
     {
+        $escaped_query = '';
+        if ( $wp_version >= 4 )
+            $escaped_query = $wpdb->esc_like($_GET['s']);
+        else
+            $escaped_query = like_escape($_GET['s']);
+
         $search_query = $_GET['s'];
-        $mysql_search_filter = $wpdb->prepare(" AND ( l.lead_email LIKE '%%%s%%' OR l.lead_source LIKE '%%%s%%' ) ", $wpdb->esc_like($search_query), $wpdb->esc_like($search_query));
+        $mysql_search_filter = $wpdb->prepare(" AND ( l.lead_email LIKE '%%%s%%' OR l.lead_source LIKE '%%%s%%' ) ", $escaped_query, $escaped_query);
     }
 
     // @TODO - need to modify the filters to pull down the form ID types

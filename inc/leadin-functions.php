@@ -835,4 +835,36 @@ function leadin_ignore_logged_in_user ()
         return FALSE;
 }
 
+function leadin_check_multisite_missing_options ( $options )
+{
+    $default_options = array(
+        'li_installed'              => 1,
+        'leadin_version'            => LEADIN_PLUGIN_VERSION,
+        'li_db_version'             => LEADIN_DB_VERSION,
+        'li_email'                  => get_bloginfo('admin_email'),
+        'li_updates_subscription'   => 1,
+        'onboarding_step'           => 1,
+        'onboarding_complete'       => 0,
+        'ignore_settings_popup'     => 0,
+        'data_recovered'            => 1,
+        'delete_flags_fixed'        => 1,
+        'beta_tester'               => 0,
+        'converted_to_tags'         => 1,
+        'names_added_to_contacts'   => 1
+    );
+
+    if ( count($options) && is_array($options) )
+    {
+        foreach ( $default_options as $key => $value )
+        {
+            if ( ! array_key_exists($key, $options) )
+                $options[$key] = $value;
+        }
+    }
+
+    update_option('leadin_options', $options);
+
+    return $options;
+}
+
 ?>

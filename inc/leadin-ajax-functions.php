@@ -14,11 +14,18 @@ if ( !defined('LEADIN_PLUGIN_VERSION') )
 function leadin_check_merged_contact ()
 {
 	global $wpdb;
+	global $wp_version;
 
 	$stale_hash = $_POST['li_id'];
 
+	$escaped_hash = '';
+	if ( $wp_version >= 4 )
+		$escaped_hash = $wpdb->esc_like($stale_hash);
+	else
+		$escaped_hash = like_escape($stale_hash);
+
 	// Check if hashkey is in a merged contact
-	$q = $wpdb->prepare("SELECT hashkey, merged_hashkeys FROM $wpdb->li_leads WHERE merged_hashkeys LIKE '%%%s%%'", $wpdb->esc_like($stale_hash));
+	$q = $wpdb->prepare("SELECT hashkey, merged_hashkeys FROM $wpdb->li_leads WHERE merged_hashkeys LIKE '%%%s%%'", $escaped_hash);
 	$row = $wpdb->get_row($q);
 
 	if ( isset($row->hashkey) && $stale_hash )
@@ -271,8 +278,11 @@ function leadin_insert_form_submission ()
 						$leadin_esp_wp = 'leadin_' . $synced_list['esp'] . '_connect_wp';
 						global ${$leadin_esp_wp};
 						
-						if ( ${$leadin_esp_wp}->activated )
-							${$leadin_esp_wp}->push_contact_to_list($synced_list['list_id'], $email, $first_name, $last_name, $phone);
+						if ( isset(${$leadin_esp_wp}) )
+						{
+							if ( ${$leadin_esp_wp}->activated )
+								${$leadin_esp_wp}->push_contact_to_list($synced_list['list_id'], $email, $first_name, $last_name, $phone);
+						}
 					}
 				}
 			}
