@@ -303,6 +303,7 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
         $preview_link .= '&lis_show_phone=' . ( isset($options['li_subscribe_phone_field']) ? $options['li_subscribe_phone_field'] : 0 );
         $preview_link .= '&lis_btn_label=' . ( $options['li_subscribe_btn_label'] ? $options['li_subscribe_btn_label'] : 'SUBSCRIBE' );
         $preview_link .= '&lis_vex_class=' . ( $options['li_subscribe_vex_class'] ? $options['li_subscribe_vex_class'] : 'vex-theme-bottom-right-corner' );
+        $preview_link .= '&lis_confirmation=' . ( $options['li_subscribe_confirmation'] ? $options['li_subscribe_confirmation'] : 1 );
 
         printf(
             '<p><a id="preview-popup-link" href="%s" target="_blank" class="button button-secondary">Preview Pop-up Form</a></p>', 

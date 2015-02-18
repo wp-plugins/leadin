@@ -1,6 +1,6 @@
 <?php
 /**
-	* Power-up Name: Contact Connect
+	* Power-up Name: Constant Contact
 	* Power-up Class: WPConstantContactConnect
 	* Power-up Menu Text: 
 	* Power-up Slug: constant_contact_connect

@@ -360,7 +360,8 @@ jQuery(document).ready( function ( $ ) {
                         $('#leadin-subscribe-name-fields').val(),
                         $('#leadin-subscribe-phone-field').val(),
                         $('#leadin-subscribe-btn-label').val(),
-                        $('#leadin-subscribe-vex-class').val()
+                        $('#leadin-subscribe-vex-class').val(),
+                        $('#leadin-subscribe-confirmation').val()
                     );
                 }
                 else
@@ -379,7 +380,8 @@ jQuery(document).ready( function ( $ ) {
                     $('#leadin-subscribe-name-fields').val(),
                     $('#leadin-subscribe-phone-field').val(),
                     $('#leadin-subscribe-btn-label').val(),
-                    $('#leadin-subscribe-vex-class').val()
+                    $('#leadin-subscribe-vex-class').val(),
+                    $('#leadin-subscribe-confirmation').val()
                 );   
             }
         }
@@ -392,19 +394,21 @@ jQuery(document).ready( function ( $ ) {
             leadin_get_parameter_by_name('lis_show_names'),
             leadin_get_parameter_by_name('lis_show_phone'),
             leadin_get_parameter_by_name('lis_btn_label'),
-            leadin_get_parameter_by_name('lis_vex_class')
+            leadin_get_parameter_by_name('lis_vex_class'),
+            leadin_get_parameter_by_name('lis_confirmation')
         );
 
         subscribe.open();
     }
 });
 
-function bind_leadin_subscribe_widget ( lis_heading, lis_desc, lis_show_names, lis_show_phone, lis_btn_label, lis_vex_class ) 
+function bind_leadin_subscribe_widget ( lis_heading, lis_desc, lis_show_names, lis_show_phone, lis_btn_label, lis_vex_class, lis_confirmation ) 
 {
-    lis_heading     = ( lis_heading ? lis_heading : 'Sign up for email updates' );
-    lis_desc        = ( lis_desc ? lis_desc : '' );
-    lis_btn_label   = ( lis_btn_label ? lis_btn_label : 'SUBSCRIBE' );
-    lis_vex_class   = ( lis_vex_class ? lis_vex_class : 'vex-theme-bottom-right-corner' );
+    lis_heading         = ( lis_heading ? lis_heading : 'Sign up for email updates' );
+    lis_desc            = ( lis_desc ? lis_desc : '' );
+    lis_btn_label       = ( lis_btn_label ? lis_btn_label : 'SUBSCRIBE' );
+    lis_vex_class       = ( lis_vex_class ? lis_vex_class : 'vex-theme-bottom-right-corner' );
+    lis_confirmation    = ( lis_confirmation ? lis_confirmation : 1 );
 
     (function(){
         var $ = jQuery;
@@ -462,7 +466,7 @@ function bind_leadin_subscribe_widget ( lis_heading, lis_desc, lis_show_names, l
                     $('.vex-dialog-form').fadeOut(300, function ( e ) {
                         $('.vex-dialog-form').html(
                             '<div class="vex-close"></div>' + 
-                            '<h3>Thanks!<br>You should receive a confirmation email in your inbox shortly.</h3>' + 
+                            ( parseInt(lis_confirmation) ? '<h3>Thanks!<br>You should receive a confirmation email in your inbox shortly.</h3>' : '<h3>Thanks!<br>We received your submission.</h3>' ) + 
                             '<div id="powered-by-leadin-thank-you">' +
                                 '<span class="powered-by">Powered by Leadin</span>' + 
                                 '<a href="http://leadin.com/wordpress-subscribe-widget-plugin/?utm_campaign=subscribe_widget&utm_medium=email&utm_source=' + window.location.host + '"><img alt="Leadin" height="20px" width="99px" src="' + document.location.protocol + '//leadin.com/wp-content/themes/LeadIn-WP-Theme/library/images/logos/Leadin_logo@2x.png" alt="leadin.com"/></a>' +
