@@ -21,8 +21,8 @@ class WPLeadInUpdater {
 	{
 		if ( $update_type == 'beta' )
 			$this->api_url = 'http://leadin.com/plugins/index.php';
-		else if ( $update_type == 'premium' )
-			$this->api_url = 'http://leadin.com/paid/index.php';
+		else if ( $update_type == 'pro' )
+			$this->api_url = 'http://leadin.com/pro/index.php';
 
 		$this->plugin_slug = LEADIN_PLUGIN_SLUG;
 

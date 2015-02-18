@@ -1,6 +1,6 @@
 <?php
 /**
-    * Power-up Name: MailChimp Connect
+    * Power-up Name: MailChimp
     * Power-up Class: WPMailChimpConnect
     * Power-up Menu Text: 
     * Power-up Slug: mailchimp_connect

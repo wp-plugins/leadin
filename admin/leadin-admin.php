@@ -482,10 +482,10 @@ class WPLeadInAdmin {
                                     $synced_lists = ( isset($tagger->details->tag_synced_lists) ? unserialize($tagger->details->tag_synced_lists) : '' );
 
                                     echo '<tr>';
-                                        echo '<th scope="row">Push tagged contacts with these ' . $power_up_name . ' lists</th>';
+                                        echo '<th scope="row">Push tagged contacts to these ' . $power_up_name . ' lists</th>';
                                         echo '<td>';
                                             echo '<fieldset>';
-                                                echo '<legend class="screen-reader-text"><span>Push tagged contacts to with these ' . $power_up_name . ' email lists</span></legend>';
+                                                echo '<legend class="screen-reader-text"><span>Push tagged contacts to these ' . $power_up_name . ' email lists</span></legend>';
                                                 //
                                                 $esp_name_readable = ucwords(str_replace('_', ' ', $esp_name));
                                                 $esp_url = str_replace('_', '', $esp_name) . '.com';
@@ -510,7 +510,7 @@ class WPLeadInAdmin {
 
                                                 if ( ! ${'leadin_' . $power_up_slug . '_wp'}->admin->authed )
                                                 {
-                                                    echo 'It looks like you haven\'t setup your ' . $esp_name_readable . ' integration yet...<br/><br/>';
+                                                    echo 'It looks like you haven\'t set up your ' . $esp_name_readable . ' integration yet...<br/><br/>';
                                                     echo '<a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_settings' . $settings_page_anchor_id . '">Setup your ' . $esp_name_readable . ' integration</a>';
                                                 }
                                                 else if ( ${'leadin_' . $power_up_slug . '_wp'}->admin->invalid_key )
@@ -602,7 +602,7 @@ class WPLeadInAdmin {
         <div class="leadin-contacts">
 
             <?php
-                $this->leadin_header('Manage Leadin Tags <a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_tags&action=add_tag" class="add-new-h2">Add New</a>', 'leadin-contacts__header');
+                $this->leadin_header('Manage Leadin Tags <a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_tags&action=add_tag" class="add-new-h2">Add New</a>', '');
             ?>
             
             <div class="">
@@ -870,8 +870,22 @@ class WPLeadInAdmin {
 
     function leadin_options_section_heading ( )
     {
-       $this->print_hidden_settings_fields();
-       $this->tracking_code_installed_message();     
+        $this->print_hidden_settings_fields();
+       
+        if ( $this->has_leads() )
+        {
+            echo '<div class="leadin-section">';
+                echo '<p style="color: #090; font-weight: bold;">Visitor tracking is installed and tracking visitors.</p>';
+                echo '<p>The next time a visitor fills out a form on your WordPress site with an email address, Leadin will send you an email with the contact\'s referral source and page view history.</p>';
+            echo '</div>';
+        }
+        else
+        {
+            echo '<div class="leadin-section">';
+                echo '<p style="color: #f67d42; font-weight: bold;">Leadin is set up and waiting for a form submission...</p>';
+                echo '<p>Can\'t wait to see Leadin in action? Go fill out a form on your site to see your first contact.</p>';
+            echo '</div>';
+        }     
     }
 
     function print_hidden_settings_fields ()
@@ -941,7 +955,7 @@ class WPLeadInAdmin {
         );
     }
 
-    function tracking_code_installed_message ( )
+    function has_leads ( )
     {
         global $wpdb;
 
@@ -950,17 +964,11 @@ class WPLeadInAdmin {
 
         if ( $num_contacts > 0 )
         {
-            echo '<div class="leadin-section">';
-                echo '<p style="color: #090; font-weight: bold;">Visitor tracking is installed and tracking visitors.</p>';
-                echo '<p>The next time a visitor fills out a form on your WordPress site with an email address, Leadin will send you an email with the contact\'s referral source and page view history.</p>';
-            echo '</div>';
+            return true;
         }
         else
         {
-            echo '<div class="leadin-section">';
-                echo '<p style="color: #f67d42; font-weight: bold;">Leadin is setup and waiting for a form submission...</p>';
-                echo '<p>Can\'t wait to see Leadin in action? Go fill out a form on your site to see your first contact.</p>';
-            echo '</div>';
+            return false;
         }
     }
 
@@ -1108,7 +1116,7 @@ class WPLeadInAdmin {
             <div class="oboarding-step">
                 <h2 class="oboarding-step-title">Setup Complete!<br>Leadin is waiting for your first form submission.</h2>
                 <div class="oboarding-step-content">
-                    <p class="oboarding-step-description">Leadin is setup and waiting for a form submission. Once Leadin detects a form submission, a new contact will be added to your contacts list. We recommend filling out a form on your site to test that Leadin is working correctly.</p>
+                    <p class="oboarding-step-description">Leadin is set up and waiting for a form submission. Once Leadin detects a form submission, a new contact will be added to your contacts list. We recommend filling out a form on your site to test that Leadin is working correctly.</p>
                     <form id="li-onboarding-form" method="post" action="options.php">
                         <?php $this->print_hidden_settings_fields();  ?>
                         <a href="<?php echo get_admin_url() . 'admin.php?page=leadin_settings'; ?>" class="button button-primary button-big"><?php esc_attr_e('Complete Setup'); ?></a>
@@ -1343,7 +1351,6 @@ class WPLeadInAdmin {
                             </div>
                             <h2>Content Stats</h2>
                             <p>See where all your conversions are coming from.</p>
-                            <p><a href="http://leadin.com/wordpress-analytics-plugin/" target="_blank">Learn more</a></p>
                             <a href="<?php echo get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_stats'; ?>" class="button button-large">View Stats</a>
                         </li>
                         <?php $power_up_count++; ?>
@@ -1359,8 +1366,6 @@ class WPLeadInAdmin {
                         </div>
                         <h2><?php echo $power_up->power_up_name; ?></h2>
                         <p><?php echo $power_up->description; ?></p>
-                        <p><a href="<?php echo $power_up->link_uri; ?>" target="_blank">Learn more</a></p>  
-
                         <?php if ( $power_up->activated ) : ?>
                             <?php if ( ! $power_up->permanent ) : ?>
                                 <a href="<?php echo get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_power_ups&leadin_action=deactivate&power_up=' . $power_up->slug; ?>" class="button button-secondary button-large">Deactivate</a>
@@ -1391,7 +1396,6 @@ class WPLeadInAdmin {
                     </div>
                     <h2>Your Idea</h2>
                     <p>Have an idea for a power-up? We'd love to hear it!</p>
-                    <p>&nbsp;</p>
                     <a href="mailto:support@leadin.com" target="_blank" class="button button-primary button-large">Suggest an idea</a>
                 </li>
 
@@ -1403,7 +1407,6 @@ class WPLeadInAdmin {
 
                     <p>Exclusive features and offers for consultants and agencies.</p>
                     
-                    <p><a href="http://leadin.com/vip/" target="_blank">Learn more</a></p>
                     <a href="http://leadin.com/vip" target="_blank" class="button button-primary button-large">Become a VIP</a>
                 </li>
 
@@ -1502,7 +1505,15 @@ class WPLeadInAdmin {
     function leadin_header ( $page_title = '', $css_class = '' )
     {
         ?>
+        
+        <?php if ( ! $this->has_leads()) : ?>
+            <div id="message" class="updated">
+                <p>Leadin is set up and waiting for a form submission... Need help? <a href="http://wordpress.org/support/plugin/leadin">Contact Us</a>.</p>
+            </div>
+        <?php endif; ?>
+
         <?php screen_icon('leadin'); ?>
+        
         <h2 class="<?php echo $css_class ?>"><?php echo $page_title; ?></h2>
 
         <?php $options = get_option('leadin_options'); ?>

@@ -136,6 +136,7 @@ class WPLeadInSubscribe extends WPLeadIn {
 	    echo '<input id="leadin-subscribe-btn-label" value="' . ( isset($options['li_subscribe_btn_label']) ? $options['li_subscribe_btn_label'] : 'SUBSCRIBE' )  . '" type="hidden"/>';
 	    echo '<input id="leadin-subscribe-name-fields" value="' . ( isset($options['li_subscribe_name_fields']) ? $options['li_subscribe_name_fields'] : '0' )  . '" type="hidden"/>';
 	    echo '<input id="leadin-subscribe-phone-field" value="' . ( isset($options['li_subscribe_phone_field']) ? $options['li_subscribe_phone_field'] : '0' )  . '" type="hidden"/>';
+	    echo '<input id="leadin-subscribe-confirmation" value="' . ( isset($options['li_subscribe_confirmation']) ? $options['li_subscribe_confirmation'] : '0' )  . '" type="hidden"/>';
 
 	    // Div checked by media query for mobile
 	    echo '<span id="leadin-subscribe-mobile-check"></span>';
