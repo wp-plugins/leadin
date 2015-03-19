@@ -177,8 +177,6 @@ class WPLeadInSubscribe extends WPLeadIn {
 			if ( $_SERVER["REQUEST_URI"] == '/' && ! isset ($options['li_subscribe_template_home']) )
 				return FALSE;
 		}
-		
-
 
 		if ( ! is_admin() && $pagenow != 'wp-login.php' )
 		{
@@ -187,15 +185,6 @@ class WPLeadInSubscribe extends WPLeadIn {
 
 			wp_register_style('leadin-subscribe-css', LEADIN_PATH . '/assets/css/build/leadin-subscribe.css');
 			wp_enqueue_style('leadin-subscribe-css');
-
-			if ( isset($li_options['premium']) )
-			{
-				if ( $li_options['premium'] )
-				{
-					wp_register_style('leadin-subscribe-premium-css', LEADIN_PATH . '/assets/css/build/leadin-subscribe-premium.css');
-					wp_enqueue_style('leadin-subscribe-premium-css');
-				}
-			}
 		}
 	}
 }

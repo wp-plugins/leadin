@@ -1,3 +1,116 @@
+/*!
+ * jQuery Cookie Plugin v1.4.0
+ * https://github.com/carhartl/jquery-cookie
+ *
+ * Copyright 2013 Klaus Hartl
+ * Released under the MIT license
+ */
+(function (factory) {
+	if (typeof define === 'function' && define.amd) {
+		// AMD. Register as anonymous module.
+		define(['jquery'], factory);
+	} else {
+		// Browser globals.
+		factory(jQuery);
+	}
+}(function ($) {
+
+	var pluses = /\+/g;
+
+	function encode(s) {
+		return config.raw ? s : encodeURIComponent(s);
+	}
+
+	function decode(s) {
+		return config.raw ? s : decodeURIComponent(s);
+	}
+
+	function stringifyCookieValue(value) {
+		return encode(config.json ? JSON.stringify(value) : String(value));
+	}
+
+	function parseCookieValue(s) {
+		if (s.indexOf('"') === 0) {
+			// This is a quoted cookie as according to RFC2068, unescape...
+			s = s.slice(1, -1).replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+		}
+
+		try {
+			// Replace server-side written pluses with spaces.
+			// If we can't decode the cookie, ignore it, it's unusable.
+			// If we can't parse the cookie, ignore it, it's unusable.
+			s = decodeURIComponent(s.replace(pluses, ' '));
+			return config.json ? JSON.parse(s) : s;
+		} catch(e) {}
+	}
+
+	function read(s, converter) {
+		var value = config.raw ? s : parseCookieValue(s);
+		return $.isFunction(converter) ? converter(value) : value;
+	}
+
+	var config = $.cookie = function (key, value, options) {
+
+		// Write
+		if (value !== undefined && !$.isFunction(value)) {
+			options = $.extend({}, config.defaults, options);
+
+			if (typeof options.expires === 'number') {
+				var days = options.expires, t = options.expires = new Date();
+				t.setDate(t.getDate() + days);
+			}
+
+			return (document.cookie = [
+				encode(key), '=', stringifyCookieValue(value),
+				options.expires ? '; expires=' + options.expires.toUTCString() : '', // use expires attribute, max-age is not supported by IE
+				options.path    ? '; path=' + options.path : '',
+				options.domain  ? '; domain=' + options.domain : '',
+				options.secure  ? '; secure' : ''
+			].join(''));
+		}
+
+		// Read
+
+		var result = key ? undefined : {};
+
+		// To prevent the for loop in the first place assign an empty array
+		// in case there are no cookies at all. Also prevents odd result when
+		// calling $.cookie().
+		var cookies = document.cookie ? document.cookie.split('; ') : [];
+
+		for (var i = 0, l = cookies.length; i < l; i++) {
+			var parts = cookies[i].split('=');
+			var name = decode(parts.shift());
+			var cookie = parts.join('=');
+
+			if (key && key === name) {
+				// If second argument (value) is a function it's a converter...
+				result = read(cookie, value);
+				break;
+			}
+
+			// Prevent storing a cookie that we couldn't decode.
+			if (!key && (cookie = read(cookie)) !== undefined) {
+				result[name] = cookie;
+			}
+		}
+
+		return result;
+	};
+
+	config.defaults = {};
+
+	$.removeCookie = function (key, options) {
+		if ($.cookie(key) === undefined) {
+			return false;
+		}
+
+		// Must not alter options, thus extending a fresh object...
+		$.cookie(key, '', $.extend({}, options, { expires: -1 }));
+		return !$.cookie(key);
+	};
+
+}));
 /*
  Highcharts JS v4.0.1 (2014-04-24)
 
@@ -310,6 +423,17 @@ hasBidiBug:Nb,isTouchDevice:Jb,numberFormat:Ga,seriesTypes:F,setOptions:function
 }
 jQuery(document).ready( function ( $ ) {
 
+	$('#close-share').click( function( e ) {
+		$.cookie('ignore_social_share', 1, { expires: 30 });
+	});
+
+	$('.big-button--share').click( function( e ) {
+		$.cookie('ignore_social_share', 1);
+	});
+
+	if ( ! $.cookie('ignore_social_share') )
+		leadin_check_social_share_popup();
+
 	$("#filter_action").select2(
 		
 	);
@@ -434,7 +558,50 @@ jQuery(document).ready( function ( $ ) {
 
 		$('#preview-popup-link').attr('href', preview_link);
 	});
+
+	$('#pro-upgrade-button').click( function ( e ) {
+		e.preventDefault();
+
+		if ( ! $('#agree-pp').is(":checked") )
+		{
+			$('#agree-pp-error').show();
+			return false;
+		}
+		else
+		{
+			$('#agree-pp-error').hide();
+			$(this).addClass('btn-submitting').text('Upgrading...');
+		}
+
+		$.ajax({
+			type: 'POST',
+			url: li_admin_ajax.ajax_url,
+			data: {
+				"action": "leadin_upgrade_to_pro"
+			},
+			success: function( redirect_to ) {
+				
+				if ( redirect_to )
+					window.location.href = redirect_to + "&pro_upgrade=1";
+			}
+		});
+	});
 });
+
+function leadin_check_social_share_popup ()
+{
+	jQuery.ajax({
+		type: 'POST',
+		url: li_admin_ajax.ajax_url,
+		data: {
+			"action": "leadin_check_installation_date"
+		},
+		success: function( data ) {
+			if ( ! data )
+				$.cookie('ignore_social_share', 1);
+		}
+	});
+}
 jQuery(document).ready( function ( $ ) {
 	
 	var $bulk_opt_selected = $('.bulkactions select option[value="add_tag_to_selected"], .bulkactions select option[value="remove_tag_from_selected"], .bulkactions select option[value="delete_selected"]');
@@ -548,6 +715,16 @@ jQuery(document).ready( function ( $ ) {
 			// Reset the bulk actions so if the user closes the box it resets the values and nulls the apply button
 			$('.bulkactions select').val('-1');
 		}
+	});
+
+	$('#contact-detail-read-more').click( function ( e ) {
+		$('#company-detail-overview-short').hide();
+		$('#company-detail-overview-full').show();
+	});
+
+	$('#contact-detail-read-less').click( function ( e ) {
+		$('#company-detail-overview-full').hide();
+		$('#company-detail-overview-short').show();
 	});
 });
 /*

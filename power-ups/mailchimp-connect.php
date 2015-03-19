@@ -43,6 +43,7 @@ class WPMailChimpConnect extends WPLeadIn {
     
     var $admin;
     var $options;
+    var $power_option_name = 'leadin_mls_options';
 
     /**
      * Class constructor
@@ -58,7 +59,7 @@ class WPMailChimpConnect extends WPLeadIn {
 
         global $leadin_mailchimp_connect_wp;
         $leadin_mailchimp_connect_wp = $this;
-        $this->options = get_option('leadin_mls_options');
+        $this->options = get_option($this->power_option_name);
     }
 
     public function admin_init ( )
@@ -111,33 +112,9 @@ class WPMailChimpConnect extends WPLeadIn {
                 )
             ));
 
+            leadin_track_plugin_activity('Contact Pushed to List', array('esp_connector' => 'mailchimp'));
+
             return $contact_synced;
-        }
-
-        return FALSE;
-    }
-
-    /**
-     * Removes an email address from a specific list
-     *
-     * @param   string
-     * @param   string
-     * @return  int/bool        API status code OR false if api key not set
-     */
-    function remove_contact_from_list ( $list_id = '', $email = '' ) 
-    {
-        if ( isset($this->options['li_mls_api_key']) && $this->options['li_mls_api_key'] && $list_id )
-        {
-            $MailChimp = new LI_MailChimp($this->options['li_mls_api_key']);
-            $contact_removed = $MailChimp->call("lists/unsubscribe ", array(
-                "id" => $list_id,
-                "email" => array('email' => $email),
-                "delete_member" => TRUE,
-                "send_goodbye" => FALSE,
-                "send_notify" => FALSE
-            ));
-
-            return $contact_removed;
         }
 
         return FALSE;
@@ -182,6 +159,8 @@ class WPMailChimpConnect extends WPLeadIn {
                 "batch" => $batch_contacts,
             ));
 
+            leadin_track_plugin_activity('Bulk Contacts Pushed to List', array('esp_connector' => 'mailchimp'));
+
             return $list_updated;
         }
 
@@ -190,7 +169,7 @@ class WPMailChimpConnect extends WPLeadIn {
 }
 
 //=============================================
-// Subscribe Widget Init
+// ESP Connect Init
 //=============================================
 
 global $leadin_mailchimp_connect_wp;

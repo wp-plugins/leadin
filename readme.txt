@@ -2,49 +2,49 @@
 Contributors: andygcook, nelsonjoyce
 Tags:  crm, contacts, lead tracking, click tracking, visitor tracking, analytics, marketing automation, inbound marketing, subscription, marketing, lead generation, mailchimp, constant contact, newsletter, popup, popover, email list, email, contacts database, contact form, forms, form widget, popup form
 Requires at least: 3.7
-Tested up to: 4.1
-Stable tag: 2.2.11
+Tested up to: 4.1.1
+Stable tag: 3.1.4
 
 Leadin is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
 
 == Description ==
 
-= Get personal with your leads =
+= Get to know your website visitors =
 
-<a href="http://leadin.com" alt="WordPress marketing automation and lead tracking plugin">Leadin</a> is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
+<a href="http://leadin.com" alt="WordPress marketing automation and lead tracking plugin" target="_blank">Leadin</a> is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
 
-When a person submits a form on your WordPress site, you want to know more about them. What pages they've visited, when they return, and what social networks they’re on. Our WordPress marketing automation and lead tracking plugin gives you the details you need to make your next move. Because business isn’t business unless it’s personal.
+[youtube https://www.youtube.com/watch?v=tcMYv2r3ecg]
+
+= Find out who's on your site and what they're doing =
+When someone visits your site, you want to know more about them. What pages they've visited, when they return, and what social networks they’re on. Leadin gives you the details you need to make your next move.
+
+= More context for your conversations =
+Leadin automatically finds publicly available information about each of your contacts. Details such as location, work history, and company info can give you more context when you reach out.
+
+= Convert more visitors to contacts =
+Use the optional popup form to prevent people from slipping through the cracks. The popup also uses the contact data to intelligently know when to appear.
+
+= Keep your contacts in sync with your email tool =
+Leadin syncs your contacts to an email list of your choice without replacing any forms.
+
+= Find out what content and traffic sources convert the best =
+Our simple analytics show you what sources of traffic and content are driving the most contacts. No more complicated Google Analytics reports.
 
 = How does it work? =
 
 1. When you activate the WordPress plugin, Leadin will track each anonymous visitor to your site with a cookie.
 2. Leadin automatically identifies and watches each existing form on your site for submissions.
 3. Once someone fills out any other form on your site, Leadin will identify that person with their email address. and add them to your contact list.
-4. You'll also receive an email with a link to the new contact record with all of their visit history.
-
-If you don't enjoy reading about how it works, watch this video from Brian Duffy explaining how he uses Leadin for <a href="http://wpapplied.com/track-visitors-wordpress-leadin-plugin">WPApplied</a>.
-
-[youtube http://www.youtube.com/watch?v=SGrsyWV988U]
-
-= Multisite Compatible =
-
-Leadin is fully Multisite compatible. The plugin will all data to each site's installaion just fine without requiring any additional setup.
+4. You'll also receive an email with a link to the new contact record with all of their visit history. (check the screenshots sections to see it in action)
 
 = Who's using Leadin? =
 
-**Alan Perlman**: *“I can use Leadin to get a sense of how engaged certain contacts are, and I can learn more about their behavior on my website to better drive the conversation and understand what they’re interested in or looking for.”*
+**<a href="http://www.extremeinbound.com/leadin-wordpress-crm-inbound-plugin/" target="_blank">Alan Perlman</a>**: *“I can use Leadin to get a sense of how engaged certain contacts are, and I can learn more about their behavior on my website to better drive the conversation and understand what they’re interested in or looking for.”*
 
-<a href="http://www.extremeinbound.com/leadin-wordpress-crm-inbound-plugin/">Read more from Alan</a>
-
-
-**Adam W. Warner**: *“…the Leadin plugin has been very useful so far in giving us an idea of the actual visitor paths to our contact forms vs. the paths we’ve intended.”*
-
-<a href="http://thewpvalet.com/wordpress-lead-tracking/">Read more from Adam</a>
+**<a href="http://thewpvalet.com/wordpress-lead-tracking/" target="_blank">Adam W. Warner</a>**: *“…the Leadin plugin has been very useful so far in giving us an idea of the actual visitor paths to our contact forms vs. the paths we’ve intended.”*
 
 
-= Note: =
-
-Leadin collects usage information about this plugin so that we can better serve our customers and know what features to add. By installing and activating the Leadin for WordPress plugin you agree to these terms.
+Having trouble? Check out our <a href="http://support.leadin.com/">help documentation & support</a>
 
 == Installation ==
 
@@ -52,67 +52,84 @@ Leadin collects usage information about this plugin so that we can better serve 
 2. Activate the plugin through the 'Plugins' menu in WordPress
 3. Add an email address under 'Leadin' in your settings panel
 
+Having trouble? Check out our <a href="http://support.leadin.com/" target="_blank">help documentation & support</a>
+
 == Frequently Asked Questions ==
-
-= How does Leadin integrate with my forms? =
-
-Leadin automatically integrates with your contact and comment forms that contain an email address field on your web site. There's no setup required.
-
-= Where are my contact submission stored? =
-
-Leadin creates a new contact in your Contacts Tabke whenever an email address is detected in your visitor's form submission.
-
-There is no limit to the number of contacts you can store in your Contacts Table.
-
-= Which contact form building plugins are supported? =
-
-Leadin is intended to work with any HTML form out of the box, but does not support forms created by Javascript or loaded through an iFrame. 
-
-To ensure quality we've tested the most popular WordPress form builder plugins.
-
-= Tested + supported: =
-
-- Contact Form 7
-- JetPack
-- Fast Secure Contact Form
-- Contact Form
-- Gravity Forms
-- Formidable
-- Ninja Forms
-- Contact Form Clean and Simple
-- HubSpot
-- Native WordPress comment forms
-- Most custom forms
-
-= Tested + unsupported: =
-
-- Wufoo
-- Easy Contact Forms
-- Disqus comments
-- SumoMe
-- JotForm
-- Ninja Popups
-- Forms contained in an iFrame
-
-= Does Leadin work on Multisite? =
-
-You betcha! Leadin should work just fine on Multisite right out-of-the-box without requiring any additional setup.
+= <a href="http://support.leadin.com/article/13-frequently-asked-questions" target="_blank">Full FAQ Here</a> =
 
 == Screenshots ==
 
 1. See the visit history of each contact.
 2. Get an email notification for every new lead.
 3. Leadin stats show you where your leads are coming from.
-4. Segment your contact list based on page views and submissinos.
+4. Segment your contact list based on page views and submissions.
 5. Collect more contacts with the pop-up subscribe widget.
 6. Create custom tagged lists, choose the form triggers to add contacts and sync your contacts to third-party email services
 
 == Changelog ==
 
-- Current version: 2.2.11
-- Current version release: 2015-02-18
+- Current version: 3.1.4
+- Current version release: 2015-03-17
+
+= 3.1.4 (2015.03.17) =
+= Enhancements =
+- Intercom added to plugin for in-app support
+- Onboarding improved for non-setup installs
+- Contact notifications are now sent through email delivery service to improve deliverability
+
+- Bug fixes
+- Namespaced AWeber oauth libraries with LI_ prefix to avoid duplicate class warnings
+- SVG icon permanently fixed for servers that don't natively support that file type
+- Check if database options are set for subscribe preview button
+- Added in check for default leadin_options in case they were deleted and recreate them if they are not there
+- Add in checks for the contact lookups to account for default object warnings
+- 
+
+= 3.1.3 (2015.02.19) =
+= Enhancements =
+- Don't show the "You should receive a confirmation email shortly" message in the popup thank you if the confirmation email setting is toggled off
+
+- Bug fixes
+- Fixed SVG icon
+- Fixed the default object warnings in class-leadin-contact for the enrichment lookups
+- Tested NinjaPopups and added to readme as unsupported form plugin
+- "Namespace" AWeber with "LI_" prefix to avoid conflicts
+
+= 3.1.2 (2015.01.26) =
+= Enhancements =
+- Tested JotForm + added compatibility to the ReadMe file
+
+- Bug fixes
+- Add in support for like_escape for < WordPress 4.0
+- Add first + last names to bulk MailChimp connector
+- Remove rogue WPDB prepare in tag list table
+- Check for existence of ESP connector when pushing to an email list
+- Bug fix for multisite installs with broken onboarding
+
+= 3.1.1 (2014.01.20) =
+= Enhancements =
+- Added ability to toggle Leadin data access by user role
+- Hide Leadin nav menu item for user roles without access to Leadin data 
+- Discontinued and disabled the beta program
+
+- Bug fixes
+- Fixed broken onboarding in WordPress Multisite after adding a new site to the network
+- Contact totals in tag editor now link to tagged list
+
+= 3.1.0 (2015.1.06) =
+= Enhancements =
+- GetResponse, Campaign Monitor and AWeber integrations launched
+
+= 3.0.0 (2014.12.10) =
+= Enhancements =
+- Jumping to version 3.0.0 to indefinitely override repository version of Leadin
+
+= Leadin 2.2.7 - 2.2.11 =
+
+*Leadin was split into Leadin and <a href="http://leadin.com/pro-upgrade" target="_blank">Leadin Pro</a> after version 2.2.6 and later merged back together, so versions 2.2.7 - 2.2.11 and 3.0.0 - 3.1.3 share similar updates.*
 
 = 2.2.11 (2015.02.18) =
+
 = Enhancements =
 - Don't show the "You should receive a confirmation email shortly" message in the popup thank you if the confirmation email setting is toggled off
 
@@ -159,6 +176,15 @@ You betcha! Leadin should work just fine on Multisite right out-of-the-box witho
 - Bug fixes
 - Fixed bug with non-tagged contacts being added to tagged lists
 
+= 2.2.6 (2014.12.08) =
+= Enhancements =
+- Contact Lookup power-up
+- Added names to contact exports
+- Added “tagged as” to the email subject lines
+
+- Bug fixes
+- Fixed bug where Leadin would add non-tagged emails to ESP lists when it was not supposed to do those contacts 
+
 = 2.2.5 (2014.11.20) =
 - Bug fixes
 - Fixes to bulk action labels
@@ -192,7 +218,7 @@ You betcha! Leadin should work just fine on Multisite right out-of-the-box witho
 - Retooled tag editor to only pull down unique selectors
 - Contact list now will go back to the previous page when clicking the back link
 - Fixed mysterious bug where popup ignored new visitors
-- NOW the subscription confirmation stays checked/uncheckedon save (Thanks Kate!)
+- NOW the subscription confirmation stays checked/unchecked on save (Thanks Kate!)
 
 = 2.2.1 (2014.10.01) =
 = Enhancements =
@@ -214,11 +240,11 @@ You betcha! Leadin should work just fine on Multisite right out-of-the-box witho
 - Added ability to ignore logged in user roles from tracking
 - Popup can be previewed on the front end site before saving changes
 - MailChimp Connect checks for faulty API keys and prompts the user to enter in one that works on the tag editor page
-- Email headers for contact notificatons come from the person who filled in the form
+- Email headers for contact notificaitons come from the person who filled in the form
 - Added traffic source URL parameters to contact notification emails
 
 - Bug fixes
-- Leadin now accounts for timezones descrepency on some MySQL databases and offsets to local time
+- Leadin now accounts for timezones discrepancy on some MySQL databases and offsets to local time
 - Filters are now persistent when clicking the link back to the contact list from a contact timeline
 - cURL dependency no longer prints the raw error to the screen on installation and gracefully disables cURL-dependant features
 - Stats page and contact list totals didn't match up - fixed
@@ -308,7 +334,7 @@ You betcha! Leadin should work just fine on Multisite right out-of-the-box witho
 = 0.10.0 (2014.06.03) =
 - Bug fixes
 - Fixed original referrer in contact timeline
-- Fixed unncessary queries on contact timeline
+- Fixed unnecessary queries on contact timeline
 - Only run the update check if the version number is different than the saved number
 - Remove "fakepath" from file path text in uploaded file input types
 
@@ -333,7 +359,7 @@ You betcha! Leadin should work just fine on Multisite right out-of-the-box witho
 
 = 0.9.1 (2014.05.14) =
 - Bug fixes
-- Fixed pop-up location dropdown not defualting to saved options value
+- Fixed pop-up location dropdown not defaulting to saved options value
 - Hooked subscribe widget into get_footer action instead of loop_end filter
 
 = 0.9.0 (2014.05.12) =
@@ -361,7 +387,7 @@ You betcha! Leadin should work just fine on Multisite right out-of-the-box witho
 - Bug fixes
 - Merge duplicate contacts into one record
 - Remove url parameters from source links in contact list
-- Downgrade use of singletons so classes are compatabile with PHP 5.2
+- Downgrade use of singletons so classes are compatible with PHP 5.2
 
 = Enhancements =
 - Swap out delete statements in favor of binary "deleted" flags to minimize data loss risk
@@ -406,7 +432,7 @@ You betcha! Leadin should work just fine on Multisite right out-of-the-box witho
 
 = 0.6.2 (2014.04.07) =
 - Bug fixes
-- Fixed activation error for some installs by removing error ouput
+- Fixed activation error for some installs by removing error output
 - MySQL query optimizations
 - Fixed bug with MySQL V5.0+ by adding default NULL values for insert statements on contacts table
 - Changed title for returning lead email notifications
@@ -455,7 +481,7 @@ You betcha! Leadin should work just fine on Multisite right out-of-the-box witho
 - Improved contact history styling + interface
 - Added visit, pageview and submission stats to the contact view
 - Added Live Chat into the Leadin WordPress admin screens
-- New Leadin icons for WordPres sidebar and admin nav menu
+- New Leadin icons for WordPress sidebar and admin nav menu
 
 = 0.4.6 (2013.02.11) =
 - Bug fixes
@@ -463,7 +489,7 @@ You betcha! Leadin should work just fine on Multisite right out-of-the-box witho
 - Bug fixes to contact type headings
 - Bug fix "Select All" export
 - Bug fix for CSS "page views" hover triangle breaking to next line
-- Backwards compability for < jQuery 1.7.0
+- Backwards compatibility for < jQuery 1.7.0
 - Add Leadin link to admin bar
 
 = Enhancements =

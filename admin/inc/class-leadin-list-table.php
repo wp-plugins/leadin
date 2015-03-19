@@ -189,7 +189,6 @@ class LI_List_Table extends WP_List_Table {
         $ids_for_action = '';
         $hashes_for_action = '';
 
-        // @TODO Fix the delete logic
         if ( strstr($this->current_action(), 'delete') )
         {
             if ( 'delete_selected' === $this->current_action() )
@@ -201,6 +200,8 @@ class LI_List_Table extends WP_List_Table {
                    if ( $i != (count($_GET['contact'])-1) )
                         $ids_for_action .= ',';
                 }
+
+                leadin_track_plugin_activity('Bulk Contacts Deleted', array( "contact_type" => 'selected'));
             }
             else if ( 'delete_all' === $this->current_action() )
             {
@@ -209,10 +210,11 @@ class LI_List_Table extends WP_List_Table {
                     $ids_for_action .= $contact['ID'] . ',';
 
                 $ids_for_action = rtrim($ids_for_action, ',');
+
+                leadin_track_plugin_activity('Bulk Contacts Deleted', array( "contact_type" => 'all'));
             }
             else // default case for when it's not actually processing a bulk action
                 return FALSE;
-
 
             $q = $wpdb->prepare("SELECT hashkey FROM $wpdb->li_leads WHERE lead_id IN ( " . $ids_for_action . " ) ", "");
             $hashes = $wpdb->get_results($q);
@@ -294,6 +296,8 @@ class LI_List_Table extends WP_List_Table {
                     $wpdb->query($q);
                 }
 
+                leadin_track_plugin_activity('Bulk Tag Added', array( "contact_type" => ( empty($_POST['leadin_selected_contacts']) ? 'all' : 'selected' )));
+
                 // Bulk push all the email addresses for the tag to the MailChimp API
                 $tagger = new LI_Tag_Editor($tag_id);
                 $tagger->push_contacts_to_tagged_list($tag_id);
@@ -305,6 +309,8 @@ class LI_List_Table extends WP_List_Table {
                     // "Delete" the existing tags only
                     $q = $wpdb->prepare("UPDATE $wpdb->li_tag_relationships SET tag_relationship_deleted = 1 WHERE tag_id = %d AND contact_hashkey IN ( " . rtrim($contacts_to_update, ',')  . ") ", $tag_id);
                     $wpdb->query($q);
+
+                    leadin_track_plugin_activity('Bulk Tag Removed', array( "contact_type" => ( empty($_POST['leadin_selected_contacts']) ? 'all' : 'selected' )));
                 }
             }
         }
@@ -345,6 +351,8 @@ class LI_List_Table extends WP_List_Table {
 
             $search_query = $_GET['s'];
             $mysql_search_filter = $wpdb->prepare(" AND ( l.lead_email LIKE '%%%s%%' OR l.lead_source LIKE '%%%s%%' ) ", $escaped_query, $escaped_query);
+
+            leadin_track_plugin_activity('Filtered List', array ( "filter_type" => "search" ));
         }
         
         $filtered_contacts = array();
@@ -374,6 +382,8 @@ class LI_List_Table extends WP_List_Table {
                 $q = $wpdb->prepare("SELECT lead_hashkey FROM $wpdb->li_pageviews WHERE pageview_title LIKE '%%%s%%' GROUP BY lead_hashkey",  htmlspecialchars(urldecode($_GET['filter_content'])));
                 $filtered_contacts = leadin_merge_filtered_contacts($wpdb->get_results($q, 'ARRAY_A'), $filtered_contacts);
                 $filter_action_set = TRUE;
+
+                leadin_track_plugin_activity('Filtered List', array ( "filter_type" => "page" ));
             }
         }
         
@@ -385,6 +395,8 @@ class LI_List_Table extends WP_List_Table {
             {
                 $filter_form = str_replace(array('#', '.'), '', htmlspecialchars(urldecode($_GET['filter_form'])));
                 $filter_form_query = $wpdb->prepare(" AND ( form_selector_id LIKE '%%%s%%' OR form_selector_classes LIKE '%%%s%%' )", $filter_form, $filter_form);
+     
+                leadin_track_plugin_activity('Filtered List', array ( "filter_type" => "form" ));
             }
 
             $q = $wpdb->prepare("SELECT lead_hashkey FROM $wpdb->li_submissions WHERE form_page_title LIKE '%%%s%%' ", ( $_GET['filter_content'] != 'any page' ? htmlspecialchars(urldecode($_GET['filter_content'])): '' ));
@@ -549,7 +561,7 @@ class LI_List_Table extends WP_List_Table {
     function views ()
     {
         $this->tags = stripslashes_deep($this->get_tags());
-        
+
         $current = ( !empty($_GET['contact_type']) ? html_entity_decode($_GET['contact_type']) : 'all' );
         $all_params = array( 'contact_type', 's', 'paged', '_wpnonce', '_wpreferrer', '_wp_http_referer', 'action', 'action2', 'filter_form', 'filter_action', 'filter_content', 'contact');
         

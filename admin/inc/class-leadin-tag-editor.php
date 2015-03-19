@@ -88,7 +88,7 @@ class LI_Tag_Editor {
 	{
 		global $wpdb;
 
-		$q = $wpdb->prepare("SELECT MAX(tag_order) FROM $wpdb->li_tags", "");
+		$q = "SELECT MAX(tag_order) FROM $wpdb->li_tags";
 		$tag_order = $wpdb->get_var($q);
 		$tag_order = ( $tag_order ? $tag_order + 1 : 1 );
 		$tag_slug = $this->generate_slug($tag_text);
@@ -113,7 +113,6 @@ class LI_Tag_Editor {
 	function save_tag ( $tag_id, $tag_text, $tag_form_selectors, $tag_synced_lists )
 	{
 		global $wpdb;
-		global $leadin_mailchimp_connect_wp;
 
 		$tag_slug = $this->generate_slug($tag_text, $tag_id);
 

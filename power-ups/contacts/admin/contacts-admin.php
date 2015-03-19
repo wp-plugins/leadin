@@ -84,6 +84,20 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
         $li_contact->get_contact_history();
         $lead_email = $li_contact->history->lead->lead_email;
         $lead_source = leadin_strip_params_from_url($li_contact->history->lead->lead_source);
+        $leadin_user = leadin_get_current_user();
+
+        ?>
+            <script type="text/javascript">
+              !function(){var analytics=window.analytics=window.analytics||[];if(!analytics.initialize)if(analytics.invoked)window.console&&console.error&&console.error("Segment snippet included twice.");else{analytics.invoked=!0;analytics.methods=["trackSubmit","trackClick","trackLink","trackForm","pageview","identify","group","track","ready","alias","page","once","off","on"];analytics.factory=function(t){return function(){var e=Array.prototype.slice.call(arguments);e.unshift(t);analytics.push(e);return analytics}};for(var t=0;t<analytics.methods.length;t++){var e=analytics.methods[t];analytics[e]=analytics.factory(e)}analytics.load=function(t){var e=document.createElement("script");e.type="text/javascript";e.async=!0;e.src=("https:"===document.location.protocol?"https://":"http://")+"cdn.segment.com/analytics.js/v1/"+t+"/analytics.min.js";var n=document.getElementsByTagName("script")[0];n.parentNode.insertBefore(e,n)};analytics.SNIPPET_VERSION="3.0.1";
+                analytics.load("<?php echo SEGMENT_WRITE_KEY ?>");
+                analytics.identify("<?php echo $leadin_user['user_id'] ?>", {
+                    email       : "<?php echo $leadin_user['email'] ?>",
+                    contacts    : "<?php echo $leadin_user['total_contacts'] ?>",
+                });
+                analytics.page("Loaded Contact Detail Page");
+              }}();
+            </script>
+        <?php
 
         if ( isset($_POST['edit_tags']) )
         {
@@ -126,9 +140,15 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
         }
         
         echo '<div class="contact-header-wrap">';
+
+            if  ( $li_contact->history->lead->lead_deleted )
+                $li_contact->display_error_message_for_merged_contact($li_contact->history->lead->lead_email);
+
             echo '<img class="contact-header-avatar leadin-dynamic-avatar_' . substr($lead_id, -1) . '" height="76px" width="76px" src="https://api.hubapi.com/socialintel/v1/avatars?email=' . $lead_email . '"/>';
             echo '<div class="contact-header-info">';
                 echo '<h1 class="contact-name">' . $lead_email . '</h1>';
+
+                
                 echo '<div class="contact-tags">';
                     foreach( $li_contact->history->tags as $tag ) {
                         if ($tag->tag_set)
@@ -160,7 +180,7 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                         </form>
                     </div>
 
-                    <a class="thickbox contact-edit-tags" href="#TB_inline?width=400&height=400&inlineId=edit-contact-tags">edit tags</a>
+                    <a class="thickbox contact-edit-tags" <?php echo ( $li_contact->history->lead->lead_deleted ? 'style="display: none;"' : '' ); ?> href="#TB_inline?width=400&height=400&inlineId=edit-contact-tags">edit tags</a>
 
                     <?php
 
@@ -169,7 +189,7 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
         echo '</div>';
         
         echo '<div id="col-container">';
-            echo '<div id="col-right">';
+            echo '<div id="col-right" ' . ( $li_contact->history->lead->lead_deleted ? 'style="display: none;"' : '' ) . '>';
                 echo '<div class="col-wrap contact-history">';
                     echo '<ul class="sessions">';
                     $sessions = $li_contact->history->sessions;
@@ -279,7 +299,7 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                     echo '</ul>';
                 echo '</div>';
             echo '</div>';
-            echo '<div id="col-left" class="metabox-holder">';
+            echo '<div id="col-left" class="metabox-holder" ' . ( $li_contact->history->lead->lead_deleted ? 'style="display: none;"' : '' ) . '>';
                 echo '<div class="leadin-meta-section">';
                     echo '<h4 class="leain-meta-header">Tracking Info</h4>';
                     echo '<table class="leadin-meta-table"><tbody>';
@@ -314,10 +334,61 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                     echo '</tbody></table>';
                 echo '</div>'; // leadin-meta-section
                 echo '<div class="leadin-meta-section">';
-                    echo '<h4 class="leain-meta-header leadin-premium-tag">Social Info</h4>';
+                    echo '<h4 class="leain-meta-header leadin-premium-tag">Personal Info</h4>';
                     echo '<table class="leadin-meta-table"><tbody>';
                         echo '<tr>';
-                            echo '<td><a href="http://leadin.com/pro-upgrade/?utm_source=Leadin%20Repo%20Plugin&utm_medium=Contact%20Detail%20Screen&utm_campaign=Repo" target="_blank">Upgrade to Leadin Pro for free</a> to get social info</td>';
+                            if ( leadin_check_pro_user() )
+                            {
+                                $social_data = FALSE;
+
+                                if ( isset($li_contact->history->lead->social_data->properties->primary) )
+                                {
+                                    $primary = $li_contact->history->lead->social_data->properties->primary;
+                                    echo '<b>' . $primary->title . ( $primary->company_name ? ' - ' . $primary->company_name : '' ) . '</b>';
+
+                                    $social_data = TRUE;
+                                }
+
+                                if ( isset($li_contact->history->lead->social_data->properties->description) )
+                                {
+                                    echo '</br>' . $li_contact->history->lead->social_data->properties->description;
+
+                                    $social_data = TRUE;
+                                }
+
+                                if ( isset($li_contact->history->lead->social_data->properties->social_profiles) )
+                                {
+                                    if ( count($li_contact->history->lead->social_data->properties->social_profiles) )
+                                    {
+                                        echo '<table class="leadin-meta-table"><tbody>';
+                                            foreach ( $li_contact->history->lead->social_data->properties->social_profiles as $key => $profile )
+                                            {
+                                                echo '<tr>';
+                                                    echo '<th>';
+                                                        echo $profile->typename;
+                                                    echo '</th>';
+                                                    echo '<td>';
+                                                        echo '<a href="' . leadin_safe_social_profile_url($profile->url) . '" target="_blank">' . ( $profile->typeid == 'twitter' ? '@' : '' ) . ( $profile->typeid == 'linkedin' ? '/in/' : '' ) . $profile->username . '</a>';
+                                                    echo '</td>';
+                                                echo '</tr>';
+                                            }
+                                        echo '</tbody></table>';
+
+                                        $social_data = TRUE;
+                                    }
+                                }
+
+                                if ( ! $social_data )
+                                    echo 'We couldn\'t find any personal info for this contact.';
+                            }
+                            else
+                            {
+                                echo '<table class="leadin-meta-table"><tbody>';
+                                    echo '<tr>';
+                                        echo '<td><a href="'.  admin_url() . 'admin.php?page=leadin_pro_upgrade">Upgrade to Leadin Pro for free</a> to get personal info</td>';
+                                    echo '</tr>';
+                                echo '</tbody></table>';
+                            }
                         echo '</tr>';
                     echo '</tbody></table>';
                 echo '</div>'; // leadin-meta-section
@@ -325,12 +396,145 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                     echo '<h4 class="leain-meta-header leadin-premium-tag">Company Info</h4>';
                     echo '<table class="leadin-meta-table"><tbody>';
                         echo '<tr>';
-                            echo '<td><a href="http://leadin.com/pro-upgrade/?utm_source=Leadin%20Repo%20Plugin&utm_medium=Contact%20Detail%20Screen&utm_campaign=Repo" target="_blank">Upgrade to Leadin Pro for free</a> to get company info</td>';
+                            if ( leadin_check_pro_user() )
+                            {
+                                $company_data = FALSE;
+
+                                $properties = ( isset($li_contact->history->lead->company_data->properties) ? $li_contact->history->lead->company_data->properties : '' );
+      
+                                if ( isset($properties->name) )
+                                {
+                                    echo '<p>';
+                                        echo '<b>About ' . $properties->name . '</b>';
+                                        if ( isset($properties->overview) )
+                                        {
+                                            $overview = $properties->overview;
+                                            
+                                            if ( strlen($overview) < 260 )
+                                            {
+                                                echo '<br>' . $overview;
+                                            }
+                                            else
+                                            {
+                                                echo '<div id="company-detail-overview-short">' . substr($overview, 0, strpos($overview, '.', 260)) . ' ... <a id="contact-detail-read-more" href="javascript:void(0);">read more</a></div>';
+                                                echo '<div style="display: none;" id="company-detail-overview-full">' . $overview . ' <a id="contact-detail-read-less" href="javascript:void(0);">read less</a></div>';
+                                            }
+
+                                            $company_data = TRUE;
+                                        }
+                                    echo '</p>';
+                                }
+
+                                echo '<table class="leadin-meta-table"><tbody>';
+
+                                if ( !empty($properties->employees) )
+                                {
+                                    echo '<tr>';
+                                        echo '<th>Employees</th>';
+                                        echo '<td>' . $properties->employees . '</td>';
+                                    echo '</tr>';
+
+                                    $company_data = TRUE;
+                                }
+
+                                if ( !empty($properties->revenue) )
+                                {
+                                    echo '<tr>';
+                                        echo '<th>Revenue</th>';
+                                        echo '<td>' . $properties->revenue . '</td>';
+                                    echo '</tr>';
+
+                                    $company_data = TRUE;
+                                }
+
+                                if ( !empty($properties->state) || !empty($properties->country) )
+                                {
+                                    echo '<tr>';
+                                        echo '<th>Headquarters</th>';
+                                        echo '<td>' . ( !empty($properties->state) ? $properties->state : '' ) . ( !empty($properties->state) && !empty($properties->country) ? ', ' : '' ) . ( !empty($properties->country) ? $properties->country : '' ) . '</td>';
+                                    echo '</tr>';
+
+                                    $company_data = TRUE;
+                                }
+
+                                if ( !empty($properties->founded) )
+                                {
+                                    echo '<tr>';
+                                        echo '<th>Founded</th>';
+                                        echo '<td>' . $properties->founded . '</td>';
+                                    echo '</tr>';
+
+                                    $company_data = TRUE;
+                                }
+
+                                if ( !empty($properties->facebookpageurl) )
+                                {
+                                    echo '<tr>';
+                                        echo '<th>Facebook</th>';
+                                        echo '<td>' . '<a href="' . $properties->facebookpageurl . '" target="_blank">' . $properties->name . '</a></td>';
+                                    echo '</tr>';
+
+                                    $company_data = TRUE;
+                                }
+
+                                if ( !empty($properties->twitterusername) )
+                                {
+                                    echo '<tr>';
+                                        echo '<th>Twitter</th>';
+                                        echo '<td>' . '<a href="' . $properties->twitterurl . '" target="_blank">' . '@' . $properties->twitterusername . '</a></td>';
+                                    echo '</tr>';
+
+                                    $company_data = TRUE;
+                                }
+
+                                if ( !empty($properties->linkedinurl) )
+                                {
+                                    echo '<tr>';
+                                        echo '<th>LinkedIn</th>';
+                                        echo '<td>' . '<a href="' . $properties->linkedinurl . '" target="_blank">' . $properties->name . '</a></td>';
+                                    echo '</tr>';
+
+                                    $company_data = TRUE;
+                                }
+
+                                if ( !empty($properties->address) )
+                                {
+                                    echo '<tr>';
+                                        echo '<th>Address</th>';
+                                        echo '<td><a href="http://maps.google.com/maps?q=' . urlencode($properties->address) . '"" target="_blank">' . $properties->address . '</a></td>';
+                                    echo '</tr>';
+
+                                    $company_data = TRUE;
+                                }
+
+                                if ( !empty($properties->country) )
+                                {
+                                    echo '<tr>';
+                                        echo '<th>Country</th>';
+                                        echo '<td>' . $properties->country . '</td>';
+                                    echo '</tr>';
+
+                                    $company_data = TRUE;
+                                }
+
+                                if ( ! $company_data )
+                                    echo 'We couldn\'t find any company info for this contact.';
+
+                                 
+                                echo '</tbody></table>';
+                            }
+                            else
+                            {
+                                echo '<table class="leadin-meta-table"><tbody>';
+                                    echo '<tr>';
+                                        echo '<td><a href="'. admin_url() . 'admin.php?page=leadin_pro_upgrade">Upgrade to Leadin Pro for free</a> to get company info</td>';
+                                    echo '</tr>';
+                                echo '</tbody></table>';
+                            }
                         echo '</tr>';
                     echo '</tbody></table>';
                 echo '</div>'; // leadin-meta-section
-            echo '</div>';
-
+            echo '</div>'; // col-left
         echo '</div>';
     }
 
@@ -365,8 +569,14 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
 
             <?php
 
-                $this->leadin_header('Leadin Contacts', 'leadin-contacts__header');
+                $this->leadin_header('Leadin Contacts', 'leadin-contacts__header', 'Loaded Contact List Page');
             ?>
+
+            <?php if ( isset($_GET['pro_upgrade']) ) : ?>
+                <div class="updated">
+                    <p><?php _e( '<p><b>Welcome to Leadin Pro!</b></p> You can now use every feature Leadin has to offer. Visit our site to <a href="http://leadin.com/go-pro" target="_blank">learn more</a> about what Leadin Pro unlocks for you.', 'my-text-domain' ); ?></p>
+                </div>
+            <?php endif; ?>
 
             <div class="leadin-contacts__nav">
                 <?php $leadinListTable->views(); ?>
@@ -655,5 +865,6 @@ if ( isset($_POST['export-all']) || isset($_POST['export-selected']) )
 
     exit;
 }
+
 
 ?>

@@ -3,7 +3,7 @@
 Plugin Name: Leadin
 Plugin URI: http://leadin.com
 Description: Leadin is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
-Version: 2.2.11
+Version: 3.1.4
 Author: Andy Cook, Nelson Joyce
 Author URI: http://leadin.com
 License: GPL2
@@ -26,7 +26,13 @@ if ( !defined('LEADIN_DB_VERSION') )
 	define('LEADIN_DB_VERSION', '2.2.4');
 
 if ( !defined('LEADIN_PLUGIN_VERSION') )
-	define('LEADIN_PLUGIN_VERSION', '2.2.11');
+	define('LEADIN_PLUGIN_VERSION', '3.1.4');
+
+if ( !defined('MIXPANEL_PROJECT_TOKEN') )
+    define('MIXPANEL_PROJECT_TOKEN', '2791b6942b57bbef2ba12b2452468253');
+
+if ( !defined('SEGMENT_WRITE_KEY') )
+    define('SEGMENT_WRITE_KEY', 'fklilck6m2');
 
 if ( !defined('MC_KEY') )
     define('MC_KEY', '934aaed05049dde737d308be26167eef-us3');
@@ -38,18 +44,30 @@ if ( !defined('LEADIN_SOURCE') )
 // Include Needed Files
 //=============================================
 
+if ( file_exists(LEADIN_PLUGIN_DIR . '/inc/leadin-constants.php') )
+	include_once(LEADIN_PLUGIN_DIR . '/inc/leadin-constants.php');
+
 require_once(LEADIN_PLUGIN_DIR . '/inc/leadin-ajax-functions.php');
 require_once(LEADIN_PLUGIN_DIR . '/inc/leadin-functions.php');
 require_once(LEADIN_PLUGIN_DIR . '/inc/class-emailer.php');
 require_once(LEADIN_PLUGIN_DIR . '/inc/class-leadin-updater.php');
 require_once(LEADIN_PLUGIN_DIR . '/admin/leadin-admin.php');
 
+require_once(LEADIN_PLUGIN_DIR . '/lib/mixpanel/LI_Mixpanel.php');
+require_once(LEADIN_PLUGIN_DIR . '/lib/segment/lib/Segment.php');
 require_once(LEADIN_PLUGIN_DIR . '/inc/class-leadin.php');
 
 require_once(LEADIN_PLUGIN_DIR . '/power-ups/subscribe-widget.php');
 require_once(LEADIN_PLUGIN_DIR . '/power-ups/contacts.php');
 require_once(LEADIN_PLUGIN_DIR . '/power-ups/mailchimp-connect.php');
 require_once(LEADIN_PLUGIN_DIR . '/power-ups/constant-contact-connect.php');
+require_once(LEADIN_PLUGIN_DIR . '/power-ups/aweber-connect.php');
+require_once(LEADIN_PLUGIN_DIR . '/power-ups/campaign-monitor-connect.php');
+require_once(LEADIN_PLUGIN_DIR . '/power-ups/getresponse-connect.php');
+require_once(LEADIN_PLUGIN_DIR . '/power-ups/beta-program.php');
+require_once(LEADIN_PLUGIN_DIR . '/power-ups/lookups.php'); 
+
+
 
 //=============================================
 // Hooks & Filters
@@ -78,6 +96,7 @@ function activate_leadin ( $network_wide )
 			switch_to_blog($blog_id);
 			add_leadin_defaults();
 			$activated[] = $blog_id;
+			leadin_track_plugin_registration_hook(TRUE);
 		}
  
 		// Switch back to the current blog
@@ -89,6 +108,7 @@ function activate_leadin ( $network_wide )
 	else
 	{
 		add_leadin_defaults();
+		leadin_track_plugin_registration_hook(TRUE);
 	}
 }
 
@@ -105,7 +125,7 @@ function add_leadin_defaults ( )
 	{
 		$opt = array(
 			'li_installed'				=> 1,
-			'leadin_version'            => LEADIN_PLUGIN_VERSION,
+			'leadin_version'			=> LEADIN_PLUGIN_VERSION,
 			'li_db_version'				=> LEADIN_DB_VERSION,
 			'li_email' 					=> get_bloginfo('admin_email'),
 			'li_updates_subscription'	=> 1,
@@ -114,10 +134,15 @@ function add_leadin_defaults ( )
 			'ignore_settings_popup'		=> 0,
 			'data_recovered'			=> 1,
 			'delete_flags_fixed'		=> 1,
+			'beta_tester'				=> 0,
 			'converted_to_tags'			=> 1,
 			'names_added_to_contacts'	=> 1
 		);
-		
+
+		// Add the Pro flag if this is a pro installation
+		if ( ( defined('LEADIN_UTM_SOURCE') && LEADIN_UTM_SOURCE != 'leadin%20repo%20plugin' ) || ! defined('LEADIN_UTM_SOURCE') )
+			$opt['pro'] = 1;
+
 		// this is a hack because multisite doesn't recognize local options using either update_option or update_site_option...
 		if ( is_multisite() )
 		{
@@ -134,25 +159,54 @@ function add_leadin_defaults ( )
 		leadin_db_install();
 
 		$multisite_prefix = ( is_multisite() ? $wpdb->prefix : '' );
-		$q = $wpdb->prepare("
+		$q = "
 			INSERT INTO " . $multisite_prefix . "li_tags 
 		        ( tag_text, tag_slug, tag_form_selectors, tag_synced_lists, tag_order ) 
 		    VALUES ('Commenters', 'commenters', '#commentform', '', 1),
 		        ('Leads', 'leads', '', '', 2),
 		        ('Contacted', 'contacted', '', '', 3),
-		        ('Customers', 'customers', '', '', 4)", "");
+		        ('Customers', 'customers', '', '', 4)";
 		$wpdb->query($q);
 	}
 
 	$leadin_active_power_ups = get_option('leadin_active_power_ups');
 
-	if ( !$leadin_active_power_ups )
+	if ( ! $leadin_active_power_ups )
 	{
 		$auto_activate = array(
-			'contacts'
+			'contacts',
+			'lookups' // 3.1.4 change - auto activating this power-up and using the Pro flag to toggle on/off
 		);
 
 		update_option('leadin_active_power_ups', serialize($auto_activate));
+	}
+
+	setcookie ( "ignore_social_share" , "1",  2592000, "/" );
+
+	// This is in here because Segment doesn't have register_once, so it's in a method that's only called once
+	if ( leadin_check_pro_user() )
+	{
+		$traits = array();
+
+		if ( defined('LEADIN_REFERRAL_SOURCE') )
+			$traits['referral_source'] = LEADIN_REFERRAL_SOURCE;
+
+		if ( defined('LEADIN_UTM_SOURCE') )
+			$traits['utm_source'] = LEADIN_UTM_SOURCE;
+
+		if ( defined('LEADIN_UTM_MEDIUM') )
+			$traits['utm_medium'] = LEADIN_UTM_MEDIUM;
+
+		if ( defined('LEADIN_UTM_TERM') )
+			$traits['utm_term'] = LEADIN_UTM_TERM;
+
+		if ( defined('LEADIN_UTM_CONTENT') )
+			$traits['utm_content'] = LEADIN_UTM_CONTENT;
+
+		if ( defined('LEADIN_UTM_CAMPAIGN') )
+			$traits['utm_campaign'] = LEADIN_UTM_CAMPAIGN;
+
+	    leadin_set_user_properties($traits);
 	}
 }
 
@@ -174,11 +228,14 @@ function deactivate_leadin ( $network_wide )
 		foreach ( $blog_ids as $blog_id ) 
 		{
 			switch_to_blog($blog_id);
+			leadin_track_plugin_registration_hook(FALSE);
 		}
  
 		// Switch back to the current blog
 		switch_to_blog($current_blog);
 	}
+	else
+		leadin_track_plugin_registration_hook(FALSE);
 }
 
 function activate_leadin_on_new_blog ( $blog_id, $user_id, $domain, $path, $site_id, $meta )

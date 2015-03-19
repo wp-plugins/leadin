@@ -32,13 +32,6 @@ class LI_Emailer {
         // Each line in an email can only be 998 characters long, so lines need to be broken with a wordwrap
         $body = wordwrap($body, 900, "\r\n");
 
-        $from = $history->lead->lead_email;
-        $headers = "From: " . $from . " <" . $from . ">\r\n";
-        $headers.= "Reply-To: " . $from . " <" . $from . ">\r\n";
-        $headers.= "X-Mailer: PHP/" . phpversion() . "\r\n";
-        $headers.= "MIME-Version: 1.0\r\n";
-        $headers.= "Content-type: text/html; charset=utf-8\r\n";
-
         // Get email from plugin settings, if none set, use admin email
         $options = get_option('leadin_options');
         $to = ( $options['li_email'] ? $options['li_email'] : get_bloginfo('admin_email') ); // Get email from plugin settings, if none set, use admin email
@@ -55,8 +48,38 @@ class LI_Emailer {
             $return_status = 'by a returning contact ';
 
         $subject = "Form submission " . $tag_status . $return_status . "on " . get_bloginfo('name') . " - " . $history->lead->lead_email;
-        $email_sent = wp_mail($to, $subject, $body, $headers);
 
+        $headers = "From: Leadin <notifications@leadin.com>\r\n";
+        $headers .= "Reply-To: Leadin <notifications@leadin.com>\r\n";
+        $headers .= "X-Mailer: PHP/" . phpversion() . "\r\n";
+        $headers .= "MIME-Version: 1.0\r\n";
+        $headers .= "Content-type: text/html; charset=utf-8\r\n";
+
+        if ( isset($options['pro']) && $options['pro'] )
+        {
+            $email_sent = $this->send_email_via_sendgrid($to, $subject, $body, get_bloginfo('wpurl'));
+
+            if ( $email_sent )
+            {
+                leadin_track_plugin_activity('Contact Notification Sent', array('service' => 'sendgrid'));
+            }
+            else
+            {
+                $email_sent = wp_mail($to, $subject, $body, $headers);
+                leadin_track_plugin_activity('Contact Notification Sent', array('service' => 'php_mail'));
+            }
+        }
+        else
+        {
+            $headers = "From: Leadin <notifications@leadin.com>\r\n";
+            $headers .= "Reply-To: Leadin <notifications@leadin.com>\r\n";
+            $headers .= "X-Mailer: PHP/" . phpversion() . "\r\n";
+            $headers .= "MIME-Version: 1.0\r\n";
+            $headers .= "Content-type: text/html; charset=utf-8\r\n";
+
+            $email_sent = wp_mail($to, $subject, $body, $headers);
+            leadin_track_plugin_activity('Contact Notification Sent', array('service' => 'php_mail'));
+        }
 
         return $email_sent;
     }
@@ -70,7 +93,8 @@ class LI_Emailer {
     function build_body ( $li_contact ) 
     {
         $format = '<html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html;charset=utf-8"/><meta name="viewport" content="width=device-width"/></head><body style="width: 100%%;min-width: 100%%;-webkit-text-size-adjust: 100%%;-ms-text-size-adjust: 100%%;margin: 0;padding: 0;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;text-align: left;line-height: 19px;font-size: 14px;background-color: #f1f1f1;"><table class="body" style="border-spacing: 0;border-collapse: collapse;padding: 0;vertical-align: top;text-align: left;height: 100%%;width: 100%%;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;background-color: #f1f1f1;"><tr style="padding: 0;vertical-align: top;text-align: left;"><td class="center" align="center" valign="top" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 0;vertical-align: top;text-align: center;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"><center style="width: 100%%;min-width: 580px;"><table class="container" style="border-spacing: 0;border-collapse: collapse;padding: 0;vertical-align: top;text-align: inherit;width: 580px;margin: 0 auto;"><tr style="padding: 0;vertical-align: top;text-align: left;"><td style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 0;vertical-align: top;text-align: left;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;">%s%s%s%s%s</td></tr></table></center></td></tr></table></body></html>';
-        $built_body = sprintf($format, $this->build_submission_details(get_bloginfo('url')), $this->build_contact_identity($li_contact->history->lead->lead_email), $this->build_sessions($li_contact->history), $this->build_enrichment_data(), $this->build_footer($li_contact));
+
+        $built_body = sprintf($format, $this->build_submission_details(get_bloginfo('url')), $this->build_contact_identity($li_contact->history->lead->lead_email), $this->build_sessions($li_contact->history), $this->build_enrichment_data($li_contact), $this->build_footer($li_contact));
 
         return $built_body;
     }
@@ -84,6 +108,7 @@ class LI_Emailer {
     function build_submission_details ( $url ) {
         $format = '<table class="row submission-detail" style="border-spacing: 0;border-collapse: collapse;padding: 0px;vertical-align: top;text-align: left;width: 100%%;position: relative;display: block;"><tr style="padding: 0;vertical-align: top;text-align: left;"><td class="wrapper last" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 10px 20px 0px 0px;vertical-align: top;text-align: left;position: relative;padding-right: 0px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"><table class="twelve columns" style="border-spacing: 0;border-collapse: collapse;padding: 0;vertical-align: top;text-align: left;margin: 0 auto;width: 580px;"><tr style="padding: 0;vertical-align: top;text-align: left;"><td class="text-pad" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 0px 0px 10px;vertical-align: top;text-align: left;padding-left: 10px;padding-right: 10px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"><h3 style="color: #666;font-family: Helvetica, Arial, sans-serif;font-weight: normal;padding: 0;margin: 0;text-align: left;line-height: 1.3;word-break: normal;font-size: 18px;">New submission on <a href="%s" style="color: #2ba6cb;text-decoration: none;">%s</a></h3></td><td class="expander" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 0;vertical-align: top;text-align: left;visibility: hidden;width: 0px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"></td></tr></table></td></tr></table>' . "\r\n";
         $built_submission_details = sprintf($format, $url, get_bloginfo('name'));
+        $built_submission_details .= '<img src="' . $this->create_tracking_pixel() . '"/>';
 
         return $built_submission_details;
     }
@@ -223,17 +248,191 @@ class LI_Emailer {
         return $built_source_url_params;
     }
 
-
     /**
      * Creates the data lookup content for the contact notificaiton email
      *
      * @param   stdClass      history from LI_Contact
      * @return  string        footer content
      */
-    function build_enrichment_data ( ) {
-        $built_enrichment_data = '<table class="row contact-details" style="border-spacing: 0;border-collapse: collapse;padding: 0px;vertical-align: top;text-align: left;width: 100%%;position: relative;display: block;"><tr style="padding: 0;vertical-align: top;text-align: left;"><td class="wrapper last" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 10px 20px 0px 0px;vertical-align: top;text-align: left;position: relative;padding-right: 0px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"><table class="twelve columns" style="border-spacing: 0;border-collapse: collapse;padding: 0;vertical-align: top;text-align: left;margin: 0 auto;width: 580px;"><tr style="padding: 0;vertical-align: top;text-align: left;"><td class="text-pad" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 0px 0px 10px;vertical-align: top;text-align: left;padding-left: 10px;padding-right: 10px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"><h2 class="data-lookup-header" style="color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;padding: 0;margin: 0;text-align: left;line-height: 1.3;word-break: normal;font-size: 20px;margin-bottom: 15px;">Data Lookup</h2><p class="data-lookup-limit" style="margin: 0;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;padding: 0;text-align: left;line-height: 19px;font-size: 14px;margin-bottom: 10px;"><a href="http://leadin.com/pro-upgrade/?utm_source=Leadin%20Repo%20Plugin&utm_medium=New%20Contact%20Email&utm_campaign=Repo">Upgrade to Leadin Pro for free</a> to get unlimited data lookups!</p></td><td class="expander" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 0;vertical-align: top;text-align: left;visibility: hidden;width: 0px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"></td></tr></table></td></tr></table>';
+    function build_enrichment_data ( $li_contact )
+    {
+        $built_enrichment_data = "";
+        
+        if ( leadin_check_pro_user() )
+        {
+            $format = '<table class="row contact-details" style="border-spacing: 0;border-collapse: collapse;padding: 0px;vertical-align: top;text-align: left;width: 100%%;position: relative;display: block;"><tr style="padding: 0;vertical-align: top;text-align: left;"><td class="wrapper last" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 10px 20px 0px 0px;vertical-align: top;text-align: left;position: relative;padding-right: 0px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"><table class="twelve columns" style="border-spacing: 0;border-collapse: collapse;padding: 0;vertical-align: top;text-align: left;margin: 0 auto;width: 580px;"><tr style="padding: 0;vertical-align: top;text-align: left;"><td class="text-pad" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 0px 0px 10px;vertical-align: top;text-align: left;padding-left: 10px;padding-right: 10px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"><h2 class="data-lookup-header" style="color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;padding: 0;margin: 0;text-align: left;line-height: 1.3;word-break: normal;font-size: 20px;margin-bottom: 15px;">Data Lookup</h2><p class="data-lookup-limit" style="margin: 0;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;padding: 0;text-align: left;line-height: 19px;font-size: 14px;margin-bottom: 10px;">You have <span class="green" style="font-weight: bold;color: green;">unlimited free data lookups remaining</span> this month.</p></td><td class="expander" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 0;vertical-align: top;text-align: left;visibility: hidden;width: 0px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"></td></tr></table></td></tr></table><table class="row contact-details" style="border-spacing: 0;border-collapse: collapse;padding: 0px;vertical-align: top;text-align: left;width: 100%%;position: relative;display: block;"><tr style="padding: 0;vertical-align: top;text-align: left;">%s%s</tr></table>';
+            $built_enrichment_personal = $this->build_enrichment_personal($li_contact);
+            $built_enrichment_data .= sprintf($format, ( $built_enrichment_personal ? $built_enrichment_personal : 'No dice' ), $this->build_enrichment_company($li_contact));
+        }
+        else
+        {
+            $built_enrichment_data = '<table class="row contact-details" style="border-spacing: 0;border-collapse: collapse;padding: 0px;vertical-align: top;text-align: left;width: 100%%;position: relative;display: block;"><tr style="padding: 0;vertical-align: top;text-align: left;"><td class="wrapper last" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 10px 20px 0px 0px;vertical-align: top;text-align: left;position: relative;padding-right: 0px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"><table class="twelve columns" style="border-spacing: 0;border-collapse: collapse;padding: 0;vertical-align: top;text-align: left;margin: 0 auto;width: 580px;"><tr style="padding: 0;vertical-align: top;text-align: left;"><td class="text-pad" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 0px 0px 10px;vertical-align: top;text-align: left;padding-left: 10px;padding-right: 10px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"><h2 class="data-lookup-header" style="color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;padding: 0;margin: 0;text-align: left;line-height: 1.3;word-break: normal;font-size: 20px;margin-bottom: 15px;">Data Lookup</h2><p class="data-lookup-limit" style="margin: 0;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;padding: 0;text-align: left;line-height: 19px;font-size: 14px;margin-bottom: 10px;"><a href="'.  admin_url() . 'admin.php?page=leadin_pro_upgrade">Upgrade to Leadin Pro for free</a> to get unlimited data lookups!</p></td><td class="expander" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 0;vertical-align: top;text-align: left;visibility: hidden;width: 0px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"></td></tr></table></td></tr></table>';
+        }
 
         return $built_enrichment_data;
+    }
+
+    /**
+     * Creates the personal info column in the data lookup content for the contact notificaiton email
+     *
+     * @param   stdClass      history from LI_Contact
+     * @return  string        footer content
+     */
+    function build_enrichment_personal ( $li_contact ) 
+    {     
+        $properties = ( isset($li_contact->history->lead->social_data->properties) ? $li_contact->history->lead->social_data->properties : '' );
+        $built_personal_data = "";
+
+        if ( ! isset($properties->primary) && empty($properties->social_profiles) )
+        {
+            $format = '<td class="wrapper" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 10px 20px 0px 0px;vertical-align: top;text-align: left;position: relative;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"><table class="six columns" style="border-spacing: 0;border-collapse: collapse;padding: 0;vertical-align: top;text-align: left;margin: 0 auto;width: 280px;"><tr style="padding: 0;vertical-align: top;text-align: left;"><td class="text-pad" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 0px 0px 10px;vertical-align: top;text-align: left;padding-left: 10px;padding-right: 10px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"><p class="contact-description" style="margin: 0;color: #666;font-family: Helvetica, Arial, sans-serif;font-weight: normal;padding: 0;text-align: left;line-height: 19px;font-size: 14px;margin-bottom: 10px;">%s</p></td><td class="expander" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 0;vertical-align: top;text-align: left;visibility: hidden;width: 0px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"></td></tr></table></td>';
+            $built_personal_data .= sprintf($format, 'We couldn\'t find any personal info for this contact.');
+
+            return $built_personal_data;
+        }
+ 
+        $format = '<td class="wrapper" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 10px 20px 0px 0px;vertical-align: top;text-align: left;position: relative;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"><table class="six columns" style="border-spacing: 0;border-collapse: collapse;padding: 0;vertical-align: top;text-align: left;margin: 0 auto;width: 280px;"><tr style="padding: 0;vertical-align: top;text-align: left;"><td class="text-pad" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 0px 0px 10px;vertical-align: top;text-align: left;padding-left: 10px;padding-right: 10px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"><h3 class="contact-name" style="color: #444;font-family: Helvetica, Arial, sans-serif;font-weight: bold;padding: 0;margin: 0;text-align: left;line-height: 1.3;word-break: normal;font-size: 14px;">%s</h3><h4 class="contact-name-subhead" style="color: #444;font-family: Helvetica, Arial, sans-serif;font-weight: 400;padding: 0;margin: 0;text-align: left;line-height: 1.3;word-break: normal;font-size: 14px;margin-bottom: 15px;">%s</h4><p class="contact-description" style="margin: 0;color: #666;font-family: Helvetica, Arial, sans-serif;font-weight: normal;padding: 0;text-align: left;line-height: 19px;font-size: 14px;margin-bottom: 10px;">%s</p>%s</td><td class="expander" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 0;vertical-align: top;text-align: left;visibility: hidden;width: 0px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"></td></tr></table></td>';
+        $format = '<td class="wrapper" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 10px 20px 0px 0px;vertical-align: top;text-align: left;position: relative;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"><table class="six columns" style="border-spacing: 0;border-collapse: collapse;padding: 0;vertical-align: top;text-align: left;margin: 0 auto;width: 280px;"><tr style="padding: 0;vertical-align: top;text-align: left;"><td class="text-pad" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 0px 0px 10px;vertical-align: top;text-align: left;padding-left: 10px;padding-right: 10px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"><h3 class="contact-name" style="color: #444;font-family: Helvetica, Arial, sans-serif;font-weight: bold;padding: 0;margin: 0;text-align: left;line-height: 1.3;word-break: normal;font-size: 14px;">%s</h3><h4 class="contact-name-subhead" style="color: #444;font-family: Helvetica, Arial, sans-serif;font-weight: 400;padding: 0;margin: 0;text-align: left;line-height: 1.3;word-break: normal;font-size: 14px;margin-bottom: 15px;">%s</h4><p class="contact-description" style="margin: 0;color: #666;font-family: Helvetica, Arial, sans-serif;font-weight: normal;padding: 0;text-align: left;line-height: 19px;font-size: 14px;margin-bottom: 10px;">%s</p>%s</td><td class="expander" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 0;vertical-align: top;text-align: left;visibility: hidden;width: 0px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"></td></tr></table></td>';
+
+        $contact_name       = $li_contact->history->lead->lead_first_name . ' ' . $li_contact->history->lead->lead_last_name;
+        
+        $contact_job_title = ''; 
+        if ( isset($properties->primary) )
+            $contact_job_title = $properties->primary->title . ( $properties->primary->company_name ? ' - ' . $properties->primary->company_name : '' );
+        
+        $contact_bio        = ( ! empty($properties->description) ? $properties->description : '');
+
+        $built_personal_data .= sprintf($format, $contact_name, $contact_job_title, $contact_bio, $this->build_enrichment_personal_fields($li_contact));
+
+        return $built_personal_data;
+    }
+
+    /**
+     * Creates the personal info column in the data lookup content for the contact notificaiton email
+     *
+     * @param   stdClass      history from LI_Contact
+     * @return  string        footer content
+     */
+    function build_enrichment_personal_fields ( $li_contact ) {
+        $built_personal_data_fields = "";
+        
+        $format = '<p class="lead-timeline__submission-field" style="margin: 0;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;padding: 0;text-align: left;line-height: 19px;font-size: 14px;margin-bottom: 10px;"><label class="lead-timeline__submission-label" style="text-transform: uppercase;font-size: 12px;color: #999;letter-spacing: 0.05em;">%s</label><br/>%s</p>';
+
+        if ( isset($li_contact->history->lead->social_data->properties->social_profiles) )
+        {
+            if ( count($li_contact->history->lead->social_data->properties->social_profiles) )
+            {
+                foreach ( $li_contact->history->lead->social_data->properties->social_profiles as $key => $profile )
+                {
+                    $field_label    = $profile->typename;
+                    $field_data     = '<a href="' . leadin_safe_social_profile_url($profile->url) . '" target="_blank">' . ( $profile->typeid == 'twitter' ? '@' : '' ) . ( $profile->typeid == 'linkedin' ? '/in/' : '' ) . $profile->username . '</a>';
+                
+                    $built_personal_data_fields .= sprintf($format, $field_label, $field_data);
+                }
+            }
+        }
+        
+        return $built_personal_data_fields;
+    }
+
+    /**
+     * Creates the personal info column in the data lookup content for the contact notificaiton email
+     *
+     * @param   stdClass      history from LI_Contact
+     * @return  string        footer content
+     */
+    function build_enrichment_company ( $li_contact )
+    {
+        $built_company_data = "";
+
+        $company_data_exists = FALSE;
+        $properties = ( isset($li_contact->history->lead->company_data->properties) ? $li_contact->history->lead->company_data->properties : '' );
+
+        $company_name       = '';
+        $company_location   = '';
+        $company_bio        = '';
+
+        if ( isset($properties->name) && $properties->name )
+            $company_name .= $properties->name;
+
+        if ( isset($properties->city) && $properties->city )
+        {
+            $company_location .= $properties->city;
+            $company_data_exists = TRUE;
+        }
+
+        if ( isset($properties->state) && $properties->state )
+        {
+            $company_location .= ', ' . $properties->state;
+            $company_data_exists = TRUE;
+        }
+
+        if ( isset($properties->country) && $properties->country )
+        {
+            $company_location .= ', ' . $properties->country;
+            $company_data_exists = TRUE;
+        }
+
+        if ( isset($properties->overview) )
+        {
+            if ( strlen($properties->overview) < 260 )
+                $company_bio = $properties->overview;
+            else
+                $company_bio = substr($properties->overview, 0, strpos($properties->overview, '.', 260)) . ' ...';
+
+            $company_data_exists = TRUE;
+        }
+
+        if ( $company_data_exists )
+        {
+            $format = '<td class="wrapper" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 10px 20px 0px 0px;vertical-align: top;text-align: left;position: relative;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"><table class="six columns" style="border-spacing: 0;border-collapse: collapse;padding: 0;vertical-align: top;text-align: left;margin: 0 auto;width: 280px;"><tr style="padding: 0;vertical-align: top;text-align: left;"><td class="text-pad" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 0px 0px 10px;vertical-align: top;text-align: left;padding-left: 10px;padding-right: 10px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"><h3 class="contact-name" style="color: #444;font-family: Helvetica, Arial, sans-serif;font-weight: bold;padding: 0;margin: 0;text-align: left;line-height: 1.3;word-break: normal;font-size: 14px;">%s</h3><h4 class="contact-name-subhead" style="color: #444;font-family: Helvetica, Arial, sans-serif;font-weight: 400;padding: 0;margin: 0;text-align: left;line-height: 1.3;word-break: normal;font-size: 14px;margin-bottom: 15px;">%s</h4><p class="contact-description" style="margin: 0;color: #666;font-family: Helvetica, Arial, sans-serif;font-weight: normal;padding: 0;text-align: left;line-height: 19px;font-size: 14px;margin-bottom: 10px;">%s</p>%s</td><td class="expander" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 0;vertical-align: top;text-align: left;visibility: hidden;width: 0px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"></td></tr></table></td>';
+            $built_company_data .= sprintf($format, $company_name, $company_location, $company_bio, $this->build_enrichment_company_fields($li_contact));
+        }
+        else
+        {
+            $format = '<td class="wrapper" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 10px 20px 0px 0px;vertical-align: top;text-align: left;position: relative;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"><table class="six columns" style="border-spacing: 0;border-collapse: collapse;padding: 0;vertical-align: top;text-align: left;margin: 0 auto;width: 280px;"><tr style="padding: 0;vertical-align: top;text-align: left;"><td class="text-pad" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 0px 0px 10px;vertical-align: top;text-align: left;padding-left: 10px;padding-right: 10px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"><p class="contact-description" style="margin: 0;color: #666;font-family: Helvetica, Arial, sans-serif;font-weight: normal;padding: 0;text-align: left;line-height: 19px;font-size: 14px;margin-bottom: 10px;">%s</p></td><td class="expander" style="word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse;padding: 0;vertical-align: top;text-align: left;visibility: hidden;width: 0px;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;margin: 0;line-height: 19px;font-size: 14px;"></td></tr></table></td>';
+            $built_company_data .= sprintf($format, 'We couldn\'t find any company info for this contact.');
+        }
+        
+        return $built_company_data;
+    }
+
+    /**
+     * Creates the company info column in the data lookup content for the contact notificaiton email
+     *
+     * @param   stdClass      history from LI_Contact
+     * @return  string        footer content
+     */
+    function build_enrichment_company_fields ( $li_contact ) {
+        $properties = $li_contact->history->lead->company_data->properties;
+
+        $built_company_data_fields = "";
+        
+        $format = '<p class="lead-timeline__submission-field" style="margin: 0;color: #222222;font-family: Helvetica, Arial, sans-serif;font-weight: normal;padding: 0;text-align: left;line-height: 19px;font-size: 14px;margin-bottom: 10px;"><label class="lead-timeline__submission-label" style="text-transform: uppercase;font-size: 12px;color: #999;letter-spacing: 0.05em;">%s</label><br/>%s</p>';
+
+        if ( !empty($properties->facebookpageurl) )
+        {
+            $field_label = "Facebook";
+            $field_data = '<a href="' . $properties->facebookpageurl . '" target="_blank">' . $properties->name . '</a>';
+            $built_company_data_fields .= sprintf($format, $field_label, $field_data);
+        }
+
+        if ( !empty($properties->twitterusername) )
+        {
+            $field_label = "Twitter";
+            $field_data = '<a href="' . $properties->twitterurl . '" target="_blank">' . '@' . $properties->twitterusername . '</a>';
+            $built_company_data_fields .= sprintf($format, $field_label, $field_data);
+        }
+
+        if ( !empty($properties->linkedinurl) )
+        {
+           $field_label = "LinkedIn";
+            $field_data = '<a href="' . $properties->linkedinurl . '" target="_blank">' . $properties->name . '</a>';
+            $built_company_data_fields .= sprintf($format, $field_label, $field_data);
+        }
+
+
+        return $built_company_data_fields;
     }
 
     /**
@@ -323,14 +522,7 @@ class LI_Emailer {
             $body .="You may also contact us at:<br/><a href='mailto:" . $leadin_email . "'>" . $leadin_email . "</a>";
         $body .= "</td></tr></table></td><td class='expander' style='word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse !important;vertical-align: top;text-align: left;visibility: hidden;width: 0px;padding: 0;border: 0;' align='left' valign='top'></td></tr></table></td></tr></table>";
         
-        // Build Powered by Leadin row
-        if ( isset($options['premium']) )
-        {
-            if ( ! $options['premium'] )
-                $body .= $this->build_powered_by_link();
-        }
-        else
-            $body .= $this->build_powered_by_link();
+        $body .= $this->build_powered_by_link();
 
         // @EMAIL - end form section
 
@@ -341,7 +533,7 @@ class LI_Emailer {
         // Each line in an email can only be 998 characters long, so lines need to be broken with a wordwrap
         $body = wordwrap($body, 900, "\r\n");
 
-        $headers = "From: Leadin <team@leadin.com>\r\n";
+        $headers = "From: Leadin <notifications@leadin.com>\r\n";
         $headers.= "Reply-To: Leadin <" . $from . ">\r\n";
         $headers.= "X-Mailer: PHP/" . phpversion() . "\r\n";
         $headers.= "MIME-Version: 1.0\r\n";
@@ -363,9 +555,64 @@ class LI_Emailer {
         $powered_by = '';
         
         $powered_by .= "<table class='row section' style='border-spacing: 0;border-collapse: collapse;vertical-align: top;text-align: left;width: 100%;position: relative;display: block;margin-top: 20px;padding: 0px;'><tr style='vertical-align: top;text-align: left;padding: 0;' align='left'><td class='wrapper last' style='word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse !important;vertical-align: top;text-align: left;position: relative;padding: 0 0px 0 0;' align='left' valign='top'><table class='twelve columns' style='border-spacing: 0;border-collapse: collapse;vertical-align: top;text-align: left;width: 580px;margin: 0 auto;padding: 0;'><tr style='vertical-align: top;text-align: left;padding: 0;' align='left'><td style='padding: 10px 20px;' align='left' valign='top'><table style='border-spacing: 0;border-collapse: collapse;vertical-align: top;text-align: left;width: 100%;overflow: hidden;padding: 0;'><tr style='vertical-align: top;text-align: left;padding: 0;' align='left'><td style='word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse !important;vertical-align: top;text-align: center;display: block;width: auto !important;font-size: 16px;padding: 10px 20px;' align='center' valign='top'>";
-            $powered_by .="<div style='font-size: 11px; color: #888; padding: 0 0 5px 0;'>Powered by</div><a href='http://leadin.com/wordpress-subscribe-widget-plugin/?utm_campaign=subscribe_widget&utm_medium=email&utm_source=" . get_bloginfo('wpurl') . "'><img alt='Leadin' height='20px' width='99px' src='http://leadin.com/wp-content/themes/LeadIn-WP-Theme/library/images/logos/leadin_logo_small_grey.png' alt='leadin.com'/></a>";
+            $powered_by .="<div style='font-size: 11px; color: #888; padding: 0 0 5px 0;'>Powered by</div><a href='http://leadin.com/wordpress-subscribe-widget-plugin?utm_source=virality&utm_medium=referral&utm_term=" . get_bloginfo('wpurl') . "&utm_content=e11&utm_campaign=subscribe%20confirmation%20email'><img alt='Leadin' height='20px' width='99px' src='http://leadin.com/wp-content/themes/LeadIn-WP-Theme/library/images/logos/leadin_logo_small_grey.png' alt='leadin.com'/></a>";
         $powered_by .= "</td></tr></table></td><td class='expander' style='word-break: break-word;-webkit-hyphens: auto;-moz-hyphens: auto;hyphens: auto;border-collapse: collapse !important;vertical-align: top;text-align: left;visibility: hidden;width: 0px;padding: 0;border: 0;' align='left' valign='top'></td></tr></table></td></tr></table>";
     
         return $powered_by;
+    }
+
+    /**
+     * Creates Mixpanel tracking email pixel
+     *
+     * @return  string      specs @ https://mixpanel.com/docs/api-documentation/pixel-based-event-tracking
+     */
+    function create_tracking_pixel ( )
+    {
+        $url_properties = array(
+            'token' => MIXPANEL_PROJECT_TOKEN
+        );
+
+        $leadin_user = leadin_get_current_user();
+        $leadin_user_properties = array(
+            'distinct_id'   => $leadin_user['user_id'],
+            '$wp-url'       => $leadin_user['wp_url'],
+            '$wp-version'   => $leadin_user['wp_version'],
+            '$li-version'   => $leadin_user['li_version'] 
+        );
+
+        $properties = array_merge($url_properties, $leadin_user_properties);
+
+        $params = array ( 'event' => 'Contact Notification Opened', 'properties' => $properties );
+
+        return 'http://api.mixpanel.com/track/?data=' . base64_encode(json_encode($params)) . '&ip=1&img=1';
+    }
+
+     /**
+     * Creates Mixpanel tracking email pixel
+     *
+     * @param   string      email address to send notification to
+     * @param   string      subject line for contact notification email
+     * @param   string      html body of email
+     * @return  string      specs @ https://mixpanel.com/docs/api-documentation/pixel-based-event-tracking
+     */
+    function send_email_via_sendgrid ( $to = '', $subject = '', $body = '', $domain = '' )
+    {
+        $fields = array(
+            'to_email'  => urlencode($to),
+            'subject'   => urlencode($subject),
+            'message'   => urlencode($body),
+            'domain'    => urlencode($domain)
+        );
+
+        $fields_string = http_build_query($fields);
+
+        $ch = curl_init();
+        curl_setopt($ch,CURLOPT_URL, 'http://leadin.com/pro/notifications/sendgrid_email.php');
+        curl_setopt($ch,CURLOPT_POST, 1);
+        curl_setopt($ch,CURLOPT_POSTFIELDS, $fields_string);
+        $result = curl_exec($ch);
+        curl_close($ch);
+
+        return $result;
     }
 }

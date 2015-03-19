@@ -37,7 +37,7 @@ if ( !defined('LEADIN_CONTACTS_PLUGIN_SLUG') )
 require_once(LEADIN_CONTACTS_PLUGIN_DIR . '/admin/contacts-admin.php');
 
 //=============================================
-// WPLeadIn Class
+// WPLeadInContacts Class
 //=============================================
 class WPLeadInContacts extends WPLeadIn {
 	

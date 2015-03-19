@@ -1,4 +1,11 @@
 <?php
+
+//=============================================
+// Include Needed Files
+//=============================================
+
+require_once(LEADIN_PLUGIN_DIR . '/power-ups/lookups/admin/inc/blacklist_domains.php');
+
 //=============================================
 // LI_Contact Class
 //=============================================
@@ -48,6 +55,12 @@ class LI_Contact {
 		$pageviews 		= $this->get_contact_pageviews($this->hashkey, 'ARRAY_A');
 		$submissions 	= $this->get_contact_submissions($this->hashkey, 'ARRAY_A');
 		$tags 			= $this->get_contact_tags($this->hashkey);
+
+		if ( WPLeadIn::is_power_up_active('lookups') )
+		{
+			$lead->social_data = $this->get_social_details($lead);
+			$lead->company_data = $this->get_company_details($lead);
+		}
 
 		// Merge the page views array and submissions array and reorder by date
 		$events_array = array_merge($pageviews, $submissions); 
@@ -119,8 +132,7 @@ class LI_Contact {
 			}
 			else
 			{
-				
-				// Always overwrite the first_submission date which will end as last submission date
+				// Always overwrite the last_submission date which will end as last submission date
 				$lead->first_submission = $event['event_date'];
 
 				$event['form_name'] = 'form';
@@ -264,7 +276,10 @@ class LI_Contact {
 				lead_ip, 
 				lead_email,
 				lead_first_name, 
-				lead_last_name
+				lead_last_name,
+				social_data,
+				company_data,
+				lead_deleted
 			FROM 
 				$wpdb->li_leads 
 			WHERE hashkey LIKE %s", $wpdb->db_hour_offset, '%b %D %l:%i%p', $hashkey);
@@ -272,6 +287,173 @@ class LI_Contact {
 		$contact_details = $wpdb->get_row($q, $output_type);
 
 		return $contact_details;
+	}
+
+	/**
+	 * Sets the social_data on a contact
+	 *
+	 * @param	object
+	 * @return	object
+	 */
+	function get_social_details ( $lead ) 
+	{
+		$site_url = site_url();
+		$social_data = '';
+
+		if ( ! $lead->social_data )
+		{
+			// Grab the social intel lookup
+			$social_data = json_decode($this->query_social_lookup_endpoint(strtolower($lead->lead_email), $site_url));	
+
+			if ( ! isset($social_data->status) )
+			{
+				$this->update_social_lookup_data($this->hashkey, serialize($social_data));
+
+				// Update the first and last names if one of them isn't set, and the respected name part is present or the full name is present the full name is present or the correspond
+				$first_name = '';
+				$last_name 	= '';
+				$update_name = FALSE;
+
+				if ( ! $lead->lead_first_name )
+				{
+					if ( isset($social_data->fullcontactDetails->contactinfo->givenname) )
+					{
+						$first_name = $social_data->fullcontactDetails->contactinfo->givenname;
+						$update_name = TRUE;
+					}
+					else if ( isset($social_data->fullcontactDetails->contactinfo->fullname) )
+					{
+						$first_name = reset(explode(' ', $social_data->fullcontactDetails->contactinfo->fullname));
+						$update_name = TRUE;
+					}
+				}
+				else
+					$first_name = $lead->lead_first_name;
+
+				if ( ! $lead->lead_last_name )
+				{
+					if ( isset($social_data->fullcontactDetails->contactinfo->familyname) )
+					{
+						$last_name = $social_data->fullcontactDetails->contactinfo->familyname;
+						$update_name = TRUE;
+					}
+					else if ( isset($social_data->fullcontactDetails->contactinfo->fullname) )
+					{
+						$last_name = end(explode(' ', $social_data->fullcontactDetails->contactinfo->fullname));
+						$update_name = TRUE;
+					}						
+				}
+				else
+					$last_name = $lead->lead_first_name;
+
+				if ( $update_name )
+					$this->update_contact_full_name($this->hashkey, $first_name, $last_name);
+
+			}
+			else if ( isset($social_data->status) && $social_data->status == 'error' )
+			{
+				$social_data = '';
+			}
+		}
+		else
+			$social_data = unserialize($lead->social_data);
+		
+		if ( isset($social_data->fullcontactDetails) ) 
+        {
+            $fullcontactDetails = $social_data->fullcontactDetails;
+
+            if ( count($fullcontactDetails->organizations) )
+            {
+                foreach ( $fullcontactDetails->organizations as $org )
+                {
+                    if ( isset($org->isprimary) )
+                    {
+                    	$social_data->properties->primary->company_name = ( isset($org->name) ? $org->name : '' );
+                    	$social_data->properties->primary->title 		= ( isset($org->title) ? $org->title : '' );
+                    	break;
+                    }
+                }
+            }
+
+            if ( isset($social_data->twitterDetails->description) )
+            {
+            	if ( $social_data->twitterDetails->description )
+                	$social_data->properties->description = $social_data->twitterDetails->description;
+            }
+
+            if ( count($fullcontactDetails->socialprofiles) )
+            {
+            	$social_profiles = array();
+
+	            foreach ( $fullcontactDetails->socialprofiles as $key => $profile )
+		        {
+		            $whitelisted_profiles = array('twitter', 'facebook', 'linkedin', 'googleplus');
+		            if ( in_array($profile->typeid, $whitelisted_profiles) && ! empty($profile->username) )
+		            {
+		            	$social_profile = (object)NULL;
+		            	$social_profile->typename 	= $profile->typename;
+		            	$social_profile->url 		= leadin_safe_social_profile_url($profile->url);
+		            	$social_profile->typeid 	= $profile->typeid;
+		            	$social_profile->username 	= $profile->username;
+
+		                $social_profiles[] = $social_profile;
+		            }
+		        }
+
+		        if ( count($social_profiles) )
+		        {
+		        	if ( isset($social_data->properties->social_profiles) )
+		        		$social_data->properties->social_profiles = $social_profiles;
+		        }
+		    }
+        }
+
+        return $social_data;
+	}
+
+	/**
+	 * Sets the company_data on a contact
+	 *
+	 * @param	object
+	 * @return	object
+	 */
+	function get_company_details ( $lead )
+	{
+		global $blacklist_freemail_domains;
+		global $blacklist_nonmail_domains;
+
+		$site_url 		= site_url();
+		$email_domain 	= end(explode('@', $lead->lead_email));
+		$leadin_user 	= leadin_get_current_user();
+		$company_data 	= '';
+
+		if ( strstr($leadin_user['email'], ',') )
+			$leadin_user_email = reset(explode(',', $leadin_user['email']));
+		else
+			$leadin_user_email = $leadin_user['email'];
+
+		if ( ! in_array($email_domain, $blacklist_nonmail_domains) && ! in_array($email_domain, $blacklist_freemail_domains) )
+		{
+			if ( ! $lead->company_data )
+			{
+				// Grab the company intel lookup
+				$company_data = json_decode($this->query_company_lookup_endpoint($email_domain, $leadin_user_email, $site_url));
+				
+				if ( isset($company_data->status) && $company_data->status != 'error' )
+				{
+					$this->update_company_lookup_data($this->hashkey, serialize($company_data));
+				}
+				else
+				{
+				}
+			}
+			else
+			{
+				$company_data = unserialize($lead->company_data);
+			}
+		}
+
+		return $company_data;
 	}
 
 	/**
@@ -365,6 +547,8 @@ class LI_Contact {
 					);
 
 					$safe_tags .= $wpdb->insert_id . ',';
+
+					leadin_track_plugin_activity('Tag Added - Contact Timeline');
 				}
 				else
 				{
@@ -393,7 +577,7 @@ class LI_Contact {
 						if ( ! ${$power_up_global}->activated )
 							continue;
 
-						${$power_up_global}->push_contact_to_list($list['list_id'], $this->history->lead->lead_email);
+						${$power_up_global}->push_contact_to_list($list['list_id'], $this->history->lead->lead_email, $this->history->lead->lead_first_name, $this->history->lead->lead_last_name);
 					}
 
 					array_push($synced_lists, $list['list_id']);
@@ -405,10 +589,17 @@ class LI_Contact {
 		{
 			$q = $wpdb->prepare("UPDATE $wpdb->li_tag_relationships SET tag_relationship_deleted = 0 WHERE contact_hashkey = %s AND tag_relationship_id IN ( " . rtrim($tags_to_update, ',') . " ) ", $this->hashkey);
 			$tag_updated = $wpdb->query($q);
+
+			leadin_track_plugin_activity('Tag Restored - Contact Timeline');
 		}
 
 		$q = $wpdb->prepare("UPDATE $wpdb->li_tag_relationships SET tag_relationship_deleted = 1 WHERE contact_hashkey = %s " . ( $safe_tags ? "AND tag_relationship_id NOT IN ( " . rtrim($safe_tags, ',') . " ) " : '' ) . " AND tag_relationship_deleted = 0 ", $this->hashkey);
 		$deleted_tags = $wpdb->query($q);
+
+		if ( $deleted_tags )
+		{
+			leadin_track_plugin_activity('Tag Removed - Contact Timeline');
+		}
 	}
 
 	/**
@@ -424,5 +615,145 @@ class LI_Contact {
 
 		return $val_a < $val_b;
 	}
+
+	/**
+	 * Query the social lookup endpoint on Leadin.com
+	 *
+	 * @param	string
+	 * @param	string
+	 * @return	array
+	 */
+	function query_social_lookup_endpoint ( $lookup_email, $caller_domain )
+	{
+		$api_endpoint = 'http://leadin.com/enrichment/v1/profile/email/email_lookup.php';
+		$params =  '?lookup_email=' . $lookup_email . '&caller_domain=' . $caller_domain;
+
+		$curl_handle = curl_init();
+        curl_setopt($curl_handle,CURLOPT_URL, $api_endpoint . $params);
+        curl_setopt($curl_handle,CURLOPT_CONNECTTIMEOUT,2);
+        curl_setopt($curl_handle,CURLOPT_RETURNTRANSFER,1);
+        $data = curl_exec($curl_handle);
+        curl_close($curl_handle);
+
+
+        return htmlspecialchars_decode($data);
+		
+	}
+
+	/**
+	 * Query the company lookup endpoint on Leadin.com
+	 *
+	 * @param	string
+	 * @param	string
+	 * @param	string
+	 * @return	array
+	 */
+	function query_company_lookup_endpoint ( $lookup_company_url, $caller_email, $caller_domain )
+	{
+		$caller_domain = str_replace(array('http://', 'https://'), '', $caller_domain);
+		$caller_domain = 'leadin.com';
+
+		$api_endpoint = 'http://leadin.com/enrichment/v1/company/company_lookup.php';
+		$params =  '?lookup_company_url=' . $lookup_company_url . '&caller_email=' . $caller_email . '&caller_domain=' . $caller_domain;
+
+		$curl_handle = curl_init();
+        curl_setopt($curl_handle,CURLOPT_URL, $api_endpoint . $params);
+        curl_setopt($curl_handle,CURLOPT_CONNECTTIMEOUT,2);
+        curl_setopt($curl_handle,CURLOPT_RETURNTRANSFER,1);
+        $data = curl_exec($curl_handle);
+        curl_close($curl_handle);
+
+
+        return htmlspecialchars_decode($data);
+	}
+
+	/**
+	 * Queries for the company_data and social_data fields on the contact in li_leads
+	 *
+	 * @param	string
+	 * @return	object
+	 */
+	function get_cached_lookup_data ( $hashkey )
+	{
+		global $wpdb;
+
+		$q = $wpdb->prepare("SELECT social_data, company_data FROM $wpdb->li_leads WHERE hashkey = %s", $hashkey);
+		$result = $wpdb->get_row($q);
+
+		return $result;
+	}
+
+	/**
+	 * Cache the social lookup data in the database
+	 *
+	 * @param	string
+	 * @param	string 		serialized array
+	 * @param	string
+	 * @return	bool
+	 */
+	function update_social_lookup_data ( $hashkey, $social_data )
+	{
+		global $wpdb;
+
+		$q = $wpdb->prepare("UPDATE $wpdb->li_leads SET social_data = %s WHERE hashkey = %s", $social_data, $hashkey);
+		$result = $wpdb->query($q);
+
+		return $result;
+	}
+
+	/**
+	 * Cache the company lookup data in the database
+	 *
+	 * @param	string
+	 * @param	string 		serialized array
+	 * @param	string
+	 * @return	bool
+	 */
+	function update_company_lookup_data ( $hashkey, $company_data )
+	{
+		global $wpdb;
+
+		$q = $wpdb->prepare("UPDATE $wpdb->li_leads SET company_data = %s WHERE hashkey = %s", $company_data, $hashkey);
+		$result = $wpdb->query($q);
+
+		return $result;
+	}
+
+	/**
+	 * Update the first + last name on a contact row in li_leads
+	 *
+	 * @param	string
+	 * @param	string
+	 * @param	string
+	 * @return	bool
+	 */
+	function update_contact_full_name ( $hashkey, $first_name, $last_name )
+	{
+		global $wpdb;
+
+		$q = $wpdb->prepare("UPDATE $wpdb->li_leads SET lead_first_name = %s, lead_last_name = %s WHERE hashkey = %s", $first_name, $last_name, $hashkey);
+		$result = $wpdb->query($q);
+
+		return $result;
+	}
+
+	/**
+	 * Redirects the user to a merged contact when the current contact has been deleted
+	 *
+	 * @param	string
+	 * 
+	 */
+	function display_error_message_for_merged_contact ( $lead_email )
+	{
+		global $wpdb;
+
+		$q = $wpdb->prepare("SELECT lead_id FROM $wpdb->li_leads WHERE lead_email = %s AND lead_deleted = 0 ORDER BY lead_date DESC LIMIT 1", $lead_email);
+		$lead_id = $wpdb->get_var($q);
+
+		if ( $lead_id )
+		{
+			echo '<div style="background: #fff; border-left: 4px solid #dd3d36; padding: 1px 12px; margin-bottom: 20px;" ><p>This contact record was merged with a more recent entry and is out of date... <br/><br/> <a class="button" href="' . get_admin_url() . 'admin.php?page=leadin_contacts&action=view&lead=' . $lead_id . '">View the latest timeline</a></p></div>';
+		}
+	} 
 }
 ?>

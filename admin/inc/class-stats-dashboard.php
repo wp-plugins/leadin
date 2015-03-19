@@ -157,7 +157,7 @@ class LI_StatsDashboard {
 				( SELECT MIN(pageview_source) AS pageview_source FROM $wpdb->li_pageviews WHERE lead_hashkey = lh AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS lead_source,
 				( SELECT MIN(pageview_url) AS pageview_url FROM $wpdb->li_pageviews WHERE lead_hashkey = lh AND pageview_session_start = 1 AND pageview_deleted = 0 ) AS lead_origin_url 
 			FROM 
-				$wpdb->li_leads ll, li_pageviews lpv
+				$wpdb->li_leads ll, $wpdb->li_pageviews lpv
 			WHERE 
 				lead_date >= CURRENT_DATE() AND 
 				ll.hashkey = lpv.lead_hashkey AND 
