@@ -5,6 +5,7 @@
 class WPConstantContactConnectAdmin extends WPLeadInAdmin {
     
     var $power_up_settings_section = 'leadin_cc_options_section';
+    var $power_option_name = 'leadin_cc_options';
     var $power_up_icon;
     var $bad_api_call;
     var $constant_contact;
@@ -26,8 +27,8 @@ class WPConstantContactConnectAdmin extends WPLeadInAdmin {
         if ( is_admin() )
         {
             $this->power_up_icon = $power_up_icon_small;
-            add_action('admin_init', array($this, 'leadin_cc_build_settings_page'));
-            $this->options = get_option('leadin_cc_options');
+            add_action('admin_init', array($this, 'leadin_build_esp_settings_page'));
+            $this->options = get_option($this->power_option_name);
             if ( isset($this->options['li_cc_email']) && isset($this->options['li_cc_password']) && $this->options['li_cc_email'] && $this->options['li_cc_password'] )
                 $this->authed = TRUE;
         }
@@ -40,11 +41,11 @@ class WPConstantContactConnectAdmin extends WPLeadInAdmin {
     /**
      * Creates settings options
      */
-    function leadin_cc_build_settings_page ()
+    function leadin_build_esp_settings_page ()
     {
         global $leadin_constant_contact_connect_wp;
 
-        register_setting('leadin_settings_options', 'leadin_cc_options', array($this, 'sanitize'));
+        register_setting('leadin_settings_options', $this->power_option_name, array($this, 'sanitize'));
      
         // If the creds are set, check if they are any good by hitting the API
         if ( $this->authed )
@@ -88,7 +89,7 @@ class WPConstantContactConnectAdmin extends WPLeadInAdmin {
         if ( $li_cc_email )
         {
             printf(
-                '<input id="li_cc_email" type="hidden" name="leadin_cc_options[li_cc_email]" value="%s"/>',
+                '<input id="li_cc_email" type="hidden" name="' . $this->power_option_name . '[li_cc_email]" value="%s"/>',
                 $li_cc_email
             );
         }
@@ -96,7 +97,7 @@ class WPConstantContactConnectAdmin extends WPLeadInAdmin {
         if ( $li_cc_password )
         {
             printf(
-                '<input id="li_cc_password" type="hidden" name="leadin_cc_options[li_cc_password]" value="%s"/>',
+                '<input id="li_cc_password" type="hidden" name="' . $this->power_option_name . '[li_cc_password]" value="%s"/>',
                 $li_cc_password
             );
         }
@@ -111,14 +112,11 @@ class WPConstantContactConnectAdmin extends WPLeadInAdmin {
     {
         $new_input = array();
 
-        if( isset( $input['li_cc_email'] ) )
+        if ( isset( $input['li_cc_email'] ) )
             $new_input['li_cc_email'] = sanitize_text_field( $input['li_cc_email'] );
 
-        if( isset( $input['li_cc_password'] ) )
+        if ( isset( $input['li_cc_password'] ) )
             $new_input['li_cc_password'] = sanitize_text_field( $input['li_cc_password'] );
-
-        if( isset( $input['li_cc_subscribers_to_list'] ) )
-            $new_input['li_cc_subscribers_to_list'] = sanitize_text_field( $input['li_cc_subscribers_to_list'] );
 
         return $new_input;
     }
@@ -131,7 +129,7 @@ class WPConstantContactConnectAdmin extends WPLeadInAdmin {
         $li_cc_email = ( $this->options['li_cc_email'] ? $this->options['li_cc_email'] : '' ); // Get header from options, or show default
         
         printf(
-            '<input id="li_cc_email" type="text" id="title" name="leadin_cc_options[li_cc_email]" value="%s" size="50"/>',
+            '<input id="li_cc_email" type="text" id="title" name="' . $this->power_option_name . '[li_cc_email]" value="%s" style="width: 430px;"/>',
             $li_cc_email
         );
     }
@@ -144,46 +142,9 @@ class WPConstantContactConnectAdmin extends WPLeadInAdmin {
         $li_cc_password = ( $this->options['li_cc_password'] ? $this->options['li_cc_password'] : '' ); // Get header from options, or show default
         
         printf(
-            '<input id="li_cc_password" type="password" id="title" name="leadin_cc_options[li_cc_password]" value="%s" size="50"/>',
+            '<input id="li_cc_password" type="password" id="title" name="' . $this->power_option_name . '[li_cc_password]" value="%s" style="width: 430px;"/>',
             $li_cc_password
         );
-    }
-
-    /**
-     * Prints email input for settings page
-     */
-    function li_cc_subscribers_to_list_callback ()
-    {
-        $li_cc_subscribers_to_list = ( isset($this->options['li_cc_subscribers_to_list']) ? $this->options['li_cc_subscribers_to_list'] : '' ); // Get header from options, or show default
-        
-        echo '<select id="li_cc_subscribers_to_list" name="leadin_cc_options[li_cc_subscribers_to_list]" ' . ( ! count($this->lists) ? 'disabled' : '' ) . '>';
-
-            if ( count($this->lists) )
-            {
-                $list_set = FALSE;
-
-                foreach ( $this->lists as $list )
-                {
-                    // Skip over default lists
-                    if ( $list['Name'] == 'Active' || $list['Name'] == 'Do Not Mail' || $list['Name'] == 'Removed' )
-                        continue;
-
-                    if ( urldecode($list['ListID']) == $li_cc_subscribers_to_list && !$list_set )
-                        $list_set = TRUE;
-
-                    echo '<option ' . ( urldecode($list['ListID']) == $li_cc_subscribers_to_list ? 'selected' : '' ) . ' value="' . urldecode($list['ListID']) . '">' . $list['Name'] . '</option>';
-                }
-
-                if ( !$list_set )
-                    echo '<option selected value="">No list set...</option>';
-            }
-            else
-            {
-                echo '<option value="No lists...">No lists...</option>';
-            }
-
-        echo '</select>';
-        echo '<p><a href="https://login.constantcontact.com/login/login.sdo?goto=https://ui.constantcontact.com/rnavmap/distui/contacts" target="_blank">Create a new list on ConstantContact.com</a></p>';
     }
 
     function li_cc_get_email_lists ( $api_key, $username, $password )

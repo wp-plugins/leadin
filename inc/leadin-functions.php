@@ -101,26 +101,122 @@ function leadin_get_current_user ()
         'alias' => $current_user->display_name,
         'wp_url' => get_bloginfo('wpurl'),
         'li_version' => LEADIN_PLUGIN_VERSION,
-        'wp_version' => $wp_version
+        'wp_version' => $wp_version,
+        'total_contacts' => get_total_contacts()
     );
+
+    if ( defined('LEADIN_REFERRAL_SOURCE') )
+        $leadin_user['referral_source'] = LEADIN_REFERRAL_SOURCE;
+    else
+        $leadin_user['referral_source'] = '';
+
+    if ( defined('LEADIN_UTM_SOURCE') )
+        $leadin_user['utm_source'] = LEADIN_UTM_SOURCE;
+    else
+        $leadin_user['utm_source'] = '';
+
+    if ( defined('LEADIN_UTM_MEDIUM') )
+        $leadin_user['utm_medium'] = LEADIN_UTM_MEDIUM;
+    else
+        $leadin_user['utm_medium'] = '';
+
+    if ( defined('LEADIN_UTM_TERM') )
+        $leadin_user['utm_term'] = LEADIN_UTM_TERM;
+    else
+        $leadin_user['utm_term'] = '';
+
+    if ( defined('LEADIN_UTM_CONTENT') )
+        $leadin_user['utm_content'] = LEADIN_UTM_CONTENT;
+    else
+        $leadin_user['utm_content'] = '';
+
+    if ( defined('LEADIN_UTM_CAMPAIGN') )
+        $leadin_user['utm_campaign'] = LEADIN_UTM_CAMPAIGN;
+    else
+        $leadin_user['utm_campaign'] = '';
 
     return $leadin_user;
 }
 
 /**
- * Subscribe user to user updates in MailChimp
+ * Get list of traits converted for Segment
+ *
+ * @return  array
+ */
+function leadin_get_segment_traits ()
+{
+    $leadin_user = leadin_get_current_user();
+    $traits = array(
+        "name"          => $leadin_user['alias'],
+        "email"         => $leadin_user['email'],
+        "wp-url"        => $leadin_user["wp_url"],
+        "wp-version"    => $leadin_user["wp_version"],
+        "li-version"    => $leadin_user["li_version"],
+        "li-source"     => LEADIN_SOURCE,
+        "createdAt"     => date("Y-m-d H:i:s"),
+        "website"       => $leadin_user["wp_url"],
+        "company"       => $leadin_user["wp_url"],
+        "contacts"      => $leadin_user["total_contacts"],
+        "utm_source"    => $leadin_user["utm_source"],
+        "utm_medium"    => $leadin_user["utm_medium"],
+        "utm_term"      => $leadin_user["utm_term"],
+        "utm_content"   => $leadin_user["utm_content"],
+        "utm_campaign"  => $leadin_user["utm_campaign"],
+        "referral_source"  => $leadin_user["referral_source"]
+    );
+
+   return $traits;
+}
+
+
+
+
+/**
+ * Gets the total number of contacts, comments and subscribers for above the table
+ */
+function get_total_contacts ()
+{
+    global $wpdb;
+
+    if ( ! isset($wpdb->li_leads) )
+        return 0;
+
+    $q = "
+        SELECT 
+            COUNT(DISTINCT hashkey) AS total_contacts
+        FROM 
+            $wpdb->li_leads
+        WHERE
+            lead_email != '' AND lead_deleted = 0 AND hashkey != ''";
+
+    $total_contacts = $wpdb->get_var($q);
+    return $total_contacts;
+}
+
+/**
+ * Register Leadin user
  *
  * @return  bool
  */
-function leadin_subscribe_user_updates ()
+function leadin_register_user ()
 {
-    //@MP hack
-    return FALSE;
+    if ( ! leadin_check_pro_user() )
+        return FALSE;
+
+    if ( ! function_exists('curl_init') )
+        return FALSE;
 
     $leadin_user = leadin_get_current_user();
- 
-    // Sync to email to MailChimp
+    $traits = leadin_get_segment_traits();
 
+    Segment::init(SEGMENT_WRITE_KEY);
+
+    Segment::identify(array(
+        "userId" => $leadin_user['user_id'],
+        "traits" => $traits
+    ));
+
+    // Sync to email to MailChimp
     $MailChimp = new LI_MailChimp(MC_KEY);
     $contact_synced = $MailChimp->call("lists/subscribe", array(
         "id"                => 'c390aea726',
@@ -133,7 +229,91 @@ function leadin_subscribe_user_updates ()
         "merge_vars"        => array('EMAIL' => $leadin_user['email'], 'WEBSITE' => get_site_url() )
     ));
 
-    return $contact_synced;
+    return TRUE;
+}
+
+/**
+ * Set Premium propertey on Leadin user in Segment
+ *
+ * @return  bool
+ */
+function leadin_set_user_properties ( $properties = array() )
+{
+    if ( ! leadin_check_pro_user() )
+        return FALSE;
+
+    if ( ! function_exists('curl_init') )
+        return FALSE;
+    
+    $leadin_user = leadin_get_current_user();
+
+    Segment::init(SEGMENT_WRITE_KEY);
+
+    Segment::identify(array(
+        "userId" => $leadin_user['user_id'],
+        "traits" => $properties
+    ));
+}
+
+/**
+ * Send Mixpanel event when plugin is activated/deactivated
+ *
+ * @param   bool
+ *
+ * @return  bool
+ */
+function leadin_track_plugin_registration_hook ( $activated )
+{
+    $properties = array();
+
+    if ( $activated )
+    {
+        leadin_register_user();
+        leadin_track_plugin_activity("Activated Plugin");
+        $properties["last_activated"] = date("Y-m-d H:i:s");
+        $properties["li-status"]  = "activated";
+    }
+    else
+    {
+        leadin_track_plugin_activity("Deactivated Plugin");
+        $properties["last_deactivated"] = date("Y-m-d H:i:s");
+        $properties["li-status"] = "deactivated";
+    }
+
+    leadin_set_user_properties( $properties );
+
+    return TRUE;
+}
+
+/**
+ * Track plugin activity
+ *
+ * @param   string
+ *
+ * @return  array
+ */
+function leadin_track_plugin_activity ( $activity_desc, $custom_properties = array() )
+{
+    if ( ! leadin_check_pro_user() )
+        return FALSE;
+
+    if ( ! function_exists('curl_init') )
+        return FALSE;
+
+    $leadin_user = leadin_get_current_user();
+
+    $default_properties = leadin_get_segment_traits();
+    $properties = array_merge((array)$default_properties, (array)$custom_properties);
+
+    Segment::init(SEGMENT_WRITE_KEY);
+
+    Segment::track(array(
+        'userId'        => $leadin_user['user_id'],
+        'event'         => $activity_desc,
+        'properties'    => $properties
+    ));
+
+    return TRUE;
 }
 
 /**
@@ -706,11 +886,11 @@ function leadin_in_array_deep ( $needle, $haystack )
  */
 function leadin_array_search_deep ( $needle, $array, $index ) 
 {
-   foreach ( $array as $key => $val ) 
-   {
-       if ( $val[$index] === $needle )
-           return $key;
-   }
+    foreach ( $array as $key => $val ) 
+    {
+        if ( $val[$index] == $needle )
+            return $key;
+    }
 
    return NULL;
 }
@@ -835,7 +1015,13 @@ function leadin_ignore_logged_in_user ()
         return FALSE;
 }
 
-function leadin_check_multisite_missing_options ( $options )
+function leadin_safe_social_profile_url ( $url )
+{
+    $url = str_replace('∖', '/', $url);
+    return $url;
+}
+
+function leadin_check_missing_options ( $options )
 {
     $default_options = array(
         'li_installed'              => 1,
@@ -853,18 +1039,65 @@ function leadin_check_multisite_missing_options ( $options )
         'names_added_to_contacts'   => 1
     );
 
+    // Add the Pro flag if this is a pro installation
+    if ( ( defined('LEADIN_UTM_SOURCE') && LEADIN_UTM_SOURCE != 'leadin%20repo%20plugin') || ! defined('LEADIN_UTM_SOURCE') )
+        $default_options['pro'] = 1;
+
+    $update_option = FALSE;
     if ( count($options) && is_array($options) )
     {
         foreach ( $default_options as $key => $value )
         {
             if ( ! array_key_exists($key, $options) )
+            {
                 $options[$key] = $value;
+                $update_option = TRUE;
+            }
         }
     }
 
-    update_option('leadin_options', $options);
+    if ( $update_option )
+        update_option('leadin_options', $options);
 
     return $options;
+}
+
+/**
+ * Checks to see if an installation is Leadin Pro enabled
+ * 
+ * @return bool
+ */
+function leadin_check_pro_user ( )
+{
+    $options = get_option('leadin_options');
+    if ( isset($options['pro']) && $options['pro'])
+        return TRUE;
+    else
+        return FALSE;
+}
+
+/**
+ * Checks the first entry in the pageviews table 
+ *
+ */
+function leadin_check_first_pageview_data ( )
+{
+    global $wpdb;
+
+    $q = "SELECT pageview_date FROM $wpdb->li_pageviews ORDER BY pageview_date ASC LIMIT 1";
+    $date = $wpdb->get_var($q);
+
+    if ( $date )
+    {
+        if ( strtotime($date) < strtotime('-30 days') )
+            return TRUE;
+        else
+            return FALSE;
+    }
+    else
+    {
+       return FALSE;
+    }
 }
 
 ?>

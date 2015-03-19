@@ -5,6 +5,7 @@
 class WPMailChimpConnectAdmin extends WPLeadInAdmin {
     
     var $power_up_settings_section = 'leadin_mls_options_section';
+    var $power_option_name = 'leadin_mls_options';
     var $power_up_icon;
     var $options;
     var $authed = FALSE;
@@ -22,8 +23,8 @@ class WPMailChimpConnectAdmin extends WPLeadInAdmin {
         if ( is_admin() )
         {
             $this->power_up_icon = $power_up_icon_small;
-            add_action('admin_init', array($this, 'leadin_mls_build_settings_page'));
-            $this->options = get_option('leadin_mls_options');
+            add_action('admin_init', array($this, 'leadin_build_esp_settings_page'));
+            $this->options = get_option($this->power_option_name);
             $this->authed = ( isset($this->options['li_mls_api_key']) && $this->options['li_mls_api_key'] ? TRUE : FALSE );
 
             if ( $this->authed )
@@ -38,9 +39,9 @@ class WPMailChimpConnectAdmin extends WPLeadInAdmin {
     /**
      * Creates settings options
      */
-    function leadin_mls_build_settings_page ()
+    function leadin_build_esp_settings_page ()
     {
-        register_setting('leadin_settings_options', 'leadin_mls_options', array($this, 'sanitize'));
+        register_setting('leadin_settings_options', $this->power_option_name, array($this, 'sanitize'));
         add_settings_section($this->power_up_settings_section, $this->power_up_icon . "MailChimp", '', LEADIN_ADMIN_PATH);
         add_settings_field('li_mls_api_key', 'API key', array($this, 'li_mls_api_key_callback'), LEADIN_ADMIN_PATH, $this->power_up_settings_section);
 
@@ -63,9 +64,6 @@ class WPMailChimpConnectAdmin extends WPLeadInAdmin {
         if( isset( $input['li_mls_api_key'] ) )
             $new_input['li_mls_api_key'] = sanitize_text_field( $input['li_mls_api_key'] );
 
-        if( isset( $input['li_mls_subscribers_to_list'] ) )
-            $new_input['li_mls_subscribers_to_list'] = sanitize_text_field( $input['li_mls_subscribers_to_list'] );
-
         return $new_input;
     }
 
@@ -77,12 +75,12 @@ class WPMailChimpConnectAdmin extends WPLeadInAdmin {
         $li_mls_api_key = ( $this->options['li_mls_api_key'] ? $this->options['li_mls_api_key'] : '' ); // Get header from options, or show default
         
         printf(
-            '<input id="li_mls_api_key" type="text" id="title" name="leadin_mls_options[li_mls_api_key]" value="%s" size="50"/>',
+            '<input id="li_mls_api_key" type="text" id="title" name="' . $this->power_option_name . '[li_mls_api_key]" value="%s" style="width: 430px;"/>',
             $li_mls_api_key
         );
 
         if ( ! isset($li_mls_api_key) || ! $li_mls_api_key )
-            echo '<p><a href="http://admin.mailchimp.com/account/api/" target="_blank">Get an API key from MailChimp.com</a></p>';
+            echo '<p><a target="_blank" href="http://kb.mailchimp.com/accounts/management/about-api-keys#Find-or-Generate-Your-API-Key">Get your API key</a> from <a href="http://admin.mailchimp.com/account/api/" target="_blank">MailChimp.com</a></p>';
     }
 
     /**
@@ -109,7 +107,7 @@ class WPMailChimpConnectAdmin extends WPLeadInAdmin {
                             echo '<td class="synced-list-cell"><span class="icon-tag"></span> ' . $synced_list->tag_text . '</td>';
                             echo '<td class="synced-list-cell"><span class="synced-list-arrow">&#8594;</span></td>';
                             echo '<td class="synced-list-cell"><span class="icon-envelope"></span> ' . $tag_synced_list['list_name'] . '</td>';
-                            echo '<td class="synced-list-edit"><a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts&action=edit_tag&tag=' . $synced_list->tag_id . '">edit tag</a></td>';
+                            echo '<td class="synced-list-edit"><a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_tags&action=edit_tag&tag=' . $synced_list->tag_id . '">edit tag</a></td>';
                         echo '</tr>';
 
                         $synced_list_count++;
@@ -142,49 +140,13 @@ class WPMailChimpConnectAdmin extends WPLeadInAdmin {
     }
 
     /**
-     * Prints email input for settings page
-     */
-    function li_mls_subscribers_to_list_callback ()
-    {
-        $li_mls_subscribers_to_list = ( isset($this->options['li_mls_subscribers_to_list']) ? $this->options['li_mls_subscribers_to_list'] : '' );
-
-        $lists = $this->li_mls_get_mailchimp_lists($this->options['li_mls_api_key']);
-
-        echo '<select id="li_mls_subscribers_to_list" name="leadin_mls_options[li_mls_subscribers_to_list]" ' . ( ! count($lists['data']) ? 'disabled' : '' ) . '>';
-
-            if ( count($lists['data']) )
-            {
-                $list_set = FALSE;
-
-                foreach ( $lists['data'] as $list )
-                {
-                    if ( $list['id'] == $li_mls_subscribers_to_list && !$list_set )
-                        $list_set = TRUE;
-
-                    echo '<option ' . ( $list['id'] == $li_mls_subscribers_to_list ? 'selected' : '' ) . ' value="' . $list['id'] . '">' . $list['name'] . '</option>';
-                }
-
-                if ( !$list_set )
-                    echo '<option selected value="">No list set...</option>';
-            }
-            else
-            {
-                echo '<option value="No lists...">No lists...</option>';
-            }
-
-        echo '</select>';
-
-        echo '<p><a href="http://admin.mailchimp.com/lists/new-list/" target="_blank">Create a new list on MailChimp.com</a></p>';
-    }
-
-    /**
      * Format API-returned lists into parseable format on front end
      *
      * @return array    
      */
     function li_get_lists ( )
     {
-        $lists = $this->li_mls_get_mailchimp_lists($this->options['li_mls_api_key']);
+        $lists = $this->li_get_api_lists($this->options['li_mls_api_key']);
         
         $sanitized_lists = array();
         if ( count($lists['data']) )
@@ -208,7 +170,7 @@ class WPMailChimpConnectAdmin extends WPLeadInAdmin {
      * @param string
      * @return array    
      */
-    function li_mls_get_mailchimp_lists ( $api_key )
+    function li_get_api_lists ( $api_key )
     {
         $MailChimp = new LI_MailChimp($api_key);
 
@@ -237,7 +199,12 @@ class WPMailChimpConnectAdmin extends WPLeadInAdmin {
         if ( $user_profile )
             $invalid_key = FALSE;
         else
+        {
+            unset($this->options['li_mc_api_key']);
+            update_option($this->power_option_name, $this->options);
+
             $invalid_key = TRUE;
+        }
 
         return $invalid_key;
     } 

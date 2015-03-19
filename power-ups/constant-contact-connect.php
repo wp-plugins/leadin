@@ -48,6 +48,7 @@ class WPConstantContactConnect extends WPLeadIn {
 	
 	var $admin;
 	var $options;
+	var $power_option_name = 'leadin_cc_options';
 	var $constant_contact;
 	var $cc_id;
 
@@ -65,7 +66,7 @@ class WPConstantContactConnect extends WPLeadIn {
 
 		global $leadin_constant_contact_connect_wp;
 		$leadin_constant_contact_connect_wp = $this;
-		$this->options = get_option('leadin_cc_options');
+		$this->options = get_option($this->power_option_name);
  	}
 
 	public function admin_init ( )
@@ -113,6 +114,8 @@ class WPConstantContactConnect extends WPLeadIn {
 
 			if ( $this->cc_id )
 			{
+				leadin_track_plugin_activity('Contact Pushed to List', array('esp_connector' => 'constant_contact'));
+
 				return $this->constant_contact->add_subscription($this->cc_id, $list_id, 'ACTION_BY_CLIENT');
 			}
 			else
@@ -132,6 +135,8 @@ class WPConstantContactConnect extends WPLeadIn {
 
 				if ( $phone )
 					$contact['WorkPhone'] = $phone;
+
+				leadin_track_plugin_activity('Contact Pushed to List', array('esp_connector' => 'constant_contact'));
 
 				return $this->constant_contact->add_contact($contact, array($list_id));
 			}
@@ -157,6 +162,8 @@ class WPConstantContactConnect extends WPLeadIn {
 
 			if ( $cc_id )
 			{
+				leadin_track_plugin_activity('Contact Removed from List', array('esp_connector' => 'constant_contact'));
+
 				return $this->constant_contact->remove_subscription($cc_id, $list_id);
 			}
 			else
@@ -183,7 +190,7 @@ class WPConstantContactConnect extends WPLeadIn {
 }
 
 //=============================================
-// Subscribe Widget Init
+// ESP Connect Init
 //=============================================
 
 global $leadin_constant_contact_connect_wp;

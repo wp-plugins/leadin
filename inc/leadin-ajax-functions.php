@@ -175,11 +175,11 @@ function leadin_insert_form_submission ()
 	$contact = $wpdb->get_row($q);
 
 	// Check if either of the names field are set and a value was filled out that's different than the existing name field
-	$lead_first_name = $contact->lead_first_name;
+	$lead_first_name = ( isset($contact->lead_first_name) ? $contact->lead_first_name : '' );
 	if ( strlen($first_name) && $lead_first_name != $first_name )
 		$lead_first_name = $first_name;
 
-	$lead_last_name = $contact->lead_last_name;
+	$lead_last_name = ( isset($contact->lead_last_name) ? $contact->lead_last_name : '' );
 	if ( strlen($last_name) && $lead_last_name != $last_name )
 		$lead_last_name = $last_name;
 
@@ -188,7 +188,7 @@ function leadin_insert_form_submission ()
 	$existing_contacts = $wpdb->get_results($q);
 	
 	// Setup the string for the existing hashkeys
-	$existing_contact_hashkeys = $contact->merged_hashkeys;
+	$existing_contact_hashkeys = ( isset($contact->merged_hashkeys) ? $contact->merged_hashkeys : '' );
 	if ( $contact->merged_hashkeys && count($existing_contacts) )
 		$existing_contact_hashkeys .= ',';
 
@@ -277,11 +277,10 @@ function leadin_insert_form_submission ()
 						// e.g. leadin_constant_contact_connect_wp
 						$leadin_esp_wp = 'leadin_' . $synced_list['esp'] . '_connect_wp';
 						global ${$leadin_esp_wp};
-						
-						if ( isset(${$leadin_esp_wp}) )
+
+						if ( isset(${$leadin_esp_wp}->activated) && ${$leadin_esp_wp}->activated )
 						{
-							if ( ${$leadin_esp_wp}->activated )
-								${$leadin_esp_wp}->push_contact_to_list($synced_list['list_id'], $email, $first_name, $last_name, $phone);
+							${$leadin_esp_wp}->push_contact_to_list($synced_list['list_id'], $email, $first_name, $last_name, $phone);
 						}
 					}
 				}
@@ -290,6 +289,7 @@ function leadin_insert_form_submission ()
 	}
 
 	// Apply the tag relationship to contacts for class rules
+	$form_classes = '';
 	if ( $form_selector_classes )
 		$form_classes = explode(',', $form_selector_classes);
 
@@ -316,8 +316,10 @@ function leadin_insert_form_submission ()
 							$leadin_esp_wp = 'leadin_' . $synced_list['esp'] . '_connect_wp';
 							global ${$leadin_esp_wp};
 
-							if ( ${$leadin_esp_wp}->activated )
+							if ( isset(${$leadin_esp_wp}->activated) && ${$leadin_esp_wp}->activated )
+							{
 								${$leadin_esp_wp}->push_contact_to_list($synced_list['list_id'], $email, $first_name, $last_name, $phone);
+							}
 						}
 					}
 				}
@@ -341,6 +343,8 @@ function leadin_insert_form_submission ()
 	}
 	else if ( strstr($form_selector_id, 'commentform') )
 		$contact_type = 'comment';
+
+	leadin_track_plugin_activity("New lead", array("contact_type" => $contact_type));
 
 	return $rows_updated;
 }
@@ -385,6 +389,7 @@ add_action('wp_ajax_nopriv_leadin_check_visitor_status', 'leadin_check_visitor_s
  */
 function leadin_subscribe_show ()
 {
+	leadin_track_plugin_activity('widget shown');
 	die();
 }
 
@@ -399,6 +404,8 @@ add_action('wp_ajax_nopriv_leadin_subscribe_show', 'leadin_subscribe_show'); // 
 function leadin_get_posts_and_pages ( )
 {
 	global $wpdb;
+
+	leadin_track_plugin_activity('Filter action clicked', array( "filter_type" => "page" ));
 
 	$search_term = $_POST['search_term'];
 
@@ -427,6 +434,8 @@ add_action('wp_ajax_nopriv_leadin_get_posts_and_pages', 'leadin_get_posts_and_pa
 function leadin_get_form_selectors ( )
 {
 	global $wpdb;
+
+	leadin_track_plugin_activity('Filter action clicked', array( "filter_type" => "form" ));
 
 	$search_term = $_POST['search_term'];
 	$tagger = new LI_Tag_Editor();
@@ -476,5 +485,57 @@ function leadin_get_form_selectors ( )
 
 add_action('wp_ajax_leadin_get_form_selectors', 'leadin_get_form_selectors'); // Call when user logged in
 add_action('wp_ajax_nopriv_leadin_get_form_selectors', 'leadin_get_form_selectors'); // Call when user is not logged in
+
+/**
+ * Sets the Pro flag for the Leadin Pro upgrade
+ *
+ */
+function leadin_upgrade_to_pro ( )
+{
+	global $wpdb;
+
+	$options = get_option('leadin_options');
+	if ( isset($options['pro']) && $options['pro'] )
+	{
+		echo get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts';
+	}
+	else
+	{
+		$updated = leadin_update_option('leadin_options', 'pro', 1);
+		echo get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts';
+	}
+
+	WPLeadIn::activate_power_up('lookups', FALSE);
+
+	// Create the user in Segment
+	$traits = leadin_get_segment_traits();
+	$traits["last_activated"] = date("Y-m-d H:i:s");
+    $traits["li-status"]  = "activated";
+	leadin_set_user_properties($traits);
+
+	leadin_track_plugin_activity("Upgraded to Pro");
+
+    die();
+}
+
+add_action('wp_ajax_leadin_upgrade_to_pro', 'leadin_upgrade_to_pro'); // Call when user logged in
+add_action('wp_ajax_nopriv_leadin_upgrade_to_pro', 'leadin_upgrade_to_pro'); // Call when user is not logged in
+
+/**
+ * Checks the first entry in the pageviews table and echos flag to Javascript
+ *
+ */
+function leadin_check_installation_date ( )
+{
+	if ( leadin_check_first_pageview_data() )
+		echo 1;
+	else
+		echo 0;
+
+	die();
+}
+
+add_action('wp_ajax_leadin_check_installation_date', 'leadin_check_installation_date'); // Call when user logged in
+add_action('wp_ajax_nopriv_leadin_check_installation_date', 'leadin_check_installation_date'); // Call when user is not logged in
 
 ?>

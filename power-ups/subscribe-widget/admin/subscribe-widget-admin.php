@@ -297,13 +297,13 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
         $options = $this->options;
 
         $preview_link = get_bloginfo('wpurl') . '?preview-subscribe=1';
-        $preview_link .= '&lis_heading=' . ( $options['li_subscribe_heading'] ? $options['li_subscribe_heading'] : 'Sign up for email updates' );
-        $preview_link .= '&lis_desc=' . ( $options['li_subscribe_text'] ? $options['li_subscribe_text'] : '' );
+        $preview_link .= '&lis_heading=' . ( isset($options['li_subscribe_heading']) ? $options['li_subscribe_heading'] : 'Sign up for email updates' );
+        $preview_link .= '&lis_desc=' . ( isset($options['li_subscribe_text']) ? $options['li_subscribe_text'] : '' );
         $preview_link .= '&lis_show_names=' . ( isset($options['li_subscribe_name_fields']) ? $options['li_subscribe_name_fields'] : 0 );
         $preview_link .= '&lis_show_phone=' . ( isset($options['li_subscribe_phone_field']) ? $options['li_subscribe_phone_field'] : 0 );
-        $preview_link .= '&lis_btn_label=' . ( $options['li_subscribe_btn_label'] ? $options['li_subscribe_btn_label'] : 'SUBSCRIBE' );
-        $preview_link .= '&lis_vex_class=' . ( $options['li_subscribe_vex_class'] ? $options['li_subscribe_vex_class'] : 'vex-theme-bottom-right-corner' );
-        $preview_link .= '&lis_confirmation=' . ( $options['li_subscribe_confirmation'] ? $options['li_subscribe_confirmation'] : 1 );
+        $preview_link .= '&lis_btn_label=' . ( isset($options['li_subscribe_btn_label']) ? $options['li_subscribe_btn_label'] : 'SUBSCRIBE' );
+        $preview_link .= '&lis_vex_class=' . ( isset($options['li_subscribe_vex_class']) ? $options['li_subscribe_vex_class'] : 'vex-theme-bottom-right-corner' );
+        $preview_link .= '&lis_confirmation=' . ( isset($options['li_subscribe_confirmation']) ? $options['li_subscribe_confirmation'] : 1 );
 
         printf(
             '<p><a id="preview-popup-link" href="%s" target="_blank" class="button button-secondary">Preview Pop-up Form</a></p>', 
