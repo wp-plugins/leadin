@@ -4,7 +4,7 @@
  * require client
  */
 
-require(__DIR__ . "/lib/Segment.php");
+require(dirname(__FILE__) . "/lib/Segment.php");
 
 /**
  * Args
@@ -20,7 +20,7 @@ if (!isset($args["secret"])) die("--secret must be given");
 if (!isset($args["file"])) die("--file must be given");
 
 $file = $args["file"];
-if ($file[0] != '/') $file = __DIR__ . "/" . $file;
+if ($file[0] != '/') $file = dirname(__FILE__) . "/" . $file;
 
 /**
  * Rename the file so we don't write the same calls
