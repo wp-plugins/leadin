@@ -1,10 +1,10 @@
 <?php
 
-require(__DIR__ . '/Consumer.php');
-require(__DIR__ . '/QueueConsumer.php');
-require(__DIR__ . '/Consumer/File.php');
-require(__DIR__ . '/Consumer/ForkCurl.php');
-require(__DIR__ . '/Consumer/Socket.php');
+require(dirname(__FILE__) . '/Consumer.php');
+require(dirname(__FILE__) . '/QueueConsumer.php');
+require(dirname(__FILE__) . '/Consumer/File.php');
+require(dirname(__FILE__) . '/Consumer/ForkCurl.php');
+require(dirname(__FILE__) . '/Consumer/Socket.php');
 
 class Segment_Client {
 
