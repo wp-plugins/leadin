@@ -264,7 +264,14 @@ class WPLeadInAdmin {
 
         self::check_admin_action();
 
-        $leadin_icon = ($wp_version < 3.8 && !is_plugin_active('mp6/mp6.php') ? LEADIN_PATH . '/images/leadin-icon-32x32.png' : 'data:image/svg+xml;base64,' . base64_encode(file_get_contents(LEADIN_PATH . '/images/leadin-svg-icon.svg')));
+        if ( ini_get('allow_url_fopen') )
+            $leadin_icon = ($wp_version < 3.8 && !is_plugin_active('mp6/mp6.php') ? LEADIN_PATH . '/images/leadin-icon-32x32.png' : 'data:image/svg+xml;base64,' . base64_encode(file_get_contents(LEADIN_PATH . '/images/leadin-svg-icon.svg')));
+        else
+        {
+
+            $leadin_icon = LEADIN_PATH . '/images/leadin-icon-16x16.png';
+        }
+
         add_menu_page('Leadin', 'Leadin', $capability, 'leadin_stats', array($this, 'leadin_build_stats_page'),  $leadin_icon , '25.100713');
 
         foreach ( $this->admin_power_ups as $power_up )
@@ -314,14 +321,17 @@ class WPLeadInAdmin {
                 </div>
                 <div class="content">
                     <ul class="features">
-                        <li>Contacts Tracking</li>
-                            <p>Learn more about your visitors.</p>
-                        <li>Contacts Analytics</li>
-                            <p>Find out what content and traffic sources convert the best.</p>
-                        <li>Popup Form</li>
-                            <p>Convert more visitors to contacts, faster.</p>
-                        <li>Email Connectors</li>
-                            <p>Push contacts to MailChimp, Constant Contact, Campaign Monitor, GetResponse and AWeber without replacing any of your forms.</p>
+                        <li>&#10003; Contacts Tracking</li>
+                        <p>Learn more about your visitors.</p>
+                        
+                        <li>&#10003; Contacts Analytics</li>
+                        <p>Find out what content and traffic sources convert the best.</p>
+                        
+                        <li>&#10003; Popup Form</li>
+                        <p>Convert more visitors to contacts, faster.</p>
+                        
+                        <li>&#10003; Email Connectors</li>
+                        <p>Push contacts to MailChimp, Constant Contact, Campaign Monitor, GetResponse and AWeber without replacing any of your forms.</p>
                     </ul>
                 </div>
             </div>
@@ -331,18 +341,24 @@ class WPLeadInAdmin {
                 </div>
                 <div class="content">
                     <p>All the features you're enjoying now, plus:</p>
-                    <ul class="features plus">
-                        <li>Contact Enrichment</li>
-                            <p>In addition to seeing the pages your contacts have visited, you'll now be able to see publicly available information about your contacts and their businesses. Info like social accounts, job role, and company location all in your contact reports. </p>
-                    </ul>
-                    <?php
-                        echo '<p id="agree-pp-error" style="display: none; border-left: 4px solid #dd3d36; padding-left: 12px; margin-bottom: 25px;">Before you can unlock the awesomeness of Leadin Pro, we need you to agree to our Privacy Policy, because lawyers.</p>';
-                        echo '<label for="agree-pp">';
-                            echo '<input type="checkbox" id="agree-pp" name="agree-pp"/>';
-                        echo 'I agree to Leadin\'s <a href="http://leadin.com/legal/privacy-policy" target="_blank">Privacy Policy</a></label>';
+                    <ul class="features">
+                        <li><b>+</b> Contact Enrichment</li>
+                        <p>In addition to seeing the pages your contacts have visited, you'll now be able to see publicly available information about your contacts and their businesses. Info like social accounts, job role, and company location all in your contact reports. </p>
 
-                        echo '<a id="pro-upgrade-button" class="big-button--orange">Upgrade to Leadin Pro</a>';
-                    ?>
+                        <li><b>+</b> Improved Email Delivery</li>
+                        <p>Instead of using your default mail server, we'll route your contact notifications through our email delivery service, ensuring you'll be more likely to actually receive your new contact notifications in your inbox.</p>
+                    </ul>
+                    
+                    <p id="agree-pp-error" style="display: none; border-left: 4px solid #dd3d36; padding-left: 12px; margin-bottom: 25px;">
+                        Before you can unlock the awesomeness of Leadin Pro, we need you to agree to our Privacy Policy, because lawyers.
+                    </p>
+
+                    <label for="agree-pp">
+                        <input type="checkbox" id="agree-pp" name="agree-pp"/>
+                        I agree to Leadin's <a href="http://leadin.com/legal/privacy-policy" target="_blank">Privacy Policy</a>
+                    </label>
+                    
+                    <a id="pro-upgrade-button" class="big-button--orange">Upgrade to Leadin Pro</a>
                 </div>
             </div>
 
@@ -902,42 +918,42 @@ class WPLeadInAdmin {
             $sources_postbox .= '</tr>';
             $sources_postbox .= '<tr>';
                 $sources_postbox .= '<td class="">Direct Traffic</td>';
-                $sources_postbox .= '<td class="">' . $this->stats_dashboard->direct_count . '</td>';
+                $sources_postbox .= '<td class="sources-contacts-num">' . $this->stats_dashboard->direct_count . '</td>';
                 $sources_postbox .= '<td>';
                     $sources_postbox .= '<div style="background: #f0f0f0; padding: 0px; height: 20px !important;"><div style="background: #f16b18; height: 100%; width: ' . ( $this->stats_dashboard->max_source ? (($this->stats_dashboard->direct_count/$this->stats_dashboard->max_source)*100) : '0' ) . '%;">&nbsp;</div></div>';
                 $sources_postbox .= '</td>';
             $sources_postbox .= '</tr>';
             $sources_postbox .= '<tr>';
                 $sources_postbox .= '<td class="">Organic Search</td>';
-                $sources_postbox .= '<td class="">' . $this->stats_dashboard->organic_count . '</td>';
+                $sources_postbox .= '<td class="sources-contacts-num">' . $this->stats_dashboard->organic_count . '</td>';
                 $sources_postbox .= '<td>';
                     $sources_postbox .= '<div style="background: #f0f0f0; padding: 0px; height: 20px !important;"><div style="background: #f16b18; height: 100%; width: ' . ( $this->stats_dashboard->max_source ? (($this->stats_dashboard->organic_count/$this->stats_dashboard->max_source)*100) : '0' ) . '%;">&nbsp;</div></div>';
                 $sources_postbox .= '</td>';
             $sources_postbox .= '</tr>';
             $sources_postbox .= '<tr>';
                 $sources_postbox .= '<td class="">Referrals</td>';
-                $sources_postbox .= '<td class="">' . $this->stats_dashboard->referral_count . '</td>';
+                $sources_postbox .= '<td class="sources-contacts-num">' . $this->stats_dashboard->referral_count . '</td>';
                 $sources_postbox .= '<td>';
                     $sources_postbox .= '<div style="background: #f0f0f0; padding: 0px; height: 20px !important;"><div style="background: #f16b18; height: 100%; width: ' . ( $this->stats_dashboard->max_source ? (($this->stats_dashboard->referral_count/$this->stats_dashboard->max_source)*100) : '0' ) . '%;">&nbsp;</div></div>';
                 $sources_postbox .= '</td>';
             $sources_postbox .= '</tr>';
             $sources_postbox .= '<tr>';
                 $sources_postbox .= '<td class="">Social Media</td>';
-                $sources_postbox .= '<td class="">' . $this->stats_dashboard->social_count . '</td>';
+                $sources_postbox .= '<td class="sources-contacts-num">' . $this->stats_dashboard->social_count . '</td>';
                 $sources_postbox .= '<td>';
                     $sources_postbox .= '<div style="background: #f0f0f0; padding: 0px; height: 20px !important;"><div style="background: #f16b18; height: 100%; width: ' . ( $this->stats_dashboard->max_source ? (($this->stats_dashboard->social_count/$this->stats_dashboard->max_source)*100) : '0' ). '%;">&nbsp;</div></div>';
                 $sources_postbox .= '</td>';
             $sources_postbox .= '</tr>';
             $sources_postbox .= '<tr>';
                 $sources_postbox .= '<td class="">Email Marketing</td>';
-                $sources_postbox .= '<td class="">' . $this->stats_dashboard->email_count . '</td>';
+                $sources_postbox .= '<td class="sources-contacts-num">' . $this->stats_dashboard->email_count . '</td>';
                 $sources_postbox .= '<td>';
                     $sources_postbox .= '<div style="background: #f0f0f0; padding: 0px; height: 20px !important;"><div style="background: #f16b18; height: 100%; width: ' . ( $this->stats_dashboard->max_source ? (($this->stats_dashboard->email_count/$this->stats_dashboard->max_source)*100) : '0' ) . '%;">&nbsp;</div></div>';
                 $sources_postbox .= '</td>';
             $sources_postbox .= '</tr>';
             $sources_postbox .= '<tr>';
                 $sources_postbox .= '<td class="">Paid Search</td>';
-                $sources_postbox .= '<td class="">' . $this->stats_dashboard->paid_count . '</td>';
+                $sources_postbox .= '<td class="sources-contacts-num">' . $this->stats_dashboard->paid_count . '</td>';
                 $sources_postbox .= '<td>';
                     $sources_postbox .= '<div style="background: #f0f0f0; padding: 0px; height: 20px !important;"><div style="background: #f16b18; height: 100%; width: ' . ( $this->stats_dashboard->max_source ? (($this->stats_dashboard->paid_count/$this->stats_dashboard->max_source)*100) : '0' ) . '%;">&nbsp;</div></div>';
                 $sources_postbox .= '</td>';
@@ -1702,7 +1718,7 @@ class WPLeadInAdmin {
                     "createdAt"         : "<?php echo date('Y-m-d H:i:s'); ?>",
                     "website"           : "<?php echo $leadin_user['wp_url']; ?>",
                     "company"           : "<?php echo $leadin_user['wp_url']; ?>",
-                    "contacts"          : "<?php echo $leadin_user['total_contacts']; ?>",
+                    "contacts"          : <?php echo $leadin_user['total_contacts']; ?>,
                     "utm_source"        : "<?php echo $leadin_user['utm_source']; ?>",
                     "utm_medium"        : "<?php echo $leadin_user['utm_medium']; ?>",
                     "utm_term"          : "<?php echo $leadin_user['utm_term']; ?>",
@@ -1714,9 +1730,13 @@ class WPLeadInAdmin {
                 jQuery(document).ready( function ( $ ) {
                     <?php  if ( $event_name == 'Loaded Contact List Page' ) : ?>
                         var num_tags = jQuery('.icon-tag').length;
-                        analytics.track(<?php echo "'$event_name', { num_tags: num_tags }"; ?>);
+                        analytics.track(<?php echo "'$event_name'"; ?>, {
+                            num_tags: num_tags
+                        });
+                        analytics.page('');
                     <?php else : ?>
                         analytics.track(<?php echo "'$event_name'"; ?>);
+                        analytics.page('');
                     <?php endif; ?>
                 });
               }}();
@@ -1746,7 +1766,7 @@ class WPLeadInAdmin {
             <?php if ( leadin_check_first_pageview_data() ) : ?>  
                 <div class="dialog-bottom-right">
                     <h1>Hey, do you like Leadin?</h1>
-                    <a href="javscript:void(0);" id="close-share" class="close"></a>
+                    <a href="javscript:void(0);" id="close-share" class="close">&#10006;</a>
                     <p>Looks like you've been using Leadin for at least 30 days. Want to help support us by spreading the word?</p>
                     <p>We'd love it if you could tell your friends about us or leave us a review on WordPress.org.</p>
                     <a class="big-button--share fb" href="https://www.facebook.com/sharer/sharer.php?u=http://leadin.com/facebook-share" target="_blank"></a>
@@ -1777,12 +1797,14 @@ class WPLeadInAdmin {
     function leadin_footer ()
     {
         $li_options = get_option('leadin_options');
+        global  $wp_version;
+        
 
         ?>
         <div id="leadin-footer">
             <p class="support">            
                 <a href="http://leadin.com">Leadin</a> <?php echo LEADIN_PLUGIN_VERSION; ?>
-                <span style="padding: 0px 5px;">|</span><a href="http://support.leadin.com" target="_blank">Support Docs</a>
+                <span style="padding: 0px 5px;">|</span><a href="<?php echo 'http://support.leadin.com?leadin_version=' . LEADIN_PLUGIN_VERSION . '&wp_version=' . $wp_version ?>" target="_blank">Support Docs</a> 
                 <span style="padding: 0px 5px;">|</span><a href="http://leadin.com/dev-updates/">Get product &amp; security updates</a>
                 <span style="padding: 0px 5px;">|</span><a href="http://wordpress.org/support/view/plugin-reviews/leadin?rate=5#postform">Leave us a review</a>
             </p>

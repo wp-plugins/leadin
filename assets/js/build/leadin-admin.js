@@ -546,7 +546,7 @@ jQuery(document).ready( function ( $ ) {
 		$('#btn-activate-subscribe').attr('href', window.location.href + '&leadin_action=activate&power_up=subscribe_widget&redirect_to=' + encodeURIComponent(window.location.href + '&activate_popup=true&popup_position=' + $("input:radio[name='popup-position']:checked").val()));
 	});
 
-	$('#li_subscribe_vex_class, #li_subscribe_heading, #li_subscribe_text, #li_subscribe_btn_label, #li_subscribe_name_fields:checkbox, #li_subscribe_phone_field:checkbox').change( function ( e ) {
+	$('#li_subscribe_vex_class, #li_subscribe_heading, #li_subscribe_text, #li_subscribe_btn_label,  #li_subscribe_btn_color, #li_subscribe_name_fields:checkbox, #li_subscribe_phone_field:checkbox').change( function ( e ) {
 		var preview_link = $('#wp-admin-bar-view-site a.ab-item').attr('href') + '?preview-subscribe=1';
 
 		preview_link += '&lis_heading=' + $('#li_subscribe_heading').val();
@@ -554,6 +554,7 @@ jQuery(document).ready( function ( $ ) {
 		preview_link += '&lis_show_names=' + ( $('#li_subscribe_name_fields').is(':checked') ? 1 : 0 );
 		preview_link += '&lis_show_phone=' + ( $('#li_subscribe_phone_field').is(':checked') ? 1 : 0 );
 		preview_link += '&lis_btn_label=' + $('#li_subscribe_btn_label').val();
+		preview_link += '&lis_btn_color=' + $('#li_subscribe_btn_color').val();
 		preview_link += '&lis_vex_class=' + $('#li_subscribe_vex_class option:selected').val();
 
 		$('#preview-popup-link').attr('href', preview_link);

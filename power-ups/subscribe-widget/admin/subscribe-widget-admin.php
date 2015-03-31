@@ -78,6 +78,13 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
             $this->power_up_settings_section
         );
         add_settings_field(
+            'li_subscribe_btn_color',
+            'Button color',
+            array($this, 'li_subscribe_btn_color_callback'),
+            LEADIN_ADMIN_PATH,
+            $this->power_up_settings_section
+        );
+        add_settings_field(
             'li_subscribe_additional_fields',
             'Also include fields for',
             array($this, 'li_subscribe_additional_fields_callback'),
@@ -108,6 +115,14 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
             LEADIN_ADMIN_PATH, 
             $this->power_up_settings_section
         );
+
+         add_settings_field( 
+            'li_subscribe_mobile_popup', 
+            'Show on mobile?', 
+            array($this, 'li_subscribe_mobile_popup_callback'), 
+            LEADIN_ADMIN_PATH, 
+            $this->power_up_settings_section
+        );
     }
 
     /**
@@ -134,6 +149,9 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
         if( isset( $input['li_subscribe_btn_label'] ) )
             $new_input['li_subscribe_btn_label'] = sanitize_text_field( $input['li_subscribe_btn_label'] );
 
+        if( isset( $input['li_subscribe_btn_color'] ) )
+            $new_input['li_subscribe_btn_color'] = sanitize_text_field( $input['li_subscribe_btn_color'] );
+
         if( isset( $input['li_subscribe_name_fields'] ) )
             $new_input['li_subscribe_name_fields'] = sanitize_text_field( $input['li_subscribe_name_fields'] );
 
@@ -156,6 +174,9 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
             $new_input['li_subscribe_confirmation'] = sanitize_text_field( $input['li_subscribe_confirmation'] );
         else
             $new_input['li_subscribe_confirmation'] = '0';
+
+        if( isset( $input['li_subscribe_mobile_popup'] ) )
+            $new_input['li_subscribe_mobile_popup'] = sanitize_text_field( $input['li_subscribe_mobile_popup'] );
 
         return $new_input;
     }
@@ -231,6 +252,51 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
     }
 
     /**
+     * Prints button color
+     */
+    function li_subscribe_btn_color_callback ()
+    {
+        $options = $this->options;
+
+        $li_subscribe_btn_color = ( isset($options['li_subscribe_btn_color']) ? $options['li_subscribe_btn_color'] : 'leadin-popup-color-blue' ); // Get button text from options, or show default
+
+        echo '<fieldset><legend class="screen-reader-text"><span>Button Color</span></legend>';
+
+        printf(
+            '<label for="li_subscribe_btn_color_blue"><input id="li_subscribe_btn_color_blue" type="radio" name="leadin_subscribe_options[li_subscribe_btn_color]" value="leadin-popup-color-blue"' . checked( 'leadin-popup-color-blue', ( isset($options['li_subscribe_btn_color']) ? $options['li_subscribe_btn_color'] : 'leadin-popup-color-blue' ), false ) . '>' . 
+            '<span class="color-swatch blue">Blue</span></label><br>'
+        );
+
+        printf(
+            '<label for="li_subscribe_btn_color_red"><input id="li_subscribe_btn_color_red" type="radio" name="leadin_subscribe_options[li_subscribe_btn_color]" value="leadin-popup-color-red"' . checked( 'leadin-popup-color-red', ( isset($options['li_subscribe_btn_color']) ? $options['li_subscribe_btn_color'] : 'leadin-popup-color-red' ), false ) . '>' . 
+            '<span class="color-swatch red">Red</span></label><br>'
+        );
+
+        printf(
+            '<label for="li_subscribe_btn_color_green"><input id="li_subscribe_btn_color_green" type="radio" name="leadin_subscribe_options[li_subscribe_btn_color]" value="leadin-popup-color-green"' . checked( 'leadin-popup-color-green', ( isset($options['li_subscribe_btn_color']) ? $options['li_subscribe_btn_color'] : 'leadin-popup-color-green' ), false ) . '>' . 
+            '<span class="color-swatch green">Green</span></label><br>'
+        );
+
+        printf(
+            '<label for="li_subscribe_btn_color_yellow"><input id="li_subscribe_btn_color_yellow" type="radio" name="leadin_subscribe_options[li_subscribe_btn_color]" value="leadin-popup-color-yellow"' . checked( 'leadin-popup-color-yellow', ( isset($options['li_subscribe_btn_color']) ? $options['li_subscribe_btn_color'] : 'leadin-popup-color-yellow' ), false ) . '>' . 
+            '<span class="color-swatch yellow">Yellow</span></label><br>'
+        );
+
+        printf(
+            '<label for="li_subscribe_btn_color_purple"><input id="li_subscribe_btn_color_purple" type="radio" name="leadin_subscribe_options[li_subscribe_btn_color]" value="leadin-popup-color-purple"' . checked( 'leadin-popup-color-purple', ( isset($options['li_subscribe_btn_color']) ? $options['li_subscribe_btn_color'] : 'leadin-popup-color-purple' ), false ) . '>' . 
+            '<span class="color-swatch purple">Purple</span></label><br>'
+        );
+
+        printf(
+            '<label for="li_subscribe_btn_color_orange"><input id="li_subscribe_btn_color_orange" type="radio" name="leadin_subscribe_options[li_subscribe_btn_color]" value="leadin-popup-color-orange"' . checked( 'leadin-popup-color-orange', ( isset($options['li_subscribe_btn_color']) ? $options['li_subscribe_btn_color'] : 'leadin-popup-color-orange' ), false ) . '>' . 
+            '<span class="color-swatch orange">Orange</span></label><br>'
+        );
+
+        echo '</fieldset>';
+
+    }
+
+    /**
      * Prints additional fields for first name, last name and phone number
      */
     function li_subscribe_additional_fields_callback ()
@@ -292,9 +358,26 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
     /**
      * Prints the options for toggling the widget on posts, pages, archives and homepage
      */
+    function li_subscribe_mobile_popup_callback ()
+    {
+        $options = $this->options;
+
+        $li_subscribe_mobile_popup = ( isset($options['li_subscribe_mobile_popup']) ? $options['li_subscribe_mobile_popup'] : '1' );
+
+        echo '<select id="li_subscribe_mobile_popup" name="leadin_subscribe_options[li_subscribe_mobile_popup]">';
+            echo '<option value="1"' . ( $li_subscribe_mobile_popup == '1' ? ' selected' : '' ) . '>Yes</option>';
+            echo '<option value="0"' . ( $li_subscribe_mobile_popup == '0' ? ' selected' : '' ) . '>No</option>';
+        echo '</select>';
+    }
+
+    /**
+     * Prints the options for toggling the widget on posts, pages, archives and homepage
+     */
     function li_preview_popup_callback ()
     {
         $options = $this->options;
+
+
 
         $preview_link = get_bloginfo('wpurl') . '?preview-subscribe=1';
         $preview_link .= '&lis_heading=' . ( isset($options['li_subscribe_heading']) ? $options['li_subscribe_heading'] : 'Sign up for email updates' );
@@ -302,8 +385,10 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
         $preview_link .= '&lis_show_names=' . ( isset($options['li_subscribe_name_fields']) ? $options['li_subscribe_name_fields'] : 0 );
         $preview_link .= '&lis_show_phone=' . ( isset($options['li_subscribe_phone_field']) ? $options['li_subscribe_phone_field'] : 0 );
         $preview_link .= '&lis_btn_label=' . ( isset($options['li_subscribe_btn_label']) ? $options['li_subscribe_btn_label'] : 'SUBSCRIBE' );
+        $preview_link .= '&lis_btn_color=' . ( isset($options['li_subscribe_btn_color']) ? $options['li_subscribe_btn_color'] : 'leadin-popup-color-blue' );
         $preview_link .= '&lis_vex_class=' . ( isset($options['li_subscribe_vex_class']) ? $options['li_subscribe_vex_class'] : 'vex-theme-bottom-right-corner' );
         $preview_link .= '&lis_confirmation=' . ( isset($options['li_subscribe_confirmation']) ? $options['li_subscribe_confirmation'] : 1 );
+        $preview_link .= '&lis_mobile_popup=' . ( isset($options['li_subscribe_mobile_popup']) ? $options['li_subscribe_mobile_popup'] : 1 );
 
         printf(
             '<p><a id="preview-popup-link" href="%s" target="_blank" class="button button-secondary">Preview Pop-up Form</a></p>', 

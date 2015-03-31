@@ -346,7 +346,7 @@ jQuery(document).ready( function ( $ ) {
 
     var preview_subscribe = leadin_get_parameter_by_name('preview-subscribe');
 
-    if ( !leadin_subscribe_check_mobile($) && ! preview_subscribe )
+    if ( !preview_subscribe )
     {
         if ( ! li_subscribe_flag )
         {
@@ -360,8 +360,10 @@ jQuery(document).ready( function ( $ ) {
                         $('#leadin-subscribe-name-fields').val(),
                         $('#leadin-subscribe-phone-field').val(),
                         $('#leadin-subscribe-btn-label').val(),
+                        $('#leadin-subscribe-btn-color').val(),
                         $('#leadin-subscribe-vex-class').val(),
-                        $('#leadin-subscribe-confirmation').val()
+                        $('#leadin-subscribe-confirmation').val(),
+                        $('#leadin-subscribe-mobile-popup').val()
                     );
                 }
                 else
@@ -380,8 +382,10 @@ jQuery(document).ready( function ( $ ) {
                     $('#leadin-subscribe-name-fields').val(),
                     $('#leadin-subscribe-phone-field').val(),
                     $('#leadin-subscribe-btn-label').val(),
+                    $('#leadin-subscribe-btn-color').val(),
                     $('#leadin-subscribe-vex-class').val(),
-                    $('#leadin-subscribe-confirmation').val()
+                    $('#leadin-subscribe-confirmation').val(),
+                    $('#leadin-subscribe-mobile-popup').val()
                 );   
             }
         }
@@ -394,22 +398,26 @@ jQuery(document).ready( function ( $ ) {
             leadin_get_parameter_by_name('lis_show_names'),
             leadin_get_parameter_by_name('lis_show_phone'),
             leadin_get_parameter_by_name('lis_btn_label'),
+            leadin_get_parameter_by_name('lis_btn_color'),
             leadin_get_parameter_by_name('lis_vex_class'),
-            leadin_get_parameter_by_name('lis_confirmation')
+            leadin_get_parameter_by_name('lis_confirmation'),
+            leadin_get_parameter_by_name('lis_mobile_popup')
         );
 
         subscribe.open();
     }
 });
 
-function bind_leadin_subscribe_widget ( lis_heading, lis_desc, lis_show_names, lis_show_phone, lis_btn_label, lis_vex_class, lis_confirmation ) 
+function bind_leadin_subscribe_widget ( lis_heading, lis_desc, lis_show_names, lis_show_phone, lis_btn_label, lis_btn_color, lis_vex_class, lis_confirmation, lis_mobile_popup ) 
 {
 
-    lis_heading     = ( lis_heading ? lis_heading : 'Sign up for email updates' );
-    lis_desc        = ( lis_desc ? lis_desc : '' );
-    lis_btn_label   = ( lis_btn_label ? lis_btn_label : 'SUBSCRIBE' );
-    lis_vex_class   = ( lis_vex_class ? lis_vex_class : 'vex-theme-bottom-right-corner' );
+    lis_heading         = ( lis_heading ? lis_heading : 'Sign up for email updates' );
+    lis_desc            = ( lis_desc ? lis_desc : '' );
+    lis_btn_label       = ( lis_btn_label ? lis_btn_label : 'SUBSCRIBE' );
+    lis_btn_color       = ( lis_btn_color ? lis_btn_color : 'leadin-popup-color-blue' );
+    lis_vex_class       = ( lis_vex_class ? lis_vex_class : 'vex-theme-bottom-right-corner' );
     lis_confirmation    = ( lis_confirmation ? lis_confirmation : 1 );
+    lis_mobile_popup    = ( lis_mobile_popup ? lis_mobile_popup : 1 );
 
     (function(){
         var $ = jQuery;
@@ -440,7 +448,7 @@ function bind_leadin_subscribe_widget ( lis_heading, lis_desc, lis_show_names, l
 
             subscribe.vex = vex.dialog.open({
                 showCloseButton: true,
-                className: 'leadin-subscribe ' + lis_vex_class,
+                className: 'leadin-subscribe ' + lis_vex_class + ' ' + lis_btn_color + ( lis_mobile_popup == 1 ? '' : ' leadin-subscribe-mobile-hide' ),
                 message: '<h4>' + lis_heading + '</h4>' + '<p>' + lis_desc + '</p>',
                 input: '<input id="leadin-subscribe-email" name="email" type="email" placeholder="Email address" />' +
                     ( parseInt(lis_show_names) ? '<input id="leadin-subscribe-fname" name="fname" type="text" placeholder="First Name" /><input id="leadin-subscribe-lname" name="lname" type="text" placeholder="Last Name"  />' : '' ) +
@@ -469,8 +477,8 @@ function bind_leadin_subscribe_widget ( lis_heading, lis_desc, lis_show_names, l
                             '<div class="vex-close"></div>' + 
                             ( parseInt(lis_confirmation) ? '<h3>Thanks!<br>You should receive a confirmation email in your inbox shortly.</h3>' : '<h3>Thanks!<br>We received your submission.</h3>' ) + 
                             '<div id="powered-by-leadin-thank-you">' +
-                                '<span class="powered-by">Powered by Leadin</span>' + 
-                                '<a href="http://leadin.com/wordpress-subscribe-widget-plugin?utm_source=virality&utm_medium=referral&utm_term=' + window.location.host + '&utm_content=e11&utm_campaign=subscribe%20widget"><img alt="Leadin" height="20px" width="99px" src="' + document.location.protocol + '//leadin.com/wp-content/themes/LeadIn-WP-Theme/library/images/logos/Leadin_logo@2x.png" alt="leadin.com"/></a>' +
+                                '<span class="powered-by">Powered by</span><br>' + 
+                                '<a href="http://leadin.com/wordpress-subscribe-widget?utm_source=virality&utm_medium=referral&utm_term=' + window.location.host + '&utm_content=e11&utm_campaign=subscribe%20widget"><img alt="Leadin" height="20px" width="99px" src="' + document.location.protocol + '//leadin.com/wp-content/themes/LeadIn-WP-Theme/library/images/logos/Leadin_logo@2x.png" alt="leadin.com"/></a>' +
                             '</div>'
                         ).css('text-align', 'center').fadeIn(250);
                     });
@@ -488,7 +496,7 @@ function bind_leadin_subscribe_widget ( lis_heading, lis_desc, lis_show_names, l
                 }
             });
 
-            $('.leadin-subscribe form.vex-dialog-form').append('<a href="http://leadin.com/wordpress-subscribe-widget-plugin?utm_source=virality&utm_medium=referral&utm_term=' + window.location.host + '&utm_content=e11&utm_campaign=subscribe%20widget" id="leadin-subscribe-powered-by" class="leadin-subscribe-powered-by">Powered by Leadin</a>');
+            $('.leadin-subscribe form.vex-dialog-form').append('<a href="http://leadin.com/wordpress-subscribe-widget?utm_source=virality&utm_medium=referral&utm_term=' + window.location.host + '&utm_content=e11&utm_campaign=subscribe%20widget" id="leadin-subscribe-powered-by" class="leadin-subscribe-powered-by">Powered by Leadin</a>');
         };
 
         subscribe._open = function() {
@@ -506,16 +514,6 @@ function bind_leadin_subscribe_widget ( lis_heading, lis_desc, lis_show_names, l
         subscribe.init();
         window.subscribe = subscribe;
     })();
-}
-
-function leadin_subscribe_check_mobile( $ )
-{
-    var is_mobile = false;
-
-    if ( $('#leadin-subscribe-mobile-check').css('display')=='none' )
-        is_mobile = true;
-
-    return is_mobile;
 }
 
 function leadin_subscribe_show ()
