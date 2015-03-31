@@ -98,13 +98,14 @@ class WPLeadInSubscribe extends WPLeadIn {
 				'li_subscribe_heading' 				=> ( isset($options['li_subscribe_heading']) ? $options['li_subscribe_heading'] : 'Sign up for email updates'),
 				'li_subscribe_text' 				=> ( isset($options['li_subscribe_text']) ? $options['li_subscribe_text'] : ''),
 				'li_subscribe_btn_label' 			=> ( isset($options['li_subscribe_btn_label']) ? $options['li_subscribe_btn_label'] : 'SUBSCRIBE'),
+				'li_subscribe_btn_color' 			=> ( isset($options['li_subscribe_btn_color']) ? $options['li_subscribe_btn_color'] : 'leadin-popup-color-blue'),
 				'li_subscribe_name_fields' 			=> ( isset($options['li_subscribe_name_fields']) ? $options['li_subscribe_name_fields'] : '0'),
 				'li_subscribe_phone_field' 			=> ( isset($options['li_subscribe_phone_field']) ? $options['li_subscribe_phone_field'] : '0'),
 				'li_subscribe_template_posts' 		=> '1',
 				'li_subscribe_template_pages' 		=> '1',
 				'li_subscribe_template_archives' 	=> '1',
-				'li_subscribe_template_home' 		=> '1'
-
+				'li_subscribe_template_home' 		=> '1',
+				'li_subscribe_mobile_popup' 		=> ( isset($options['li_subscribe_mobile_popup']) ? $options['li_subscribe_mobile_popup'] : '1')
 			);
 
 			update_option('leadin_subscribe_options', $opt);
@@ -134,12 +135,11 @@ class WPLeadInSubscribe extends WPLeadIn {
 	    echo '<input id="leadin-subscribe-heading" value="' . ( isset($options['li_subscribe_heading']) ? $options['li_subscribe_heading'] : 'Sign up for email updates' )  . '" type="hidden"/>';
 	    echo '<input id="leadin-subscribe-text" value="' . ( isset($options['li_subscribe_text']) ? $options['li_subscribe_text'] : '' )  . '" type="hidden"/>';
 	    echo '<input id="leadin-subscribe-btn-label" value="' . ( isset($options['li_subscribe_btn_label']) ? $options['li_subscribe_btn_label'] : 'SUBSCRIBE' )  . '" type="hidden"/>';
+	    echo '<input id="leadin-subscribe-btn-color" value="' . ( isset($options['li_subscribe_btn_color']) ? $options['li_subscribe_btn_color'] : 'leadin-popup-color-blue' )  . '" type="hidden"/>';
 	    echo '<input id="leadin-subscribe-name-fields" value="' . ( isset($options['li_subscribe_name_fields']) ? $options['li_subscribe_name_fields'] : '0' )  . '" type="hidden"/>';
 	    echo '<input id="leadin-subscribe-phone-field" value="' . ( isset($options['li_subscribe_phone_field']) ? $options['li_subscribe_phone_field'] : '0' )  . '" type="hidden"/>';
 	    echo '<input id="leadin-subscribe-confirmation" value="' . ( isset($options['li_subscribe_confirmation']) ? $options['li_subscribe_confirmation'] : '0' )  . '" type="hidden"/>';
-
-	    // Div checked by media query for mobile
-	    echo '<span id="leadin-subscribe-mobile-check"></span>';
+	    echo '<input id="leadin-subscribe-mobile-popup" value="' . ( isset($options['li_subscribe_mobile_popup']) ? $options['li_subscribe_mobile_popup'] : '1' )  . '" type="hidden"/>';
 	}
 
 	//=============================================

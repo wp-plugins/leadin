@@ -82,21 +82,41 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
         $li_contact = new LI_Contact();
         $li_contact->set_hashkey_by_id($lead_id);
         $li_contact->get_contact_history();
-        $lead_email = $li_contact->history->lead->lead_email;
-        $lead_source = leadin_strip_params_from_url($li_contact->history->lead->lead_source);
-        $leadin_user = leadin_get_current_user();
+        $lead_name      = ( $li_contact->history->lead->lead_first_name || $li_contact->history->lead->lead_last_name ?  $li_contact->history->lead->lead_first_name . ' ' . $li_contact->history->lead->lead_last_name : '' );
+        $lead_email     = $li_contact->history->lead->lead_email;
+        $lead_source    = leadin_strip_params_from_url($li_contact->history->lead->lead_source);
+        $leadin_user    = leadin_get_current_user();
 
         ?>
+
+        <?php if ( leadin_check_pro_user() ) : ?>
             <script type="text/javascript">
               !function(){var analytics=window.analytics=window.analytics||[];if(!analytics.initialize)if(analytics.invoked)window.console&&console.error&&console.error("Segment snippet included twice.");else{analytics.invoked=!0;analytics.methods=["trackSubmit","trackClick","trackLink","trackForm","pageview","identify","group","track","ready","alias","page","once","off","on"];analytics.factory=function(t){return function(){var e=Array.prototype.slice.call(arguments);e.unshift(t);analytics.push(e);return analytics}};for(var t=0;t<analytics.methods.length;t++){var e=analytics.methods[t];analytics[e]=analytics.factory(e)}analytics.load=function(t){var e=document.createElement("script");e.type="text/javascript";e.async=!0;e.src=("https:"===document.location.protocol?"https://":"http://")+"cdn.segment.com/analytics.js/v1/"+t+"/analytics.min.js";var n=document.getElementsByTagName("script")[0];n.parentNode.insertBefore(e,n)};analytics.SNIPPET_VERSION="3.0.1";
                 analytics.load("<?php echo SEGMENT_WRITE_KEY ?>");
-                analytics.identify("<?php echo $leadin_user['user_id'] ?>", {
-                    email       : "<?php echo $leadin_user['email'] ?>",
-                    contacts    : "<?php echo $leadin_user['total_contacts'] ?>",
+                analytics.identify("<?php echo $leadin_user['user_id']; ?>", {
+                    "name"              : "<?php echo $leadin_user['alias']; ?>",
+                    "email"             : "<?php echo $leadin_user['email']; ?>",
+                    "wp-url"            : "<?php echo $leadin_user['wp_url']; ?>",
+                    "wp-version"        : "<?php echo $leadin_user['wp_version']; ?>",
+                    "li-version"        : "<?php echo $leadin_user['li_version']; ?>",
+                    "li-source"         : "<?php echo LEADIN_SOURCE; ?>",
+                    "createdAt"         : "<?php echo date('Y-m-d H:i:s'); ?>",
+                    "website"           : "<?php echo $leadin_user['wp_url']; ?>",
+                    "company"           : "<?php echo $leadin_user['wp_url']; ?>",
+                    "contacts"          : <?php echo $leadin_user['total_contacts']; ?>,
+                    "utm_source"        : "<?php echo $leadin_user['utm_source']; ?>",
+                    "utm_medium"        : "<?php echo $leadin_user['utm_medium']; ?>",
+                    "utm_term"          : "<?php echo $leadin_user['utm_term']; ?>",
+                    "utm_content"       : "<?php echo $leadin_user['utm_content']; ?>",
+                    "utm_campaign"      : "<?php echo $leadin_user['utm_campaign']; ?>",
+                    "referral_source"   : "<?php echo $leadin_user['referral_source']; ?>"
                 });
-                analytics.page("Loaded Contact Detail Page");
+                analytics.track("Loaded Contact Detail Page");
+                analytics.page('');
               }}();
             </script>
+        <?php endif; ?>
+
         <?php
 
         if ( isset($_POST['edit_tags']) )
@@ -115,44 +135,64 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
             $li_contact->history->tags = $li_contact->get_contact_tags($li_contact->hashkey);
         }
 
-        if ( isset($_GET['stats_dashboard']) )
-            echo '<a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_stats">&larr; Stat Dashboard</a>';
-        else
-        {
-            if ( isset($_GET['redirect_to']) )
-            {
-                if ( strstr($_GET['redirect_to'], 'contact_type') )
-                {
-                    $url_parts = parse_url(urldecode($_GET['redirect_to']));
-                    parse_str($url_parts['query'], $url_vars);
+        echo '<div class="contact-top-navigation">';
+            
+            if  ( $li_contact->history->lead->lead_deleted ) {
+                $li_contact->display_error_message_for_merged_contact($li_contact->history->lead->lead_email);
+            }
 
-                    if ( isset($url_vars['contact_type']) && $url_vars['contact_type'] )
-                        echo '<a href="' . $_GET['redirect_to'] . '">&larr; All ' . ucwords($url_vars['contact_type']) . '</a>';
-                    else
-                        echo '<a href="' . $_GET['redirect_to'] . '">&larr; All Contacts</a>';
-                }
-                else
-                    echo '<a href="' . $_GET['redirect_to'] . '">&larr; All Contacts</a>';
-                
+            if ( isset($_GET['stats_dashboard']) ) {
+                echo '<a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_stats">&larr; Stat Dashboard</a>';
             }
             else
-                echo '<a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts">&larr; All Contacts</a>';
-        }
-        
-        echo '<div class="contact-header-wrap">';
+            {
+                if ( isset($_GET['redirect_to']) )
+                {
+                    if ( strstr($_GET['redirect_to'], 'contact_type') )
+                    {
+                        $url_parts = parse_url(urldecode($_GET['redirect_to']));
+                        parse_str($url_parts['query'], $url_vars);
 
-            if  ( $li_contact->history->lead->lead_deleted )
-                $li_contact->display_error_message_for_merged_contact($li_contact->history->lead->lead_email);
+                        if ( isset($url_vars['contact_type']) && $url_vars['contact_type'] )
+                            echo '<a href="' . $_GET['redirect_to'] . '">&larr; All ' . ucwords($url_vars['contact_type']) . '</a>';
+                        else
+                            echo '<a href="' . $_GET['redirect_to'] . '">&larr; All Contacts</a>';
+                    }
+                    else
+                        echo '<a href="' . $_GET['redirect_to'] . '">&larr; All Contacts</a>';
+                    
+                }
+                else
+                    echo '<a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts">&larr; All Contacts</a>';
+            }
+        echo '</div>'; // contact-top-navigation
 
-            echo '<img class="contact-header-avatar leadin-dynamic-avatar_' . substr($lead_id, -1) . '" height="76px" width="76px" src="https://api.hubapi.com/socialintel/v1/avatars?email=' . $lead_email . '"/>';
-            echo '<div class="contact-header-info">';
-                echo '<h1 class="contact-name">' . $lead_email . '</h1>';
+        echo '<div class="contact-deatils-column">';
+            echo '<div class="leadin-meta-section">';
+                echo '<div class="leadin-postbox__content">';
+                    echo '<img class="contact-header-avatar leadin-dynamic-avatar_' . substr($lead_id, -1) . '" height="65px" width="65px" src="https://api.hubapi.com/socialintel/v1/avatars?email=' . $lead_email . '"/>';
+                    echo '<div class="contact-header-info">';
+                        echo '<h2 class="contact-name">' . ( $lead_name ? $lead_name : $lead_email ) . '</h2>';
+                        echo '<div class="contact-networks">';
+                           
+                            if ( isset($li_contact->history->lead->social_data->social_profiles) && count($li_contact->history->lead->social_data->social_profiles) )
+                            {
+                                foreach ( $li_contact->history->lead->social_data->social_profiles as $key => $profile )
+                                    echo '<a href="' . leadin_safe_social_profile_url($profile->url) . '" class="icon-' . $profile->typeid . '" target="_blank"></a>';
+                            }
 
-                
-                echo '<div class="contact-tags">';
+                            echo '<a href="mailto:' . $lead_email . '" class="icon-envelope"></a>';
+                        echo '</div>';
+                    echo '</div>';
+                echo '</div>';
+            echo '</div>'; // leadin-meta-section
+
+            echo '<div class="leadin-meta-section">';
+                echo '<h4 class="leain-meta-header">Tags</h4>';
+                echo '<div class="leadin-postbox__content">';
                     foreach( $li_contact->history->tags as $tag ) {
                         if ($tag->tag_set)
-                            echo '<a class="contact-tag" href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts&contact_type=' . $tag->tag_slug . '"><span class="icon-tag"></span>' . $tag->tag_text . '</a>';
+                            echo '<a class="contact-tag" href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts&contact_type=' . $tag->tag_slug . '">' . $tag->tag_text . '</a>';
                     }
                     ?>
 
@@ -183,125 +223,12 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                     <a class="thickbox contact-edit-tags" <?php echo ( $li_contact->history->lead->lead_deleted ? 'style="display: none;"' : '' ); ?> href="#TB_inline?width=400&height=400&inlineId=edit-contact-tags">edit tags</a>
 
                     <?php
+                echo '</div>'; // leadin-postbox__content
+            echo '</div>'; // leadin-meta-section
 
-                echo '</div>';
-            echo '</div>';
-        echo '</div>';
-        
-        echo '<div id="col-container">';
-            echo '<div id="col-right" ' . ( $li_contact->history->lead->lead_deleted ? 'style="display: none;"' : '' ) . '>';
-                echo '<div class="col-wrap contact-history">';
-                    echo '<ul class="sessions">';
-                    $sessions = $li_contact->history->sessions;
-                    foreach ( $sessions as &$session )
-                    {
-                        $first_event = end($session['events']);
-                        $first_event_date = $first_event['event_date'];
-                        $session_date = date('F j, Y, g:ia', strtotime($first_event['event_date']));
-                        $session_start_time = date('g:ia', strtotime($first_event['event_date']));
-
-                        $last_event = array_values($session['events']);
-                        $session_end_time = date('g:ia', strtotime($last_event[0]['event_date']));
-
-                        echo '<li class="session">';
-                        echo '<h3 class="session-date">' . $session_date . ( $session_start_time != $session_end_time ? ' - ' . $session_end_time : '' ) . '</h3>';
-
-                        echo '<ul class="events">';
-
-                        //$events = array_reverse($session['events']);
-                        $events = $session['events'];
-                        foreach ( $events as &$event )
-                        {
-                            if ( $event['event_type'] == 'pageview' )
-                            {
-                                $pageview = $event['activities'][0];
-                                
-                                echo '<li class="event pageview">';
-                                    echo '<div class="event-time">' . date('g:ia', strtotime($pageview['event_date'])) . '</div>';
-                                    echo '<div class="event-content">';
-                                        echo '<p class="event-title">' . $pageview['pageview_title'] . '</p>';
-                                        echo '<a class="event-detail pageview-url" target="_blank" href="' . $pageview['pageview_url'] . '">' . leadin_strip_params_from_url($pageview['pageview_url']) . '</a>';
-                                    echo '</div>';
-                                echo '</li>';
-
-                                if ( $pageview['event_date'] == $first_event['event_date'] )
-                                {
-                                    echo '<li class="event source">';
-                                        echo '<div class="event-time">' . date('g:ia', strtotime($pageview['event_date'])) . '</div>';
-                                        echo '<div class="event-content">';
-                                            echo '<p class="event-title">Traffic Source: ' . ( $pageview['pageview_source'] ? '<a href="' . $pageview['pageview_source'] . '">' . leadin_strip_params_from_url($pageview['pageview_source']) : 'Direct' ) . '</a></p>';
-                                            $url_parts = parse_url($pageview['pageview_source']);
-                                            if ( isset($url_parts['query']) )
-                                            {
-                                                if ( $url_parts['query'] )
-                                                {
-                                                    parse_str($url_parts['query'], $url_vars);
-                                                    if ( count($url_vars) )
-                                                    {
-                                                        echo '<ul class="event-detail fields">';
-                                                            foreach ( $url_vars as $key => $value )
-                                                            {
-                                                                if ( ! $value )
-                                                                    continue;
-                                                                
-                                                                echo '<li class="field">';
-                                                                    echo '<label class="field-label">' . $key . ':</label>';
-                                                                    echo '<p class="field-value">' . nl2br($value) . '</p>';
-                                                                echo '</li>';
-                                                            }
-                                                        echo '</ul>';
-                                                    }
-                                                }
-                                            }
-                                            
-                                        echo '</div>';
-                                    echo '</li>';
-                                }
-                            }
-                            else if ( $event['event_type'] == 'form' )
-                            {
-                                $submission = $event['activities'][0];
-                                $form_fields = json_decode($submission['form_fields']);
-                                $num_form_fieds = count($form_fields);
-                                $tag_text = '<a class="contact-tag" href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts&contact_type=' . $tag->tag_slug . '">' . $tag->tag_text . '</a>';
-
-                                echo '<li class="event form-submission">';
-                                    echo '<div class="event-time">' . date('g:ia', strtotime($submission['event_date'])) . '</div>';
-                                    echo '<div class="event-content">';
-                                        echo '<p class="event-title">';
-                                            echo 'Filled out ' . $event['form_name'] . ' on page <a href="' . $submission['form_page_url'] . '">' . $submission['form_page_title']  . '</a>';
-                                            if ( count($event['form_tags']) )
-                                            {
-                                                echo ' and tagged as ';
-                                                for ( $i = 0; $i < count($event['form_tags']); $i++ )
-                                                    echo '<a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts&contact_type=' . $event['form_tags'][$i]['tag_slug'] . '">' . $event['form_tags'][$i]['tag_text'] . '</a> ';
-                                            }
-                                        echo '</p>';
-                                        echo '<ul class="event-detail fields">';
-                                        if ( count($form_fields) )
-                                        {
-                                            foreach ( $form_fields as $field )
-                                            {
-                                                echo '<li class="field">';
-                                                    echo '<label class="field-label">' . $field->label . ':</label>';
-                                                    echo '<p class="field-value">' . nl2br($field->value) . '</p>';
-                                                echo '</li>';
-                                            }
-                                        }
-                                        echo '</ul>';
-                                    echo '</div>';
-                                echo '</li>';
-                            }
-                        }
-                        echo '</ul>';
-                        echo '</li>';
-                    }
-                    echo '</ul>';
-                echo '</div>';
-            echo '</div>';
-            echo '<div id="col-left" class="metabox-holder" ' . ( $li_contact->history->lead->lead_deleted ? 'style="display: none;"' : '' ) . '>';
-                echo '<div class="leadin-meta-section">';
-                    echo '<h4 class="leain-meta-header">Tracking Info</h4>';
+            echo '<div class="leadin-meta-section">';
+                echo '<h4 class="leain-meta-header">Tracking Info</h4>';
+                echo '<div class="leadin-postbox__content">';
                     echo '<table class="leadin-meta-table"><tbody>';
 
                         if ( $li_contact->history->lead->lead_first_name )
@@ -332,36 +259,30 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                             echo '<td>' . $li_contact->history->lead->total_submissions . '</td>';
                         echo '</tr>';
                     echo '</tbody></table>';
-                echo '</div>'; // leadin-meta-section
-                echo '<div class="leadin-meta-section">';
-                    echo '<h4 class="leain-meta-header leadin-premium-tag">Personal Info</h4>';
+                echo '</div>'; // leadin-postbox__content
+            echo '</div>'; // leadin-meta-section
+            echo '<div class="leadin-meta-section">';
+                echo '<h4 class="leain-meta-header leadin-premium-tag">Personal Info</h4>';
+                echo '<div class="leadin-postbox__content">';
                     echo '<table class="leadin-meta-table"><tbody>';
                         echo '<tr>';
                             if ( leadin_check_pro_user() )
                             {
-                                $social_data = FALSE;
-
-                                if ( isset($li_contact->history->lead->social_data->properties->primary) )
+                                $social_data = ( isset($li_contact->history->lead->social_data) ? $li_contact->history->lead->social_data : array() );
+                                
+                                if ( ! $social_data )
                                 {
-                                    $primary = $li_contact->history->lead->social_data->properties->primary;
-                                    echo '<b>' . $primary->title . ( $primary->company_name ? ' - ' . $primary->company_name : '' ) . '</b>';
-
-                                    $social_data = TRUE;
+                                    echo 'We couldn\'t find any personal info for this contact.';
                                 }
-
-                                if ( isset($li_contact->history->lead->social_data->properties->description) )
+                                else
                                 {
-                                    echo '</br>' . $li_contact->history->lead->social_data->properties->description;
+                                    echo '<b>' . $social_data->title . ( $social_data->company_name ? ' - ' . $social_data->company_name : '' ) . '</b>';
+                                    echo '</br>' . $social_data->description;
 
-                                    $social_data = TRUE;
-                                }
-
-                                if ( isset($li_contact->history->lead->social_data->properties->social_profiles) )
-                                {
-                                    if ( count($li_contact->history->lead->social_data->properties->social_profiles) )
+                                    if ( count($social_data->social_profiles) )
                                     {
                                         echo '<table class="leadin-meta-table"><tbody>';
-                                            foreach ( $li_contact->history->lead->social_data->properties->social_profiles as $key => $profile )
+                                            foreach ( $social_data->social_profiles as $key => $profile )
                                             {
                                                 echo '<tr>';
                                                     echo '<th>';
@@ -373,13 +294,8 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                                                 echo '</tr>';
                                             }
                                         echo '</tbody></table>';
-
-                                        $social_data = TRUE;
                                     }
                                 }
-
-                                if ( ! $social_data )
-                                    echo 'We couldn\'t find any personal info for this contact.';
                             }
                             else
                             {
@@ -391,24 +307,28 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                             }
                         echo '</tr>';
                     echo '</tbody></table>';
-                echo '</div>'; // leadin-meta-section
-                echo '<div class="leadin-meta-section">';
-                    echo '<h4 class="leain-meta-header leadin-premium-tag">Company Info</h4>';
+                echo '</div>'; // leadin-postbox__content
+            echo '</div>'; // leadin-meta-section
+            echo '<div class="leadin-meta-section">';
+                echo '<h4 class="leain-meta-header leadin-premium-tag">Company Info</h4>';
+                echo '<div class="leadin-postbox__content">';
                     echo '<table class="leadin-meta-table"><tbody>';
                         echo '<tr>';
                             if ( leadin_check_pro_user() )
                             {
-                                $company_data = FALSE;
+                                $company_data = ( isset($li_contact->history->lead->company_data) ? $li_contact->history->lead->company_data : array() );
 
-                                $properties = ( isset($li_contact->history->lead->company_data->properties) ? $li_contact->history->lead->company_data->properties : '' );
-      
-                                if ( isset($properties->name) )
+                                if ( ! $company_data )
+                                {
+                                    echo 'We couldn\'t find any company info for this contact.';
+                                }
+                                else
                                 {
                                     echo '<p>';
-                                        echo '<b>About ' . $properties->name . '</b>';
-                                        if ( isset($properties->overview) )
+                                        echo '<b>About ' . $company_data->name . '</b>';
+                                        if ( isset($company_data->overview) )
                                         {
-                                            $overview = $properties->overview;
+                                            $overview = $company_data->overview;
                                             
                                             if ( strlen($overview) < 260 )
                                             {
@@ -419,109 +339,85 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                                                 echo '<div id="company-detail-overview-short">' . substr($overview, 0, strpos($overview, '.', 260)) . ' ... <a id="contact-detail-read-more" href="javascript:void(0);">read more</a></div>';
                                                 echo '<div style="display: none;" id="company-detail-overview-full">' . $overview . ' <a id="contact-detail-read-less" href="javascript:void(0);">read less</a></div>';
                                             }
-
-                                            $company_data = TRUE;
                                         }
                                     echo '</p>';
+
+                                    echo '<table class="leadin-meta-table"><tbody>';
+
+                                    if ( $company_data->employees )
+                                    {
+                                        echo '<tr>';
+                                            echo '<th>Employees</th>';
+                                            echo '<td>' . $company_data->employees . '</td>';
+                                        echo '</tr>';
+                                    }
+
+                                    if ( $company_data->revenue )
+                                    {
+                                        echo '<tr>';
+                                            echo '<th>Revenue</th>';
+                                            echo '<td>' . $company_data->revenue . '</td>';
+                                        echo '</tr>';
+                                    }
+
+                                    if ( $company_data->state || $company_data->country )
+                                    {
+                                        echo '<tr>';
+                                            echo '<th>Headquarters</th>';
+                                            echo '<td>' . ( !empty($company_data->state) ? $company_data->state : '' ) . ( !empty($company_data->state) && !empty($company_data->country) ? ', ' : '' ) . ( !empty($company_data->country) ? $company_data->country : '' ) . '</td>';
+                                        echo '</tr>';
+                                    }
+
+                                    if ( $company_data->founded )
+                                    {
+                                        echo '<tr>';
+                                            echo '<th>Founded</th>';
+                                            echo '<td>' . $company_data->founded . '</td>';
+                                        echo '</tr>';
+                                    }
+
+                                    if ( $company_data->facebookpageurl )
+                                    {
+                                        echo '<tr>';
+                                            echo '<th>Facebook</th>';
+                                            echo '<td>' . '<a href="' . $company_data->facebookpageurl . '" target="_blank">' . $company_data->name . '</a></td>';
+                                        echo '</tr>';
+                                    }
+
+                                    if ( $company_data->twitterusername )
+                                    {
+                                        echo '<tr>';
+                                            echo '<th>Twitter</th>';
+                                            echo '<td>' . '<a href="' . $company_data->twitterurl . '" target="_blank">' . '@' . $company_data->twitterusername . '</a></td>';
+                                        echo '</tr>';
+                                    }
+
+                                    if ( $company_data->linkedinurl )
+                                    {
+                                        echo '<tr>';
+                                            echo '<th>LinkedIn</th>';
+                                            echo '<td>' . '<a href="' . $company_data->linkedinurl . '" target="_blank">' . $company_data->name . '</a></td>';
+                                        echo '</tr>';
+                                    }
+
+                                    if ( $company_data->address )
+                                    {
+                                        echo '<tr>';
+                                            echo '<th>Address</th>';
+                                            echo '<td><a href="http://maps.google.com/maps?q=' . urlencode($company_data->address) . '"" target="_blank">' . $company_data->address . '</a></td>';
+                                        echo '</tr>';
+                                    }
+
+                                    if ( $company_data->country )
+                                    {
+                                        echo '<tr>';
+                                            echo '<th>Country</th>';
+                                            echo '<td>' . $company_data->country . '</td>';
+                                        echo '</tr>';
+                                    }
+
+                                    echo '</tbody></table>';
                                 }
-
-                                echo '<table class="leadin-meta-table"><tbody>';
-
-                                if ( !empty($properties->employees) )
-                                {
-                                    echo '<tr>';
-                                        echo '<th>Employees</th>';
-                                        echo '<td>' . $properties->employees . '</td>';
-                                    echo '</tr>';
-
-                                    $company_data = TRUE;
-                                }
-
-                                if ( !empty($properties->revenue) )
-                                {
-                                    echo '<tr>';
-                                        echo '<th>Revenue</th>';
-                                        echo '<td>' . $properties->revenue . '</td>';
-                                    echo '</tr>';
-
-                                    $company_data = TRUE;
-                                }
-
-                                if ( !empty($properties->state) || !empty($properties->country) )
-                                {
-                                    echo '<tr>';
-                                        echo '<th>Headquarters</th>';
-                                        echo '<td>' . ( !empty($properties->state) ? $properties->state : '' ) . ( !empty($properties->state) && !empty($properties->country) ? ', ' : '' ) . ( !empty($properties->country) ? $properties->country : '' ) . '</td>';
-                                    echo '</tr>';
-
-                                    $company_data = TRUE;
-                                }
-
-                                if ( !empty($properties->founded) )
-                                {
-                                    echo '<tr>';
-                                        echo '<th>Founded</th>';
-                                        echo '<td>' . $properties->founded . '</td>';
-                                    echo '</tr>';
-
-                                    $company_data = TRUE;
-                                }
-
-                                if ( !empty($properties->facebookpageurl) )
-                                {
-                                    echo '<tr>';
-                                        echo '<th>Facebook</th>';
-                                        echo '<td>' . '<a href="' . $properties->facebookpageurl . '" target="_blank">' . $properties->name . '</a></td>';
-                                    echo '</tr>';
-
-                                    $company_data = TRUE;
-                                }
-
-                                if ( !empty($properties->twitterusername) )
-                                {
-                                    echo '<tr>';
-                                        echo '<th>Twitter</th>';
-                                        echo '<td>' . '<a href="' . $properties->twitterurl . '" target="_blank">' . '@' . $properties->twitterusername . '</a></td>';
-                                    echo '</tr>';
-
-                                    $company_data = TRUE;
-                                }
-
-                                if ( !empty($properties->linkedinurl) )
-                                {
-                                    echo '<tr>';
-                                        echo '<th>LinkedIn</th>';
-                                        echo '<td>' . '<a href="' . $properties->linkedinurl . '" target="_blank">' . $properties->name . '</a></td>';
-                                    echo '</tr>';
-
-                                    $company_data = TRUE;
-                                }
-
-                                if ( !empty($properties->address) )
-                                {
-                                    echo '<tr>';
-                                        echo '<th>Address</th>';
-                                        echo '<td><a href="http://maps.google.com/maps?q=' . urlencode($properties->address) . '"" target="_blank">' . $properties->address . '</a></td>';
-                                    echo '</tr>';
-
-                                    $company_data = TRUE;
-                                }
-
-                                if ( !empty($properties->country) )
-                                {
-                                    echo '<tr>';
-                                        echo '<th>Country</th>';
-                                        echo '<td>' . $properties->country . '</td>';
-                                    echo '</tr>';
-
-                                    $company_data = TRUE;
-                                }
-
-                                if ( ! $company_data )
-                                    echo 'We couldn\'t find any company info for this contact.';
-
-                                 
-                                echo '</tbody></table>';
                             }
                             else
                             {
@@ -533,9 +429,120 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                             }
                         echo '</tr>';
                     echo '</tbody></table>';
-                echo '</div>'; // leadin-meta-section
-            echo '</div>'; // col-left
-        echo '</div>';
+                echo '</div>'; // leadin-postbox__content
+            echo '</div>'; // leadin-meta-section
+        echo '</div>'; // contact-deatils-column
+        
+        echo '<div class="contact-timeline-column" ' . ( $li_contact->history->lead->lead_deleted ? 'style="display: none;"' : '' ) . '>';
+            echo '<div class="col-wrap contact-history">';
+                echo '<ul class="sessions">';
+                $sessions = $li_contact->history->sessions;
+                foreach ( $sessions as &$session )
+                {
+                    $first_event = end($session['events']);
+                    $first_event_date = $first_event['event_date'];
+                    $session_date = date('F j, Y, g:ia', strtotime($first_event['event_date']));
+                    $session_start_time = date('g:ia', strtotime($first_event['event_date']));
+
+                    $last_event = array_values($session['events']);
+                    $session_end_time = date('g:ia', strtotime($last_event[0]['event_date']));
+
+                    echo '<li class="session">';
+                    echo '<h3 class="session-date">' . $session_date . ( $session_start_time != $session_end_time ? ' - ' . $session_end_time : '' ) . '</h3>';
+
+                    echo '<ul class="events">';
+
+                    //$events = array_reverse($session['events']);
+                    $events = $session['events'];
+                    foreach ( $events as &$event )
+                    {
+                        if ( $event['event_type'] == 'pageview' )
+                        {
+                            $pageview = $event['activities'][0];
+                            
+                            echo '<li class="event pageview">';
+                                echo '<div class="event-time">' . date('g:ia', strtotime($pageview['event_date'])) . '</div>';
+                                echo '<div class="event-content">';
+                                    echo '<p class="event-title">' . $pageview['pageview_title'] . '</p>';
+                                    echo '<a class="event-detail pageview-url" target="_blank" href="' . $pageview['pageview_url'] . '">' . leadin_strip_params_from_url($pageview['pageview_url']) . '</a>';
+                                echo '</div>';
+                            echo '</li>';
+
+                            if ( $pageview['event_date'] == $first_event['event_date'] )
+                            {
+                                echo '<li class="event source">';
+                                    echo '<div class="event-time">' . date('g:ia', strtotime($pageview['event_date'])) . '</div>';
+                                    echo '<div class="event-content">';
+                                        echo '<p class="event-title">Traffic Source: ' . ( $pageview['pageview_source'] ? '<a href="' . $pageview['pageview_source'] . '">' . leadin_strip_params_from_url($pageview['pageview_source']) : 'Direct' ) . '</a></p>';
+                                        $url_parts = parse_url($pageview['pageview_source']);
+                                        if ( isset($url_parts['query']) )
+                                        {
+                                            if ( $url_parts['query'] )
+                                            {
+                                                parse_str($url_parts['query'], $url_vars);
+                                                if ( count($url_vars) )
+                                                {
+                                                    echo '<ul class="event-detail fields">';
+                                                        foreach ( $url_vars as $key => $value )
+                                                        {
+                                                            if ( ! $value )
+                                                                continue;
+                                                            
+                                                            echo '<li class="field">';
+                                                                echo '<label class="field-label">' . $key . ':</label>';
+                                                                echo '<p class="field-value">' . nl2br($value) . '</p>';
+                                                            echo '</li>';
+                                                        }
+                                                    echo '</ul>';
+                                                }
+                                            }
+                                        }
+                                        
+                                    echo '</div>';
+                                echo '</li>';
+                            }
+                        }
+                        else if ( $event['event_type'] == 'form' )
+                        {
+                            $submission = $event['activities'][0];
+                            $form_fields = json_decode($submission['form_fields']);
+                            $num_form_fieds = count($form_fields);
+                            $tag_text = '<a class="contact-tag" href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts&contact_type=' . $tag->tag_slug . '">' . $tag->tag_text . '</a>';
+
+                            echo '<li class="event form-submission">';
+                                echo '<div class="event-time">' . date('g:ia', strtotime($submission['event_date'])) . '</div>';
+                                echo '<div class="event-content">';
+                                    echo '<p class="event-title">';
+                                        echo 'Filled out ' . $event['form_name'] . ' on page <a href="' . $submission['form_page_url'] . '">' . $submission['form_page_title']  . '</a>';
+                                        if ( count($event['form_tags']) )
+                                        {
+                                            echo ' and tagged as ';
+                                            for ( $i = 0; $i < count($event['form_tags']); $i++ )
+                                                echo '<a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts&contact_type=' . $event['form_tags'][$i]['tag_slug'] . '">' . $event['form_tags'][$i]['tag_text'] . '</a> ';
+                                        }
+                                    echo '</p>';
+                                    echo '<ul class="event-detail fields">';
+                                    if ( count($form_fields) )
+                                    {
+                                        foreach ( $form_fields as $field )
+                                        {
+                                            echo '<li class="field">';
+                                                echo '<label class="field-label">' . $field->label . ':</label>';
+                                                echo '<p class="field-value">' . nl2br($field->value) . '</p>';
+                                            echo '</li>';
+                                        }
+                                    }
+                                    echo '</ul>';
+                                echo '</div>';
+                            echo '</li>';
+                        }
+                    }
+                    echo '</ul>';
+                    echo '</li>';
+                }
+                echo '</ul>';
+            echo '</div>';
+        echo '</div>'; //contact-timeline-column
     }
 
     /**

@@ -72,9 +72,15 @@ class WPLeadIn {
                 return FALSE;
         }
 
+
+        if ( ini_get('allow_url_fopen') )
+            $leadin_icon = '<img src="data:image/svg+xml;base64,' . base64_encode(file_get_contents(LEADIN_PATH . '/images/leadin-svg-icon.svg')) . '">';
+        else
+            $leadin_icon = '<img src="' . LEADIN_PATH . '/images/leadin-icon-16x16.png' . '">';
+
         $args = array(
             'id'     => 'leadin-admin-menu',
-            'title'  => '<span class="ab-icon" '. ( $wp_version < 3.8 && !is_plugin_active('mp6/mp6.php') ? ' style="margin-top: 3px;"' : ''). '><img src="data:image/svg+xml;base64,' . base64_encode(file_get_contents(LEADIN_PATH . '/images/leadin-svg-icon.svg')). '"></span><span class="ab-label">Leadin</span>', // alter the title of existing node
+            'title'  => '<span class="ab-icon" '. ( $wp_version < 3.8 && !is_plugin_active('mp6/mp6.php') ? ' style="margin-top: 3px;"' : '' ) . '>' . $leadin_icon . '</span><span class="ab-label">Leadin</span>', // alter the title of existing node
             'parent' => FALSE,   // set parent to false to make it a top level (parent) node
             'href' => get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_stats',
             'meta' => array('title' => 'Leadin')

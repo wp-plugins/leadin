@@ -56,12 +56,6 @@ class LI_Contact {
 		$submissions 	= $this->get_contact_submissions($this->hashkey, 'ARRAY_A');
 		$tags 			= $this->get_contact_tags($this->hashkey);
 
-		if ( WPLeadIn::is_power_up_active('lookups') )
-		{
-			$lead->social_data = $this->get_social_details($lead);
-			$lead->company_data = $this->get_company_details($lead);
-		}
-
 		// Merge the page views array and submissions array and reorder by date
 		$events_array = array_merge($pageviews, $submissions); 
 		usort($events_array, array('LI_Contact','sort_by_event_date'));
@@ -184,6 +178,15 @@ class LI_Contact {
 			$count++;
 		}
 
+		$lead->social_data = '';
+		$lead->company_data = '';
+		
+		if ( WPLeadIn::is_power_up_active('lookups') )
+		{
+			$lead->social_data 	= $this->get_social_details($lead);
+			$lead->company_data = $this->get_company_details($lead);
+		}
+
 		$lead->total_visits 		= $total_visits;
 		$lead->total_pageviews 		= $total_pageviews;
 		$lead->total_submissions 	= $total_submissions;
@@ -290,97 +293,108 @@ class LI_Contact {
 	}
 
 	/**
-	 * Sets the social_data on a contact
+	 * Sets the social_data on a contact object
 	 *
 	 * @param	object
 	 * @return	object
 	 */
 	function get_social_details ( $lead ) 
 	{
-		$site_url = site_url();
-		$social_data = '';
+		// Grab the social intel lookup
+		$response = json_decode($this->query_social_lookup_endpoint(strtolower($lead->lead_email), site_url()));
+		$social_data = (Object)NULL;
+		$social_data_exists = FALSE;
 
-		if ( ! $lead->social_data )
+		/*
+			- Create a null object
+				- If no response, return false
+				- If response, set all defaults
+				- Overwrite defaults
+				- Loop through response, if no values set, then return false
+		*/
+
+		if ( isset($response->status) && $response->status == 'error' )
 		{
-			// Grab the social intel lookup
-			$social_data = json_decode($this->query_social_lookup_endpoint(strtolower($lead->lead_email), $site_url));	
-
-			if ( ! isset($social_data->status) )
-			{
-				$this->update_social_lookup_data($this->hashkey, serialize($social_data));
-
-				// Update the first and last names if one of them isn't set, and the respected name part is present or the full name is present the full name is present or the correspond
-				$first_name = '';
-				$last_name 	= '';
-				$update_name = FALSE;
-
-				if ( ! $lead->lead_first_name )
-				{
-					if ( isset($social_data->fullcontactDetails->contactinfo->givenname) )
-					{
-						$first_name = $social_data->fullcontactDetails->contactinfo->givenname;
-						$update_name = TRUE;
-					}
-					else if ( isset($social_data->fullcontactDetails->contactinfo->fullname) )
-					{
-						$first_name = reset(explode(' ', $social_data->fullcontactDetails->contactinfo->fullname));
-						$update_name = TRUE;
-					}
-				}
-				else
-					$first_name = $lead->lead_first_name;
-
-				if ( ! $lead->lead_last_name )
-				{
-					if ( isset($social_data->fullcontactDetails->contactinfo->familyname) )
-					{
-						$last_name = $social_data->fullcontactDetails->contactinfo->familyname;
-						$update_name = TRUE;
-					}
-					else if ( isset($social_data->fullcontactDetails->contactinfo->fullname) )
-					{
-						$last_name = end(explode(' ', $social_data->fullcontactDetails->contactinfo->fullname));
-						$update_name = TRUE;
-					}						
-				}
-				else
-					$last_name = $lead->lead_first_name;
-
-				if ( $update_name )
-					$this->update_contact_full_name($this->hashkey, $first_name, $last_name);
-
-			}
-			else if ( isset($social_data->status) && $social_data->status == 'error' )
-			{
-				$social_data = '';
-			}
+			return FALSE;
 		}
-		else
-			$social_data = unserialize($lead->social_data);
+		else if ( ! isset($response->status) )
+		{
+			$social_data->company_name		= '';
+			$social_data->title 			= '';
+			$social_data->description 		= '';
+			$social_data->social_profiles 	= '';
+
+			$update_name = FALSE;
+
+			// Updates the contact first name with the API value if it isn't set yet on the contact row
+			if ( ! $lead->lead_first_name )
+			{
+				if ( isset($response->fullcontactDetails->contactinfo->givenname) )
+				{
+					$first_name = $response->fullcontactDetails->contactinfo->givenname;
+					$update_name = TRUE;
+				}
+				else if ( isset($response->fullcontactDetails->contactinfo->fullname) )
+				{
+					// Grab the first section of the full name
+					$first_name = reset(explode(' ', $response->fullcontactDetails->contactinfo->fullname));
+					$update_name = TRUE;
+				}
+			}
+
+			// Updates the contact last name with the API value if it isn't set yet on the contact row
+			if ( ! $lead->lead_last_name )
+			{
+				if ( isset($response->fullcontactDetails->contactinfo->familyname) )
+				{
+					$last_name = $response->fullcontactDetails->contactinfo->familyname;
+					$update_name = TRUE;
+				}
+				else if ( isset($response->fullcontactDetails->contactinfo->fullname) )
+				{
+					// Grab the last section of the full name
+					$last_name = end(explode(' ', $response->fullcontactDetails->contactinfo->fullname));
+					$update_name = TRUE;
+				}						
+			}
+
+			if ( $update_name )
+				$this->update_contact_full_name($this->hashkey, $first_name, $last_name);
+		}
 		
-		if ( isset($social_data->fullcontactDetails) ) 
+		// Figure out the job title and company name
+		if ( isset($response->fullcontactDetails) ) 
         {
-            $fullcontactDetails = $social_data->fullcontactDetails;
+            $fullcontactDetails = $response->fullcontactDetails;
 
-            if ( count($fullcontactDetails->organizations) )
+            if ( isset($fullcontactDetails->organizations) )
             {
-                foreach ( $fullcontactDetails->organizations as $org )
-                {
-                    if ( isset($org->isprimary) )
-                    {
-                    	$social_data->properties->primary->company_name = ( isset($org->name) ? $org->name : '' );
-                    	$social_data->properties->primary->title 		= ( isset($org->title) ? $org->title : '' );
-                    	break;
-                    }
-                }
+	            if ( count($fullcontactDetails->organizations) )
+	            {
+	                foreach ( $fullcontactDetails->organizations as $org )
+	                {
+	                    if ( isset($org->isprimary) && $org->isprimary )
+	                    {
+	                    	$social_data->company_name 	= ( isset($org->name) ? $org->name : '' );
+	                    	$social_data->title 		= ( isset($org->title) ? $org->title : '' );
+	                    	$social_data_exists = TRUE;
+	                    	break;
+	                    }
+	                }
+	            }
+	        }
+
+	        // Set the description
+            if ( isset($response->twitterDetails->description) )
+            {
+            	if ( $response->twitterDetails->description )
+            	{
+                	$social_data->description = $response->twitterDetails->description;
+                	$social_data_exists = TRUE;
+            	}
             }
 
-            if ( isset($social_data->twitterDetails->description) )
-            {
-            	if ( $social_data->twitterDetails->description )
-                	$social_data->properties->description = $social_data->twitterDetails->description;
-            }
-
+            // Set social profiles
             if ( count($fullcontactDetails->socialprofiles) )
             {
             	$social_profiles = array();
@@ -395,20 +409,33 @@ class LI_Contact {
 		            	$social_profile->url 		= leadin_safe_social_profile_url($profile->url);
 		            	$social_profile->typeid 	= $profile->typeid;
 		            	$social_profile->username 	= $profile->username;
+		                
+		                $social_profiles[] 			= $social_profile;
+		            }
 
-		                $social_profiles[] = $social_profile;
+		            // Default Twitter bio fallback if twitterDetails in API response
+		            if ( $profile->typeid == 'twitter' && ! isset($social_data->description) )
+		            {
+		            	if ( isset($profile->bio) )
+		            	{
+		            		$social_data->description = $profile->bio;
+		            		$social_data_exists = TRUE;
+		            	}
 		            }
 		        }
 
 		        if ( count($social_profiles) )
 		        {
-		        	if ( isset($social_data->properties->social_profiles) )
-		        		$social_data->properties->social_profiles = $social_profiles;
+		        	$social_data->social_profiles = $social_profiles;
+		        	$social_data_exists = TRUE;
 		        }
 		    }
         }
 
-        return $social_data;
+        if ( $social_data_exists )
+        	return $social_data;
+		else
+			return FALSE;
 	}
 
 	/**
@@ -425,7 +452,7 @@ class LI_Contact {
 		$site_url 		= site_url();
 		$email_domain 	= end(explode('@', $lead->lead_email));
 		$leadin_user 	= leadin_get_current_user();
-		$company_data 	= '';
+		$company_data 	= (Object)NULL;
 
 		if ( strstr($leadin_user['email'], ',') )
 			$leadin_user_email = reset(explode(',', $leadin_user['email']));
@@ -434,26 +461,120 @@ class LI_Contact {
 
 		if ( ! in_array($email_domain, $blacklist_nonmail_domains) && ! in_array($email_domain, $blacklist_freemail_domains) )
 		{
-			if ( ! $lead->company_data )
+			// Grab the company intel lookup
+			$response = json_decode($this->query_company_lookup_endpoint($email_domain, $leadin_user_email, $site_url));
+			
+			if ( isset($response->status) && $response->status == 'error' )
 			{
-				// Grab the company intel lookup
-				$company_data = json_decode($this->query_company_lookup_endpoint($email_domain, $leadin_user_email, $site_url));
-				
-				if ( isset($company_data->status) && $company_data->status != 'error' )
+				return FALSE;
+			}
+			else if ( ! isset($response->status) )
+			{
+				$company_data_exists = FALSE;
+
+				if ( isset($response->properties->name) )
+					$company_data->name = $response->properties->name;
+				else
+					$company_data->name = '';
+
+				if ( isset($response->properties->overview) )
 				{
-					$this->update_company_lookup_data($this->hashkey, serialize($company_data));
+					$company_data->overview = $response->properties->overview;
+					$company_data_exists = TRUE;
 				}
 				else
+					$company_data->overview = '';
+
+				if ( isset($response->properties->employees) )
 				{
+					$company_data->employees = $response->properties->employees;
+					$company_data_exists = TRUE;
 				}
-			}
-			else
-			{
-				$company_data = unserialize($lead->company_data);
+				else
+					$company_data->employees = '';
+
+				if ( isset($response->properties->revenue) )
+				{
+					$company_data->revenue = $response->properties->revenue;
+					$company_data_exists = TRUE;
+				}
+				else
+					$company_data->revenue = '';
+
+
+				if ( isset($response->properties->country) )
+				{
+					$company_data->country = $response->properties->country;
+					$company_data_exists = TRUE;
+				}
+				else
+					$company_data->country = '';
+
+				if ( isset($response->properties->state) )
+				{
+					$company_data->state = $response->properties->state;
+					$company_data_exists = TRUE;
+				}
+				else
+					$company_data->state = '';
+
+				if ( isset($response->properties->founded) )
+				{
+					$company_data->founded = $response->properties->founded;
+					$company_data_exists = TRUE;
+				}
+				else
+					$company_data->founded = '';
+
+				if ( isset($response->properties->facebookpageurl) )
+				{
+					$company_data->facebookpageurl = $response->properties->facebookpageurl;
+					$company_data_exists = TRUE;
+				}
+				else
+					$company_data->facebookpageurl = '';
+
+				if ( isset($response->properties->twitterusername) )
+				{
+					$company_data->twitterusername = $response->properties->twitterusername;
+					$company_data_exists = TRUE;
+				}
+				else
+					$company_data->twitterusername = '';
+
+				if ( isset($response->properties->twitterurl) )
+				{
+					$company_data->twitterurl = $response->properties->twitterurl;
+					$company_data_exists = TRUE;
+				}
+				else
+					$company_data->twitterurl = '';
+
+				if ( isset($response->properties->linkedinurl) )
+				{
+					$company_data->linkedinurl = $response->properties->linkedinurl;
+					$company_data_exists = TRUE;
+				}
+				else
+					$company_data->linkedinurl = '';
+
+				if ( isset($response->properties->address) )
+				{
+					$company_data->address = $response->properties->address;
+					$company_data_exists = TRUE;
+				}
+				else
+					$company_data->address = '';
+
+				if ( $company_data_exists )
+					return $company_data;
+				else
+					return FALSE;
+
 			}
 		}
-
-		return $company_data;
+		else
+			return FALSE;
 	}
 
 	/**
@@ -625,6 +746,9 @@ class LI_Contact {
 	 */
 	function query_social_lookup_endpoint ( $lookup_email, $caller_domain )
 	{
+		if ( ! function_exists('curl_init') )
+			return FALSE;
+
 		$api_endpoint = 'http://leadin.com/enrichment/v1/profile/email/email_lookup.php';
 		$params =  '?lookup_email=' . $lookup_email . '&caller_domain=' . $caller_domain;
 
@@ -650,6 +774,9 @@ class LI_Contact {
 	 */
 	function query_company_lookup_endpoint ( $lookup_company_url, $caller_email, $caller_domain )
 	{
+		if ( ! function_exists('curl_init') )
+			return FALSE;
+		
 		$caller_domain = str_replace(array('http://', 'https://'), '', $caller_domain);
 		$caller_domain = 'leadin.com';
 
@@ -679,42 +806,6 @@ class LI_Contact {
 
 		$q = $wpdb->prepare("SELECT social_data, company_data FROM $wpdb->li_leads WHERE hashkey = %s", $hashkey);
 		$result = $wpdb->get_row($q);
-
-		return $result;
-	}
-
-	/**
-	 * Cache the social lookup data in the database
-	 *
-	 * @param	string
-	 * @param	string 		serialized array
-	 * @param	string
-	 * @return	bool
-	 */
-	function update_social_lookup_data ( $hashkey, $social_data )
-	{
-		global $wpdb;
-
-		$q = $wpdb->prepare("UPDATE $wpdb->li_leads SET social_data = %s WHERE hashkey = %s", $social_data, $hashkey);
-		$result = $wpdb->query($q);
-
-		return $result;
-	}
-
-	/**
-	 * Cache the company lookup data in the database
-	 *
-	 * @param	string
-	 * @param	string 		serialized array
-	 * @param	string
-	 * @return	bool
-	 */
-	function update_company_lookup_data ( $hashkey, $company_data )
-	{
-		global $wpdb;
-
-		$q = $wpdb->prepare("UPDATE $wpdb->li_leads SET company_data = %s WHERE hashkey = %s", $company_data, $hashkey);
-		$result = $wpdb->query($q);
 
 		return $result;
 	}
