@@ -265,7 +265,7 @@ class WPLeadInAdmin {
         self::check_admin_action();
 
         if ( ini_get('allow_url_fopen') )
-            $leadin_icon = ($wp_version < 3.8 && !is_plugin_active('mp6/mp6.php') ? LEADIN_PATH . '/images/leadin-icon-32x32.png' : 'data:image/svg+xml;base64,' . base64_encode(file_get_contents(LEADIN_PATH . '/images/leadin-svg-icon.svg')));
+            $leadin_icon = ($wp_version < 3.8 && !is_plugin_active('mp6/mp6.php') ? LEADIN_PATH . '/images/leadin-icon-16x16.png' : 'data:image/svg+xml;base64,' . base64_encode(file_get_contents(LEADIN_PATH . '/images/leadin-svg-icon.svg')));
         else
         {
 
