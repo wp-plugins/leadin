@@ -188,7 +188,7 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
             echo '</div>'; // leadin-meta-section
 
             echo '<div class="leadin-meta-section">';
-                echo '<h4 class="leain-meta-header">Tags</h4>';
+                echo '<h4 class="leain-meta-header">Tags - <a class="thickbox contact-edit-tags" '.( $li_contact->history->lead->lead_deleted ? 'style="display: none;"' : '' ).' href="#TB_inline?width=400&height=400&inlineId=edit-contact-tags">edit</a></h4>';
                 echo '<div class="leadin-postbox__content">';
                     foreach( $li_contact->history->tags as $tag ) {
                         if ($tag->tag_set)
@@ -219,8 +219,6 @@ class WPLeadInContactsAdmin extends WPLeadInAdmin {
                             </p>
                         </form>
                     </div>
-
-                    <a class="thickbox contact-edit-tags" <?php echo ( $li_contact->history->lead->lead_deleted ? 'style="display: none;"' : '' ); ?> href="#TB_inline?width=400&height=400&inlineId=edit-contact-tags">edit tags</a>
 
                     <?php
                 echo '</div>'; // leadin-postbox__content
