@@ -30,6 +30,8 @@ class WPLeadIn {
         }
         else
         {
+            add_action('wp_footer', array($this, 'append_leadin_version_number'));
+
             // Adds the leadin-tracking script to wp-login.php page which doesnt hook into the enqueue logic
             if ( in_array($GLOBALS['pagenow'], array('wp-login.php', 'wp-register.php')) )
                 add_action('login_enqueue_scripts', array($this, 'add_leadin_frontend_scripts'));
@@ -74,7 +76,7 @@ class WPLeadIn {
 
 
         if ( ini_get('allow_url_fopen') )
-            $leadin_icon = '<img src="data:image/svg+xml;base64,' . base64_encode(file_get_contents(LEADIN_PATH . '/images/leadin-svg-icon.svg')) . '">';
+            $leadin_icon = '<img style="width: 16px; height: 16px; opacity: 0.6" src="data:image/svg+xml;base64,' . base64_encode(file_get_contents(LEADIN_PATH . '/images/leadin-svg-icon.svg')) . '">';
         else
             $leadin_icon = '<img src="' . LEADIN_PATH . '/images/leadin-icon-16x16.png' . '">';
 
@@ -90,9 +92,18 @@ class WPLeadIn {
     }
 
     /**
+     * Adds Leadin version number to the source code for debugging purposes
+     */
+    function append_leadin_version_number ( )
+    {
+        echo "\n\n<!-- This site is collecting contacts with Leadin v" . LEADIN_PLUGIN_VERSION . " - http://leadin.com --> \n";
+    }
+
+    /**
      * List available power-ups
      */
-    public static function get_available_power_ups ( $min_version = FALSE, $max_version = FALSE ) {
+    public static function get_available_power_ups ( $min_version = FALSE, $max_version = FALSE ) 
+    {
         static $power_ups = null;
 
         if ( ! isset( $power_ups ) ) {

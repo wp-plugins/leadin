@@ -80,6 +80,9 @@ class WPLeadInAdmin {
             add_action('admin_footer', array($this, 'build_contacts_chart'));
         }
 
+        /*        
+        //Turned off the updater in 3.1.7
+
         $updater_type = '';
 
         if ( isset($options['pro']) && $options['pro'] )
@@ -87,6 +90,7 @@ class WPLeadInAdmin {
 
         if ( $updater_type )
             $li_wp_updater = new WPLeadInUpdater($updater_type);
+        */
     }
 
     function leadin_update_check ()
@@ -272,7 +276,7 @@ class WPLeadInAdmin {
             $leadin_icon = LEADIN_PATH . '/images/leadin-icon-16x16.png';
         }
 
-        add_menu_page('Leadin', 'Leadin', $capability, 'leadin_stats', array($this, 'leadin_build_stats_page'),  $leadin_icon , '25.100713');
+        add_menu_page('Leadin', 'Leadin', $capability, 'leadin_stats', array($this, 'leadin_build_stats_page'), $leadin_icon , '25.100713');
 
         foreach ( $this->admin_power_ups as $power_up )
         {

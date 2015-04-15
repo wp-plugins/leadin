@@ -116,6 +116,7 @@ var page_url = window.location.href;
 var page_referrer = document.referrer;
 var form_saved = false;
 var ignore_form = false;
+var leadin_debug_mode = false;
 
 jQuery(document).ready( function ( $ ) {
 
@@ -192,8 +193,43 @@ jQuery(function($){
 	}
 });
 
+function leadin_start_debug_mode ()
+{
+	leadin_debug_mode = true;
+
+	jQuery.ajax({
+		type: 'POST',
+		url: li_ajax.ajax_url,
+		data: {
+			"action": "leadin_print_debug_values"
+		},
+		success: function( data ) {
+			console.log("SERVER CONFIG:\n------------\n");
+			console.log('jQuery version: ' + jQuery.fn.jquery + "\n");
+
+			console.log(data);
+
+			if ( jQuery.versioncompare('1.7.0', jQuery.fn.jquery) != -1 )
+			{
+				console.log('- jQuery version < 1.7.0');
+			}
+		},
+		error: function ( error_data ) {
+			//alert(error_data);
+		}
+	});
+
+	return "Debug started...";	
+}
+
 function leadin_submit_form ( $form, $ )
 {
+	if ( leadin_debug_mode )
+	{
+		console.log("\nFUNCTION FIRED: leadin_submit_form()");
+		console.log("FIELDS:\n-----------\n");
+	}
+
 	var $this = $form;
 
 	var form_fields 	= [];
@@ -310,6 +346,11 @@ function leadin_submit_form ( $form, $ )
 
 		if ( ! ignore_field($label_text, $value) )
 			push_form_field($label_text, $value, form_fields);
+		else
+		{
+			if ( leadin_debug_mode )
+				console.log('	- Skipping... label: ' + $label + ' value: ' + $value);	
+		}
 
 		// Set email
 		if ( $value.indexOf('@') != -1 && $value.indexOf('.') != -1 && !lead_email )
@@ -331,7 +372,7 @@ function leadin_submit_form ( $form, $ )
 
 		// Set phone number
 		if ( lower_label_text == 'phone' || lower_label_text == 'phone' )
-			lead_phone = $value;		
+			lead_phone = $value;
 	});
 
 	var radio_groups = [];
@@ -367,6 +408,11 @@ function leadin_submit_form ( $form, $ )
 
 		if ( ! ignore_field($rbg_label, rgb_selected) )
 			push_form_field($rbg_label, rgb_selected, form_fields);
+		else
+		{
+			if ( leadin_debug_mode )
+				console.log('Skipping... label: ' + $label + ' value: ' + $value);	
+		}
 	}
 
 	$this.find('select').each( function ( ) {
@@ -419,6 +465,11 @@ function leadin_submit_form ( $form, $ )
 
 		if ( ! ignore_field($select_label, select_value) )
 			push_form_field($select_label, select_value, form_fields);
+		else
+		{
+			if ( leadin_debug_mode )
+				console.log('Skipping... label: ' + $label + ' value: ' + $value);	
+		}
 	});
 
 	$this.find('.li_used').removeClass('li_used'); // Clean up added classes
@@ -426,6 +477,9 @@ function leadin_submit_form ( $form, $ )
 	// Save submission into database if email is present and form is not ignore, send Leadin email, and submit form as usual
 	if ( lead_email )
 	{
+		if ( leadin_debug_mode )
+			console.log("\nFOUND lead_email: " + lead_email + "\n");
+
 		if ( ignore_form )
 		{
 			push_form_field('Credit card form submitted', 'Payment fields not collected for security', form_fields);
@@ -450,6 +504,12 @@ function leadin_submit_form ( $form, $ )
 			"form_selector_classes": 	form_selector_classes
 		};
 
+		if ( leadin_debug_mode )
+		{
+			console.log("\nFORM SUBMISSION OBJECT:");
+			console.log(form_submission);
+		}
+
 		$.cookie("li_submission", JSON.stringify(form_submission), {path: "/", domain: ""});
 
 		leadin_insert_form_submission(
@@ -473,6 +533,9 @@ function leadin_submit_form ( $form, $ )
 	else // No lead - submit form as usual
 	{
 		form_saved = true;
+
+		if ( leadin_debug_mode )
+			console.log("\ERROR: lead_email not found\n");
 	}
 }
 
@@ -559,6 +622,9 @@ function leadin_insert_lead ( hashkey, page_referrer ) {
 
 function leadin_insert_form_submission ( submission_haskey, hashkey, page_title, page_url, json_fields, lead_email, lead_first_name, lead_last_name, lead_phone, form_selector_id, form_selector_classes, Callback )
 {
+	if ( leadin_debug_mode )
+		console.log("\nFUNCTION FIRED: leadin_insert_form_submission()");
+
 	jQuery.ajax({
 		type: 'POST',
 		url: li_ajax.ajax_url,
@@ -577,6 +643,10 @@ function leadin_insert_form_submission ( submission_haskey, hashkey, page_title,
 			"li_form_selector_classes": form_selector_classes
 		},
 		success: function(data){
+			
+			if ( leadin_debug_mode )
+				console.log('RESULT rows updated: ' + data);
+			
 			if ( Callback )
 				Callback(data);
 		},
@@ -595,6 +665,9 @@ function push_form_field ( label, value, form_fields )
 	};
 
 	form_fields.push(field);
+
+	if ( leadin_debug_mode )
+		console.log('	+ Adding... [label:] ' + label + ' [value:] ' + value);
 }
 
 function ignore_field ( label, value )

@@ -3,7 +3,7 @@
 Plugin Name: Leadin
 Plugin URI: http://leadin.com
 Description: Leadin is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
-Version: 3.1.6
+Version: 3.1.7
 Author: Andy Cook, Nelson Joyce
 Author URI: http://leadin.com
 License: GPL2
@@ -26,7 +26,7 @@ if ( !defined('LEADIN_DB_VERSION') )
 	define('LEADIN_DB_VERSION', '2.2.4');
 
 if ( !defined('LEADIN_PLUGIN_VERSION') )
-	define('LEADIN_PLUGIN_VERSION', '3.1.6');
+	define('LEADIN_PLUGIN_VERSION', '3.1.7');
 
 if ( !defined('MIXPANEL_PROJECT_TOKEN') )
     define('MIXPANEL_PROJECT_TOKEN', '2791b6942b57bbef2ba12b2452468253');
@@ -186,26 +186,8 @@ function add_leadin_defaults ( )
 	// This is in here because Segment doesn't have register_once, so it's in a method that's only called once
 	if ( leadin_check_pro_user() )
 	{
-		$traits = array();
-
-		if ( defined('LEADIN_REFERRAL_SOURCE') )
-			$traits['referral_source'] = LEADIN_REFERRAL_SOURCE;
-
-		if ( defined('LEADIN_UTM_SOURCE') )
-			$traits['utm_source'] = LEADIN_UTM_SOURCE;
-
-		if ( defined('LEADIN_UTM_MEDIUM') )
-			$traits['utm_medium'] = LEADIN_UTM_MEDIUM;
-
-		if ( defined('LEADIN_UTM_TERM') )
-			$traits['utm_term'] = LEADIN_UTM_TERM;
-
-		if ( defined('LEADIN_UTM_CONTENT') )
-			$traits['utm_content'] = LEADIN_UTM_CONTENT;
-
-		if ( defined('LEADIN_UTM_CAMPAIGN') )
-			$traits['utm_campaign'] = LEADIN_UTM_CAMPAIGN;
-
+		// Add the UTM tags to the options table to permanently store them
+		$traits = leadin_update_utm_option();
 	    leadin_set_user_properties($traits);
 	}
 }

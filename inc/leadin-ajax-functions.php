@@ -135,7 +135,6 @@ add_action('wp_ajax_nopriv_leadin_insert_lead', 'leadin_insert_lead'); // Call w
 /**
  * Inserts a new form submisison into the li_submissions table and ties to the submission to a row in li_leads
  *
- * @return	int
  */
 function leadin_insert_form_submission ()
 {
@@ -336,7 +335,7 @@ function leadin_insert_form_submission ()
 	{
 		// Send the subscription confirmation kickback email
 		$leadin_subscribe_settings = get_option('leadin_subscribe_options');
-		if ( !isset($leadin_subscribe_settings['li_subscribe_confirmation']) || $leadin_subscribe_settings['li_subscribe_confirmation'] )
+		if ( isset($leadin_subscribe_settings['li_subscribe_confirmation']) && $leadin_subscribe_settings['li_subscribe_confirmation'] )
 			$li_emailer->send_subscriber_confirmation_email($hashkey);
 
 		$contact_type = 'subscriber';
@@ -346,7 +345,8 @@ function leadin_insert_form_submission ()
 
 	leadin_track_plugin_activity("New lead", array("contact_type" => $contact_type));
 
-	return $rows_updated;
+	echo $rows_updated;
+	die();
 }
 
 add_action('wp_ajax_leadin_insert_form_submission', 'leadin_insert_form_submission'); // Call when user logged in
@@ -513,6 +513,11 @@ function leadin_upgrade_to_pro ( )
     $traits["li-status"]  = "activated";
 	leadin_set_user_properties($traits);
 
+	// Add the UTM tags to the options table to permanently store them
+	$leadin_utm = get_option('leadin_utm');
+	if ( ! $leadin_utm )
+		leadin_update_utm_option();
+	
 	leadin_track_plugin_activity("Upgraded to Pro");
 
     die();
@@ -537,5 +542,61 @@ function leadin_check_installation_date ( )
 
 add_action('wp_ajax_leadin_check_installation_date', 'leadin_check_installation_date'); // Call when user logged in
 add_action('wp_ajax_nopriv_leadin_check_installation_date', 'leadin_check_installation_date'); // Call when user is not logged in
+
+/**
+ * Checks for properly installed Leadin instance
+ *
+ */
+function leadin_print_debug_values ( )
+{
+	global $wpdb;
+	global $wp_version;
+
+	$debug_string = '';
+	$error_string = '';
+
+	$debug_string .= "Leadin version: " . LEADIN_PLUGIN_VERSION . "\n";
+	$debug_string .= "WordPress version: " . $wp_version . "\n";
+	$debug_string .= "Multisite : " . ( is_multisite() ? "YES" : "NO" ) . "\n";
+	$debug_string .= "Pro enabled: " . ( leadin_check_pro_user() ? 'YES' : 'NO' ) . "\n";
+	$debug_string .= "cURL enabled: " . ( function_exists('curl_init') ? 'YES' : 'NO' ) . "\n";
+
+	if ( version_compare('3.7', $wp_version) != -1 )
+	{
+		$error_string .= "- WordPress version < 3.7. Leadin requires WordPress 3.7+\n";
+	}
+
+	$q = "SELECT table_name FROM information_schema.tables WHERE table_name LIKE '" . ( is_multisite() ? $wpdb->prefix : '' ) . "li_%'";
+	$li_tables = $wpdb->get_results($q);
+	
+	$li_tables_count = count($li_tables);
+
+	if ( $li_tables_count )
+	{
+		$debug_string .= "Leadin tables installed:\n";
+
+		foreach ( $li_tables as $table )
+		{
+			$debug_string .= "- " . $table->table_name . "\n";
+		}
+
+		if ( $li_tables_count != 5 )
+			$error_string .= "- Missing database tables\n";
+	}
+	else
+	{
+		$error_string .= "- Database tables not installed\n";
+	}
+
+	echo $debug_string;
+
+	if ( $error_string )
+		echo "\n\n ERRORS:\n------------\n" . $error_string;
+
+	die();
+}
+
+add_action('wp_ajax_leadin_print_debug_values', 'leadin_print_debug_values'); // Call when user logged in
+add_action('wp_ajax_nopriv_leadin_print_debug_values', 'leadin_print_debug_values'); // Call when user is not logged in
 
 ?>

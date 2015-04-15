@@ -105,35 +105,26 @@ function leadin_get_current_user ()
         'total_contacts' => get_total_contacts()
     );
 
-    if ( defined('LEADIN_REFERRAL_SOURCE') )
-        $leadin_user['referral_source'] = LEADIN_REFERRAL_SOURCE;
-    else
-        $leadin_user['referral_source'] = '';
+    $utms = get_option('leadin_utm');
 
-    if ( defined('LEADIN_UTM_SOURCE') )
-        $leadin_user['utm_source'] = LEADIN_UTM_SOURCE;
+    if ( count($utms) )
+    {
+        $leadin_user['referral_source'] = ( isset($utms['referral_source'])     ? $utms['referral_source']  : '' );
+        $leadin_user['utm_source']      = ( isset($utms['utm_source'])          ? $utms['utm_source']       : '' );
+        $leadin_user['utm_medium']      = ( isset($utms['utm_medium'])          ? $utms['utm_medium']       : '' );
+        $leadin_user['utm_term']        = ( isset($utms['utm_term'])            ? $utms['utm_term']         : '' );
+        $leadin_user['utm_content']     = ( isset($utms['utm_content'])         ? $utms['utm_content']      : '' );
+        $leadin_user['utm_campaign']    = ( isset($utms['utm_campaign'])        ? $utms['utm_campaign']     : '' );
+    }
     else
-        $leadin_user['utm_source'] = '';
-
-    if ( defined('LEADIN_UTM_MEDIUM') )
-        $leadin_user['utm_medium'] = LEADIN_UTM_MEDIUM;
-    else
-        $leadin_user['utm_medium'] = '';
-
-    if ( defined('LEADIN_UTM_TERM') )
-        $leadin_user['utm_term'] = LEADIN_UTM_TERM;
-    else
-        $leadin_user['utm_term'] = '';
-
-    if ( defined('LEADIN_UTM_CONTENT') )
-        $leadin_user['utm_content'] = LEADIN_UTM_CONTENT;
-    else
-        $leadin_user['utm_content'] = '';
-
-    if ( defined('LEADIN_UTM_CAMPAIGN') )
-        $leadin_user['utm_campaign'] = LEADIN_UTM_CAMPAIGN;
-    else
-        $leadin_user['utm_campaign'] = '';
+    {
+        $leadin_user['referral_source'] = ( defined('LEADIN_REFERRAL_SOURCE')     ? LEADIN_REFERRAL_SOURCE  : '' );
+        $leadin_user['utm_source']      = ( defined('LEADIN_UTM_SOURCE')          ? LEADIN_UTM_SOURCE       : '' );
+        $leadin_user['utm_medium']      = ( defined('LEADIN_UTM_MEDIUM')          ? LEADIN_UTM_MEDIUM       : '' );
+        $leadin_user['utm_term']        = ( defined('LEADIN_UTM_TERM')            ? LEADIN_UTM_TERM         : '' );
+        $leadin_user['utm_content']     = ( defined('LEADIN_UTM_CONTENT')         ? LEADIN_UTM_CONTENT      : '' );
+        $leadin_user['utm_campaign']    = ( defined('LEADIN_UTM_CAMPAIGN')        ? LEADIN_UTM_CAMPAIGN     : '' );
+    }
 
     return $leadin_user;
 }
@@ -168,8 +159,32 @@ function leadin_get_segment_traits ()
    return $traits;
 }
 
+function leadin_update_utm_option ( )
+{
+    $traits = array();
 
+    if ( defined('LEADIN_REFERRAL_SOURCE') )
+        $traits['referral_source'] = LEADIN_REFERRAL_SOURCE;
 
+    if ( defined('LEADIN_UTM_SOURCE') )
+        $traits['utm_source'] = LEADIN_UTM_SOURCE;
+
+    if ( defined('LEADIN_UTM_MEDIUM') )
+        $traits['utm_medium'] = LEADIN_UTM_MEDIUM;
+
+    if ( defined('LEADIN_UTM_TERM') )
+        $traits['utm_term'] = LEADIN_UTM_TERM;
+
+    if ( defined('LEADIN_UTM_CONTENT') )
+        $traits['utm_content'] = LEADIN_UTM_CONTENT;
+
+    if ( defined('LEADIN_UTM_CAMPAIGN') )
+        $traits['utm_campaign'] = LEADIN_UTM_CAMPAIGN;
+
+    update_option('leadin_utm', $traits);
+
+    return $traits;
+}
 
 /**
  * Gets the total number of contacts, comments and subscribers for above the table
