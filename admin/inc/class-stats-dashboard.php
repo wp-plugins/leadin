@@ -176,8 +176,8 @@ class LI_StatsDashboard {
 		 FROM 
 		 	$wpdb->li_leads
 		 WHERE 
-		 	lead_date BETWEEN CURDATE() - INTERVAL 30 DAY AND NOW() AND lead_email != ''";
-	
+		 	lead_date BETWEEN CURDATE() - INTERVAL 30 DAY AND NOW() AND lead_email != '' AND lead_deleted = 0";
+
 		$contacts = $wpdb->get_results($q);
 
 		foreach ( $contacts as $contact ) 
@@ -217,6 +217,42 @@ class LI_StatsDashboard {
 
 	function check_lead_source ( $source, $origin_url = '' )
 	{
+		if ( $origin_url )
+		{
+			$decoded_origin_url = urldecode($origin_url);
+
+			if ( stristr($decoded_origin_url, 'utm_medium=cpc') || stristr($decoded_origin_url, 'utm_medium=ppc') || stristr($decoded_origin_url, 'aclk') || stristr($decoded_origin_url, 'gclid') || stristr($decoded_origin_url, 'utm_medium=paid') )
+				return 'paid';
+
+			if ( stristr($decoded_origin_url, 'utm_') )
+			{
+				$url = $decoded_origin_url;
+				$url_parts = parse_url($url);
+				parse_str($url_parts['query'], $path_parts);
+
+				if ( isset($path_parts['adurl']) )
+					return 'paid';
+
+				if ( isset($path_parts['utm_medium']) )
+				{
+					if ( $path_parts['utm_medium'] == 'cpc' || $path_parts['utm_medium'] == 'ppc' )
+						return 'paid';
+
+					if ( $path_parts['utm_medium'] == 'social' )
+						return 'social';
+
+					if ( $path_parts['utm_medium'] == 'email' )
+						return 'email';
+				}
+
+				if ( isset($path_parts['utm_source']) )
+				{
+					if ( stristr($path_parts['utm_source'], 'email') ) 
+						return 'email';
+				}
+			}
+		}
+		
 		if ( $source )
 		{
 			$decoded_source = urldecode($source);
@@ -261,43 +297,8 @@ class LI_StatsDashboard {
 			else
 			    return 'referral';
 		}
-		else
-		{
-			$decoded_origin_url = urldecode($origin_url);
 
-			if ( stristr($decoded_origin_url, 'utm_medium=cpc') || stristr($decoded_origin_url, 'utm_medium=ppc') || stristr($decoded_origin_url, 'aclk') || stristr($decoded_origin_url, 'gclid') )
-				return 'paid';
-
-			if ( stristr($decoded_origin_url, 'utm_') )
-			{
-				$url = $decoded_origin_url;
-				$url_parts = parse_url($url);
-				parse_str($url_parts['query'], $path_parts);
-
-				if ( isset($path_parts['adurl']) )
-					return 'paid';
-
-				if ( isset($path_parts['utm_medium']) )
-				{
-					if ( $path_parts['utm_medium'] == 'cpc' || $path_parts['utm_medium'] == 'ppc' )
-						return 'paid';
-
-					if ( $path_parts['utm_medium'] == 'social' )
-						return 'social';
-
-					if ( $path_parts['utm_medium'] == 'email' )
-						return 'email';
-				}
-
-				if ( isset($path_parts['utm_source']) )
-				{
-					if ( stristr($path_parts['utm_source'], 'email') ) 
-						return 'email';
-				}
-			}
-
-			return 'direct';
-		}
+		return 'direct';
 	}
 
 	function print_readable_source ( $source )

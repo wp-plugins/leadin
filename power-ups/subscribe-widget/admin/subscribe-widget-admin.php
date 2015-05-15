@@ -93,14 +93,6 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
         );
 
         add_settings_field( 
-            'li_preview_popup', 
-            '&nbsp;', 
-            array($this, 'li_preview_popup_callback'), 
-            LEADIN_ADMIN_PATH, 
-            $this->power_up_settings_section
-        );
-
-        add_settings_field( 
             'li_subscribe_templates', 
             'Show subscribe pop-up on', 
             array($this, 'li_subscribe_templates_callback'), 
@@ -368,30 +360,6 @@ class WPLeadInSubscribeAdmin extends WPLeadInAdmin {
             echo '<option value="1"' . ( $li_subscribe_mobile_popup == '1' ? ' selected' : '' ) . '>Yes</option>';
             echo '<option value="0"' . ( $li_subscribe_mobile_popup == '0' ? ' selected' : '' ) . '>No</option>';
         echo '</select>';
-    }
-
-    /**
-     * Prints the options for toggling the widget on posts, pages, archives and homepage
-     */
-    function li_preview_popup_callback ()
-    {
-        $options = $this->options;
-
-        $preview_link = get_bloginfo('wpurl') . '?preview-subscribe=1';
-        $preview_link .= '&lis_heading=' . ( isset($options['li_subscribe_heading']) ? $options['li_subscribe_heading'] : 'Sign up for email updates' );
-        $preview_link .= '&lis_desc=' . ( isset($options['li_subscribe_text']) ? $options['li_subscribe_text'] : '' );
-        $preview_link .= '&lis_show_names=' . ( isset($options['li_subscribe_name_fields']) ? $options['li_subscribe_name_fields'] : 0 );
-        $preview_link .= '&lis_show_phone=' . ( isset($options['li_subscribe_phone_field']) ? $options['li_subscribe_phone_field'] : 0 );
-        $preview_link .= '&lis_btn_label=' . ( isset($options['li_subscribe_btn_label']) ? $options['li_subscribe_btn_label'] : 'SUBSCRIBE' );
-        $preview_link .= '&lis_btn_color=' . ( isset($options['li_subscribe_btn_color']) ? $options['li_subscribe_btn_color'] : 'leadin-popup-color-blue' );
-        $preview_link .= '&lis_vex_class=' . ( isset($options['li_subscribe_vex_class']) ? $options['li_subscribe_vex_class'] : 'vex-theme-bottom-right-corner' );
-        $preview_link .= '&lis_confirmation=' . ( isset($options['li_subscribe_confirmation']) ? $options['li_subscribe_confirmation'] : 0 );
-        $preview_link .= '&lis_mobile_popup=' . ( isset($options['li_subscribe_mobile_popup']) ? $options['li_subscribe_mobile_popup'] : 1 );
-
-        printf(
-            '<p><a id="preview-popup-link" href="%s" target="_blank" class="button button-secondary">Preview Pop-up Form</a></p>', 
-            $preview_link
-        );
     }
 }
 

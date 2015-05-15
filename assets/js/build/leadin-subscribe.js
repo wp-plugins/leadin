@@ -344,38 +344,12 @@ ignore_date.setTime(ignore_date.getTime() + (60 * 60 * 24 * 14 * 1000));
 jQuery(document).ready( function ( $ ) {
     var li_subscribe_flag = $.cookie('li_subscribe');
 
-    var preview_subscribe = leadin_get_parameter_by_name('preview-subscribe');
-
-    if ( !preview_subscribe )
+    if ( ! li_subscribe_flag )
     {
-        if ( ! li_subscribe_flag )
-        {
-            leadin_check_visitor_status($.cookie("li_hash"), function ( data ) {
-                if ( data != 'vex_set' )
-                {
-                    $.cookie("li_subscribe", 'show', {path: "/", domain: ""});
-                    bind_leadin_subscribe_widget(
-                        $('#leadin-subscribe-heading').val(),
-                        $('#leadin-subscribe-text').val(),
-                        $('#leadin-subscribe-name-fields').val(),
-                        $('#leadin-subscribe-phone-field').val(),
-                        $('#leadin-subscribe-btn-label').val(),
-                        $('#leadin-subscribe-btn-color').val(),
-                        $('#leadin-subscribe-vex-class').val(),
-                        $('#leadin-subscribe-confirmation').val(),
-                        $('#leadin-subscribe-mobile-popup').val()
-                    );
-                }
-                else
-                {
-                    $.cookie("li_subscribe", 'ignore', {path: "/", domain: "", expires: ignore_date});
-                }
-            });
-        }
-        else
-        {
-            if ( li_subscribe_flag == 'show' )
+        leadin_check_visitor_status($.cookie("li_hash"), function ( data ) {
+            if ( data != 'vex_set' )
             {
+                $.cookie("li_subscribe", 'show', {path: "/", domain: ""});
                 bind_leadin_subscribe_widget(
                     $('#leadin-subscribe-heading').val(),
                     $('#leadin-subscribe-text').val(),
@@ -386,25 +360,30 @@ jQuery(document).ready( function ( $ ) {
                     $('#leadin-subscribe-vex-class').val(),
                     $('#leadin-subscribe-confirmation').val(),
                     $('#leadin-subscribe-mobile-popup').val()
-                );   
+                );
             }
-        }
+            else
+            {
+                $.cookie("li_subscribe", 'ignore', {path: "/", domain: "", expires: ignore_date});
+            }
+        });
     }
-    else if ( preview_subscribe )
+    else
     {
-        bind_leadin_subscribe_widget(
-            leadin_get_parameter_by_name('lis_heading'),
-            leadin_get_parameter_by_name('lis_desc'),
-            leadin_get_parameter_by_name('lis_show_names'),
-            leadin_get_parameter_by_name('lis_show_phone'),
-            leadin_get_parameter_by_name('lis_btn_label'),
-            leadin_get_parameter_by_name('lis_btn_color'),
-            leadin_get_parameter_by_name('lis_vex_class'),
-            leadin_get_parameter_by_name('lis_confirmation'),
-            leadin_get_parameter_by_name('lis_mobile_popup')
-        );
-
-        subscribe.open();
+        if ( li_subscribe_flag == 'show' )
+        {
+            bind_leadin_subscribe_widget(
+                $('#leadin-subscribe-heading').val(),
+                $('#leadin-subscribe-text').val(),
+                $('#leadin-subscribe-name-fields').val(),
+                $('#leadin-subscribe-phone-field').val(),
+                $('#leadin-subscribe-btn-label').val(),
+                $('#leadin-subscribe-btn-color').val(),
+                $('#leadin-subscribe-vex-class').val(),
+                $('#leadin-subscribe-confirmation').val(),
+                $('#leadin-subscribe-mobile-popup').val()
+            );   
+        }
     }
 });
 

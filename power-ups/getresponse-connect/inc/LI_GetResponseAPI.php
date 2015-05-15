@@ -57,7 +57,7 @@ class LI_GetResponse
 	{
 		$request  = $this->prepRequest('ping');
 		$response = $this->execute($request);
-		return $response->ping;
+		return ( isset($response->ping) ? $response->ping : '' );
 	}
 	
 	/**

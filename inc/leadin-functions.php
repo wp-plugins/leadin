@@ -144,7 +144,6 @@ function leadin_get_segment_traits ()
         "wp-version"    => $leadin_user["wp_version"],
         "li-version"    => $leadin_user["li_version"],
         "li-source"     => LEADIN_SOURCE,
-        "createdAt"     => date("Y-m-d H:i:s"),
         "website"       => $leadin_user["wp_url"],
         "company"       => $leadin_user["wp_url"],
         "contacts"      => $leadin_user["total_contacts"],
@@ -223,6 +222,7 @@ function leadin_register_user ()
 
     $leadin_user = leadin_get_current_user();
     $traits = leadin_get_segment_traits();
+    $traits["createdAt"]  = date("Y-m-d H:i:s");
 
     Segment::init(SEGMENT_WRITE_KEY);
 
@@ -1113,6 +1113,47 @@ function leadin_check_first_pageview_data ( )
     {
        return FALSE;
     }
+}
+
+/**
+ * Sets the Pro flag for the Leadin Pro upgrade in the database + register user in Segment
+ *
+ */
+function leadin_upgrade_to_pro ( $location = '' )
+{
+    global $wpdb;
+
+    $options = get_option('leadin_options');
+    if ( ( isset($options['pro']) && ! $options['pro']) || ! isset($options['pro']) )
+    {
+        $updated = leadin_update_option('leadin_options', 'pro', 1);
+    }
+
+    WPLeadIn::activate_power_up('lookups', FALSE);
+
+    // Create the user in Segment
+    $traits = leadin_get_segment_traits();
+    $traits["last_activated"] = date("Y-m-d H:i:s");
+    $traits["li-status"]  = "activated";
+    $traits["createdAt"]  = date("Y-m-d H:i:s");
+    leadin_set_user_properties($traits);
+
+    // Add the UTM tags to the options table to permanently store them
+    $leadin_utm = get_option('leadin_utm');
+    if ( ! $leadin_utm )
+        leadin_update_utm_option();
+    
+    leadin_track_plugin_activity("Upgraded to Pro", array('location' => $location));
+}
+
+function leadin_check_tables_exist ()
+{
+    global $wpdb;
+
+    $q = "SELECT table_name FROM information_schema.tables WHERE table_name = '" . $wpdb->li_leads . "' OR table_name = '" . $wpdb->li_submissions . "' OR table_name = '" . $wpdb->li_pageviews . "' OR table_name = '" . $wpdb->li_tags . "' OR table_name = '" . $wpdb->li_tag_relationships . "'";
+    $li_tables = $wpdb->get_results($q);
+
+    return $li_tables;
 }
 
 ?>

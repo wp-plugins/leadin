@@ -359,20 +359,29 @@ function leadin_submit_form ( $form, $ )
 		// Set first name 
 		if ( ! lead_first_name )
 		{
-			if ( lower_label_text == 'first' || lower_label_text == 'first name' || lower_label_text == 'name' || lower_label_text == 'your name' )
+			if ( $element.attr('id') == 'leadin-subscribe-fname' )
+				lead_first_name = $value;
+			else if ( lower_label_text == 'first' || lower_label_text == 'first name' || lower_label_text == 'name' || lower_label_text == 'your name' )
 				lead_first_name = $value;
 		}
 
 		// Set last name
 		if ( ! lead_last_name )
 		{
-			if ( lower_label_text == 'last' || lower_label_text == 'last name' || lower_label_text == 'your last name' || lower_label_text == 'surname' )
+			if ( $element.attr('id') == 'leadin-subscribe-lname' )
+				lead_last_name = $value;
+			else if ( lower_label_text == 'last' || lower_label_text == 'last name' || lower_label_text == 'your last name' || lower_label_text == 'surname' )
 				lead_last_name = $value;
 		}
 
 		// Set phone number
-		if ( lower_label_text == 'phone' || lower_label_text == 'phone' )
-			lead_phone = $value;
+		if ( ! lead_phone )
+		{
+			if ( $element.attr('id') == 'leadin-subscribe-phone' )
+				lead_phone = $value;
+			else if ( lower_label_text == 'phone' || lower_label_text == 'phone' )
+				lead_phone = $value;
+		}
 	});
 
 	var radio_groups = [];

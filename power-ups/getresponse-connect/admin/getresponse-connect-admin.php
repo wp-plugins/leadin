@@ -47,7 +47,7 @@ class LIGetResponseConnectAdmin extends WPLeadInAdmin {
 
         if ( isset($this->options['li_gr_api_key']) )
         {
-            if ( $this->options['li_gr_api_key'] )
+            if ( $this->options['li_gr_api_key'] && ! $this->invalid_key )
                 add_settings_field('li_print_synced_lists', 'Synced tags', array($this, 'li_print_synced_lists'), LEADIN_ADMIN_PATH, $this->power_up_settings_section);
         }
     }
@@ -72,14 +72,14 @@ class LIGetResponseConnectAdmin extends WPLeadInAdmin {
      */
     function li_gr_api_key_callback ()
     {
-        $li_gr_api_key = ( $this->options['li_gr_api_key'] ? $this->options['li_gr_api_key'] : '' ); // Get header from options, or show default
+        $li_gr_api_key = ( isset($this->options['li_gr_api_key']) && $this->options['li_gr_api_key'] ? $this->options['li_gr_api_key'] : '' ); // Get header from options, or show default
         
         printf(
             '<input id="li_gr_api_key" type="text" id="title" name="' . $this->power_option_name . '[li_gr_api_key]" value="%s" size="50"/>',
             $li_gr_api_key
         );
 
-        if ( ! isset($li_gr_api_key) || ! $li_gr_api_key )
+        if ( ! isset($li_gr_api_key) || ! $li_gr_api_key || $this->invalid_key )
             echo '<p><a target="_blank" href="http://support.getresponse.com/faq/where-i-find-api-key">Get your API key</a> from <a href="https://app.getresponse.com/account.html#api" target="_blank">GetResponse.com</a></p>';
     }
 
@@ -193,9 +193,6 @@ class LIGetResponseConnectAdmin extends WPLeadInAdmin {
             $invalid_key = FALSE;
         else
         {
-            unset($this->options['li_gr_api_key']);
-            update_option($this->power_option_name, $this->options);
-
             $invalid_key = TRUE;
         }
 
