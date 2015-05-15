@@ -50,6 +50,7 @@ class WPLeadInAdmin {
     var $power_up_icon;
     var $stats_dashboard;
     var $action;
+    var $esp_power_ups;
 
     /**
      * Class constructor
@@ -77,20 +78,15 @@ class WPLeadInAdmin {
 
         if ( isset($_GET['page']) && $_GET['page'] == 'leadin_stats' )
         {
+            if ( $this->action == 'restore_tables' )
+            {
+                leadin_db_install();
+                wp_redirect(get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_stats&tables_restored=1');
+                exit;
+            }
+
             add_action('admin_footer', array($this, 'build_contacts_chart'));
         }
-
-        /*        
-        //Turned off the updater in 3.1.7
-
-        $updater_type = '';
-
-        if ( isset($options['pro']) && $options['pro'] )
-            $updater_type = 'pro';
-
-        if ( $updater_type )
-            $li_wp_updater = new WPLeadInUpdater($updater_type);
-        */
     }
 
     function leadin_update_check ()
@@ -278,32 +274,35 @@ class WPLeadInAdmin {
 
         add_menu_page('Leadin', 'Leadin', $capability, 'leadin_stats', array($this, 'leadin_build_stats_page'), $leadin_icon , '25.100713');
 
-        foreach ( $this->admin_power_ups as $power_up )
+        if ( count(leadin_check_tables_exist()) == 5 )
         {
-            if ( $power_up->activated )
+            foreach ( $this->admin_power_ups as $power_up )
             {
-                $power_up->admin_init();
+                if ( $power_up->activated )
+                {
+                    $power_up->admin_init();
 
-                // Creates the menu icon for power-up if it's set. Overrides the main Leadin menu to hit the contacts power-up
-                if ( $power_up->menu_text )
-                    add_submenu_page('leadin_stats', $power_up->menu_text, $power_up->menu_text, $capability, 'leadin_' . $power_up->menu_link, array($power_up, 'power_up_setup_callback'));    
+                    // Creates the menu icon for power-up if it's set. Overrides the main Leadin menu to hit the contacts power-up
+                    if ( $power_up->menu_text )
+                        add_submenu_page('leadin_stats', $power_up->menu_text, $power_up->menu_text, $capability, 'leadin_' . $power_up->menu_link, array($power_up, 'power_up_setup_callback'));    
+                }
             }
-        }
 
-        add_submenu_page('leadin_stats', 'Tags', 'Tags', $capability, 'leadin_tags', array(&$this, 'leadin_build_tag_page'));
-        add_submenu_page('leadin_stats', 'Settings', 'Settings', 'activate_plugins', 'leadin_settings', array(&$this, 'leadin_plugin_options'));
-        add_submenu_page('leadin_stats', 'Power-ups', 'Power-ups', 'activate_plugins', 'leadin_power_ups', array(&$this, 'leadin_power_ups_page'));
-        
-        if ( ! leadin_check_pro_user() )
-            add_submenu_page('leadin_stats', 'Pro Upgrade', 'Pro Upgrade', 'activate_plugins', 'leadin_pro_upgrade', array(&$this, 'leadin_pro_upgrade_page'));
+            add_submenu_page('leadin_stats', 'Tags', 'Tags', $capability, 'leadin_tags', array(&$this, 'leadin_build_tag_page'));
+            add_submenu_page('leadin_stats', 'Settings', 'Settings', 'activate_plugins', 'leadin_settings', array(&$this, 'leadin_plugin_options'));
+            add_submenu_page('leadin_stats', 'Power-ups', 'Power-ups', 'activate_plugins', 'leadin_power_ups', array(&$this, 'leadin_power_ups_page'));
+            
+            if ( ! leadin_check_pro_user() )
+                add_submenu_page('leadin_stats', 'Pro Upgrade', 'Pro Upgrade', 'activate_plugins', 'leadin_pro_upgrade', array(&$this, 'leadin_pro_upgrade_page'));
 
-        $submenu['leadin_stats'][0][0] = 'Stats';
+            $submenu['leadin_stats'][0][0] = 'Stats';
 
-        if ( !isset($_GET['page']) || $_GET['page'] != 'leadin_settings' )
-        {
-            $options = get_option('leadin_options');
-            if ( !isset($options['ignore_settings_popup']) || !$options['ignore_settings_popup'] )
-                $li_pointers = new LI_Pointers();
+            if ( !isset($_GET['page']) || $_GET['page'] != 'leadin_settings' )
+            {
+                $options = get_option('leadin_options');
+                if ( !isset($options['ignore_settings_popup']) || !$options['ignore_settings_popup'] )
+                    $li_pointers = new LI_Pointers();
+            }
         }
 
         
@@ -400,26 +399,35 @@ class WPLeadInAdmin {
     function leadin_build_stats_page ()
     {
         global $wp_version;
-        $this->stats_dashboard = new LI_StatsDashboard();
-
-        echo '<div id="leadin" class="li-stats wrap '. ( $wp_version < 3.8 && !is_plugin_active('mp6/mp6.php') ? 'pre-mp6' : ''). '">';
         
-        $this->leadin_header('Leadin Stats: ' . date('F j Y, g:ia', current_time('timestamp')), 'leadin-stats__header', 'Loaded Stats Page');
+        if ( count(leadin_check_tables_exist()) == 5 )
+        {
+           $this->stats_dashboard = new LI_StatsDashboard();
+        
+            echo '<div id="leadin" class="li-stats wrap '. ( $wp_version < 3.8 && !is_plugin_active('mp6/mp6.php') ? 'pre-mp6' : ''). '">';
+            
+            $this->leadin_header('Leadin Stats: ' . date('F j Y, g:ia', current_time('timestamp')), 'leadin-stats__header', 'Loaded Stats Page');
 
-        echo '<div class="leadin-stats__top-container">';
-            echo $this->leadin_postbox('leadin-stats__chart', leadin_single_plural_label(number_format($this->stats_dashboard->total_contacts_last_30_days), 'new contact', 'new contacts') . ' last 30 days', $this->leadin_build_contacts_chart_stats());
-        echo '</div>';
+            echo '<div class="leadin-stats__top-container">';
+                echo $this->leadin_postbox('leadin-stats__chart', leadin_single_plural_label(number_format($this->stats_dashboard->total_contacts_last_30_days), 'new contact', 'new contacts') . ' last 30 days', $this->leadin_build_contacts_chart_stats());
+            echo '</div>';
 
-        echo '<div class="leadin-stats__postbox_containter">';
-            echo $this->leadin_postbox('leadin-stats__new-contacts', leadin_single_plural_label(number_format($this->stats_dashboard->total_new_contacts), 'new contact', 'new contacts') . ' today', $this->leadin_build_new_contacts_postbox());
-            echo $this->leadin_postbox('leadin-stats__returning-contacts', leadin_single_plural_label(number_format($this->stats_dashboard->total_returning_contacts), 'returning contact', 'returning contacts') . ' today', $this->leadin_build_returning_contacts_postbox());
-        echo '</div>';
+            echo '<div class="leadin-stats__postbox_containter">';
+                echo $this->leadin_postbox('leadin-stats__new-contacts', leadin_single_plural_label(number_format($this->stats_dashboard->total_new_contacts), 'new contact', 'new contacts') . ' today', $this->leadin_build_new_contacts_postbox());
+                echo $this->leadin_postbox('leadin-stats__returning-contacts', leadin_single_plural_label(number_format($this->stats_dashboard->total_returning_contacts), 'returning contact', 'returning contacts') . ' today', $this->leadin_build_returning_contacts_postbox());
+            echo '</div>';
 
 
 
-        echo '<div class="leadin-stats__postbox_containter">';
-            echo $this->leadin_postbox('leadin-stats__sources', 'New contact sources last 30 days', $this->leadin_build_sources_postbox());
-        echo '</div>';
+            echo '<div class="leadin-stats__postbox_containter">';
+                echo $this->leadin_postbox('leadin-stats__sources', 'New contact sources last 30 days', $this->leadin_build_sources_postbox());
+            echo '</div>';
+        }
+        else
+        {
+            $this->leadin_header(' ', 'leadin-stats__header', 'Error - No Database Tables');
+
+        }
 
         $this->leadin_footer();
     }
@@ -603,22 +611,17 @@ class WPLeadInAdmin {
 
                         
                         <?php
-                            $esp_power_ups = array(
-                                'MailChimp'         => 'mailchimp_connect', 
-                                'Constant Contact'  => 'constant_contact_connect', 
-                                'AWeber'            => 'aweber_connect', 
-                                'GetResponse'       => 'getresponse_connect', 
-                                'MailPoet'          => 'mailpoet_connect', 
-                                'Campaign Monitor'  => 'campaign_monitor_connect'
-                            );
 
-                            foreach ( $esp_power_ups as $power_up_name => $power_up_slug )
+                            foreach ( $this->esp_power_ups as $power_up_name => $power_up_slug )
                             {
                                 if ( WPLeadIn::is_power_up_active($power_up_slug) )
                                 {
                                     global ${'leadin_' . $power_up_slug . '_wp'}; // e.g leadin_mailchimp_connect_wp
                                     $esp_name = strtolower(str_replace('_connect', '', $power_up_slug)); // e.g. mailchimp
-                                    $lists = ${'leadin_' . $power_up_slug . '_wp'}->admin->li_get_lists();
+                                    
+                                    if ( ${'leadin_' . $power_up_slug . '_wp'}->admin->authed && ! ${'leadin_' . $power_up_slug . '_wp'}->admin->invalid_key )
+                                        $lists = ${'leadin_' . $power_up_slug . '_wp'}->admin->li_get_lists();
+                                    
                                     $synced_lists = ( isset($tagger->details->tag_synced_lists) ? unserialize($tagger->details->tag_synced_lists) : '' );
 
                                     echo '<tr>';
@@ -676,7 +679,7 @@ class WPLeadInAdmin {
                                                     echo 'It looks like you haven\'t set up your ' . $esp_name_readable . ' integration yet...<br/><br/>';
                                                     echo '<a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_settings' . $settings_page_anchor_id . '">Set up your ' . $esp_name_readable . ' integration</a>';
                                                 }
-                                                else if ( ${'leadin_' . $power_up_slug . '_wp'}->admin->invalid_key )
+                                                else if ( isset(${'leadin_' . $power_up_slug . '_wp'}->admin->invalid_key) && ${'leadin_' . $power_up_slug . '_wp'}->admin->invalid_key )
                                                 {
                                                     echo $invalid_key_message;
                                                     echo '<p>' . $invalid_key_link . ' then try copying and pasting it again in <a href="' . get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_settings' . $settings_page_anchor_id . '">Leadin → Settings</a></p>';
@@ -973,10 +976,6 @@ class WPLeadInAdmin {
     function leadin_build_settings_page ()
     {
         global $leadin_contacts;
-
-        //echo get_site_url();
-
-        //print_r($_POST);
         
         // Show the settings popup on all pages except the settings page
         if ( isset($_GET['page']) && $_GET['page'] == 'leadin_settings' )
@@ -1032,26 +1031,19 @@ class WPLeadInAdmin {
             2
         );
 
+        $this->esp_power_ups = array(
+            'MailChimp'         => 'mailchimp_connect', 
+            'Constant Contact'  => 'constant_contact_connect', 
+            'AWeber'            => 'aweber_connect', 
+            'GetResponse'       => 'getresponse_connect', 
+            'MailPoet'          => 'mailpoet_connect', 
+            'Campaign Monitor'  => 'campaign_monitor_connect'
+        );
     }
 
     function leadin_options_section_heading ( )
     {
         $this->print_hidden_settings_fields();
-
-        if ( $this->has_leads() )
-        {
-            echo '<div class="leadin-section">';
-                echo '<p style="color: #090; font-weight: bold;">Visitor tracking is installed and tracking visitors.</p>';
-                echo '<p>The next time a visitor fills out a form on your WordPress site with an email address, Leadin will send you an email with the contact\'s referral source and page view history.</p>';
-            echo '</div>';
-        }
-        else
-        {
-            echo '<div class="leadin-section">';
-                echo '<p style="color: #f67d42; font-weight: bold;">Leadin is set up and waiting for a form submission...</p>';
-                echo '<p>Can\'t wait to see Leadin in action? Go fill out a form on your site to see your first contact.</p>';
-            echo '</div>';
-        }
     }
 
     function print_hidden_settings_fields ()
@@ -1148,6 +1140,7 @@ class WPLeadInAdmin {
 
     function update_option_leadin_options_callback ( $old_value, $new_value )
     {
+
     }
 
     /**
@@ -1158,10 +1151,15 @@ class WPLeadInAdmin {
         $li_options = get_option('leadin_options');
         
         // Load onboarding if not complete
-        if ( $li_options['onboarding_complete'] == 0 ) {
+        if ( $li_options['onboarding_complete'] == 0 ) 
+        {
             $this->leadin_plugin_onboarding();
+            wp_register_script('leadin-admin-js', LEADIN_PATH . '/assets/js/build/leadin-admin.min.js', array ( 'jquery' ), FALSE, TRUE);
+            wp_enqueue_script('leadin-admin-js');
+            wp_localize_script('leadin-admin-js', 'li_admin_ajax', array('ajax_url' => get_admin_url(NULL,'') . '/admin-ajax.php'));
         }
-        else {
+        else 
+        {
             $this->leadin_plugin_settings();
         }
     }
@@ -1175,37 +1173,48 @@ class WPLeadInAdmin {
 
         $li_options = get_option('leadin_options');
 
-        echo '<div id="leadin" class="li-onboarding wrap '. ( $wp_version < 3.8 && !is_plugin_active('mp6/mp6.php') ? 'pre-mp6' : ''). '">';
-    
+        echo '<div id="leadin" class="li-onboarding wrap centered'. ( $wp_version < 3.8 && !is_plugin_active('mp6/mp6.php') ? 'pre-mp6' : ''). '">';
         
         ?>
         
-        <?php if ( ! isset($_GET['activate_popup']) ) : ?>
+        <div class="oboarding-steps">
             
-            <?php if ( $li_options['onboarding_step'] == 1 ) : ?>
+            <img src="<?php echo LEADIN_PATH . '/images/leadin_logo.png' ; ?>" width="147px">
+                
+            <?php if ( $li_options['onboarding_step'] <= 1 ) : ?>
 
-                <?php $this->leadin_header('Leadin Setup', 'li_setup', 'Onboarding Step 2 - Get Contact Reports'); ?>
+                <?php $this->leadin_header('You\'re 3 steps away from understanding your visitors better.' , 'li_setup_header', 'Onboarding Step 2 - Get Contact Reports'); ?>
+               
+                <ol class="oboarding-steps-names">
+                    <li class="oboarding-step-name completed">Activate Leadin</li>
+                    <li class="oboarding-step-name active">Get Contact Reports</li>
+                    <li class="oboarding-step-name">Grow Your Contacts List</li>
+                    <li class="oboarding-step-name">Email your new contacts</li>
+                </ol>
+                <div class="oboarding-step">
+                    <h2 class="oboarding-step-title">Where should we send your contact reports?</h2>
+                    <div class="oboarding-step-content">
+                        <p class="oboarding-step-description">Leadin will help you get to know your website visitors by sending you a report including traffic source and pageview history each time a visitor fills out a form.</p>
+                        <form id="li-onboarding-form" method="post" action="options.php">
+                            <div>
+                                <?php settings_fields('leadin_settings_options'); ?>
+                                <?php $this->li_email_callback(); ?>
+                            </div>
+                            <?php $this->print_hidden_settings_fields();  ?>
 
-                <div class="oboarding-steps">
-                    <ol class="oboarding-steps-names">
-                        <li class="oboarding-step-name completed">Activate Leadin</li>
-                        <li class="oboarding-step-name active">Get Contact Reports</li>
-                        <li class="oboarding-step-name">Grow Your Contacts List</li>
-                    </ol>
-                    <div class="oboarding-step">
-                        <h2 class="oboarding-step-title">Where should we send your contact reports?</h2>
-                        <div class="oboarding-step-content">
-                            <p class="oboarding-step-description">Leadin will help you get to know your website visitors by sending you a report including traffic source and pageview history each time a visitor fills out a form.</p>
-                            <form id="li-onboarding-form" method="post" action="options.php">
-                                <div>
-                                    <?php settings_fields('leadin_settings_options'); ?>
-                                    <?php $this->li_email_callback(); ?>
-                                </div>
-                                <?php $this->print_hidden_settings_fields();  ?>
-                                <input type="hidden" id="next_onboarding_step" name="next_onboarding_step" value="2">
-                                <input type="submit" name="submit" id="submit" class="button button-primary button-big" value="<?php esc_attr_e('Save Email'); ?>">
-                            </form>
-                        </div>
+                            <p id="agree-pp-error" style="display: none; border-left: 4px solid #dd3d36; padding: 8px 12px; margin-bottom: 25px; background: #fff;">
+                                Before you can unlock the awesomeness of Leadin , we need you to agree to our Privacy Policy, you know... because lawyers.
+                            </p>
+
+                            <p>
+                                <label for="agree-pp">
+                                    <input type="checkbox" id="agree-pp" name="agree-pp"/>
+                                    I agree to Leadin's <a href="http://leadin.com/legal/privacy-policy" target="_blank">Privacy Policy</a>
+                                </label>
+                            </p>
+
+                            <input type="submit" name="submit" id="onboarding-step-1-button" class="button button-primary button-big" style="margin-top: 15px;" value="<?php esc_attr_e('Save Email'); ?>">
+                        </form>
                     </div>
                 </div>
                 <!-- Facebook Conversion Code for Installed plugin -->
@@ -1225,89 +1234,129 @@ class WPLeadInAdmin {
                 </script>
                 <noscript><img height="1" width="1" alt="" style="display:none" src="https://www.facebook.com/tr?ev=6024677413664&amp;cd[value]=0.00&amp;cd[currency]=USD&amp;noscript=1" /></noscript>
 
-            <?php elseif ( $li_options['onboarding_step'] == 2 ) : ?>
+            <?php elseif ( $li_options['onboarding_step'] == 2 && !isset($_GET['activate_popup']) && !isset($_GET['activate_esp']) ) : ?>
 
-                <?php $this->leadin_header('Leadin Setup', 'li_setup', 'Onboarding Step 3 - Grow Your Contact List'); ?>
+                <?php 
+                    // Upgrade to Pro in the database
+                    leadin_upgrade_to_pro('onboarding'); 
+                ?>
 
-                <div class="oboarding-steps">
-                    <ol class="oboarding-steps-names">
-                        <li class="oboarding-step-name completed">Activate Leadin</li>
-                        <li class="oboarding-step-name completed">Get Contact Reports</li>
-                        <li class="oboarding-step-name active">Grow Your Contacts List</li>
-                    </ol>
-                    <div class="oboarding-step">
-                        <h2 class="oboarding-step-title">Grow your contacts list with our popup form<br><small>and start converting visitors on <?php echo get_bloginfo('wpurl') ?></small></h2>
-                        <form id="li-onboarding-form" method="post" action="options.php">
-                            <?php $this->print_hidden_settings_fields();  ?>
-                            <div class="popup-options">
-                                <label class="popup-option">
-                                    <input type="radio" name="popup-position" value="slide_in" checked="checked" >Slide in
-                                    <img src="<?php echo LEADIN_PATH ?>/images/popup-bottom.png">
-                                </label>
-                                <label class="popup-option">
-                                    <input type="radio" name="popup-position" value="popup">Popup
-                                    <img src="<?php echo LEADIN_PATH ?>/images/popup-over.png">
-                                </label>
-                                <label class="popup-option">
-                                    <input type="radio" name="popup-position" value="top">Top
-                                    <img src="<?php echo LEADIN_PATH ?>/images/popup-top.png">
-                                </label>
-                            </div>
-                            <input type="hidden" id="next_onboarding_step" name="next_onboarding_step" value="3">
-                            <a id="btn-activate-subscribe" href="<?php echo get_admin_url() .'admin.php?page=leadin_settings&leadin_action=activate&power_up=subscribe_widget&redirect_to=' . get_admin_url() . urlencode('admin.php?page=leadin_settings&activate_popup=true&popup_position=slide_in'); ?>" class="button button-primary button-big"><?php esc_attr_e('Activate the popup form');?></a>
-                            <p><a href="<?php echo get_admin_url() .'admin.php?page=leadin_settings&activate_popup=false'; ?>">Don't activate the popup form right now</a></p>
-                        </form>
+                <?php $this->leadin_header('You\'re 2 steps away from understanding your visitors better.', 'li_setup_header', 'Onboarding Step 3 - Grow Your Contact List'); ?>
+                
+                <ol class="oboarding-steps-names">
+                    <li class="oboarding-step-name completed">Activate Leadin</li>
+                    <li class="oboarding-step-name completed">Get Contact Reports</li>
+                    <li class="oboarding-step-name active">Grow Your Contacts List</li>
+                    <li class="oboarding-step-name">Email your new contacts</li>
+                </ol>
+                <div class="oboarding-step">
+                    <h2 class="oboarding-step-title">Grow your contacts list with our popup form</h2>
+                    <div class="oboarding-step-content">
+                        <p class="oboarding-step-description">Start converting more visitors to contacts on <?php echo get_bloginfo('wpurl') ?>. Don't worry, you'll be able to customize this form more later.</p>
                     </div>
+                    <form id="li-onboarding-form" method="post" action="options.php">
+                        <?php $this->print_hidden_settings_fields();  ?>
+                        <div class="popup-options">
+                            <label class="popup-option">
+                                <input type="radio" name="popup-position" value="slide_in" checked="checked" >Slide in
+                                <img src="<?php echo LEADIN_PATH ?>/images/popup-bottom.png">
+                            </label>
+                            <label class="popup-option">
+                                <input type="radio" name="popup-position" value="popup">Popup
+                                <img src="<?php echo LEADIN_PATH ?>/images/popup-over.png">
+                            </label>
+                            <label class="popup-option">
+                                <input type="radio" name="popup-position" value="top">Top
+                                <img src="<?php echo LEADIN_PATH ?>/images/popup-top.png">
+                            </label>
+                        </div>
+                        <a id="btn-activate-subscribe" href="<?php echo get_admin_url() .'admin.php?page=leadin_settings&leadin_action=activate&power_up=subscribe_widget&redirect_to=' . get_admin_url() . urlencode('admin.php?page=leadin_settings&activate_popup=true&popup_position=slide_in'); ?>" class="button button-primary button-big"><?php esc_attr_e('Activate the popup form');?></a>
+                        <p><a href="<?php echo get_admin_url() .'admin.php?page=leadin_settings&activate_popup=false'; ?>">Don't activate the popup form right now</a></p>
+                    </form>
                 </div>
 
-            <?php endif; ?>
+            <?php elseif ( isset($_GET['activate_popup']) && !isset($_GET['activate_esp']) ) : ?>
 
-        <?php else : ?>
+                <?php
+                    // Set the popup position based on get URL 
+                    if ( isset($_GET['activate_popup']) ) {
+                        if ( isset($_GET['popup_position']) ) {
+                            $vex_class_option = '';
+                            switch ( $_GET['popup_position'] ) {
+                                case 'slide_in' :
+                                    $vex_class_option = 'vex-theme-bottom-right-corner';
+                                break;
 
-            <?php
-                // Set the popup position based on get URL 
+                                case 'popup' :
+                                    $vex_class_option = 'vex-theme-default';
+                                break;
 
-                if ( isset($_GET['popup_position']) )
-                {
-                    $vex_class_option = '';
-                    switch ( $_GET['popup_position'] )
-                    {
-                        case 'slide_in' :
-                            $vex_class_option = 'vex-theme-bottom-right-corner';
-                        break;
+                                case 'top' :
+                                    $vex_class_option = 'vex-theme-top';
+                                break;
+                            }
 
-                        case 'popup' :
-                            $vex_class_option = 'vex-theme-default';
-                        break;
-
-                        case 'top' :
-                            $vex_class_option = 'vex-theme-top';
-                        break;
+                            leadin_update_option('leadin_subscribe_options', 'li_subscribe_vex_class', $vex_class_option);
+                            leadin_track_plugin_activity('Onboarding Popup Activated');
+                        }
+                        else {
+                            leadin_track_plugin_activity('Onboarding Popup Not Activated');
+                        }
                     }
-
-                    leadin_update_option('leadin_subscribe_options', 'li_subscribe_vex_class', $vex_class_option);
-                    leadin_track_plugin_activity('Onboarding Popup Activated');
-                }
-                else
-                    leadin_track_plugin_activity('Onboarding Popup Not Activated');
-
-                // Update the onboarding settings
-                if ( ! isset($options['onboarding_complete']) || ! $options['onboarding_complete'] )
-                {
-                    leadin_update_option('leadin_options', 'onboarding_complete', 1);
-                }
-            ?>
-            
-            <?php $this->leadin_header('Leadin Setup', 'li_setup', 'Onboarding Complete'); ?>
-
-            <div class="oboarding-steps">
+                    
+                ?>
+                
+                <?php $this->leadin_header('You\'re 1 step away from understanding your visitors better.', 'li_setup_header', 'Onboarding Step 4 - Email your contacts'); ?>
+                
                 <ol class="oboarding-steps-names">
                     <li class="oboarding-step-name completed">Activate Leadin</li>
                     <li class="oboarding-step-name completed">Get Contact Reports</li>
                     <li class="oboarding-step-name completed">Grow Your Contacts List</li>
+                    <li class="oboarding-step-name active">Email your new contacts</li>
                 </ol>
                 <div class="oboarding-step">
-                    <h2 class="oboarding-step-title">Setup Complete!<br>Leadin is waiting for your first form submission.</h2>
+                    <h2 class="oboarding-step-title">Which email provider do you use?</h2>
+                    <div class="oboarding-step-content">
+                        <p class="oboarding-step-description">Leadin works best when connected to an email provider. Don’t worry, we won’t start syncing contacts until we get your account details later.</p>
+                    </div>
+                    <form id="li-onboarding-form" method="post" action="options.php">
+                        <?php $this->print_hidden_settings_fields(); ?>
+                        <div class="popup-options">
+                            <label class="esp-option">
+                                <input type="radio" name="esp" value="mailchimp_connect" checked="checked" ><span class="esp-name mailchimp">MailChimp</span>
+                            </label>
+                            <label class="esp-option">
+                                <input type="radio" name="esp" value="constant_contact_connect"><span class="esp-name constant-contact">Constant Contact</span>
+                            </label>
+                            <label class="esp-option">
+                                <input type="radio" name="esp" value="aweber_connect"><span class="esp-name aweber">Aweber</span>
+                            </label>
+                            <label class="esp-option">
+                                <input type="radio" name="esp" value="getresponse_connect"><span class="esp-name getresponse">GetResponse</span>
+                            </label>
+                            <label class="esp-option">
+                                <input type="radio" name="esp" value="campaign_monitor_connect"><span class="esp-name campaign-monitor">CampaignMonitor</span>
+                            </label>
+                        </div>
+                        <a id="btn-activate-esp" href="<?php echo get_admin_url() .'admin.php?page=leadin_settings&leadin_action=activate&power_up=mailchimp_connect&redirect_to=' . get_admin_url() . urlencode('admin.php?page=leadin_settings&activate_esp=true&esp=mailchimp'); ?>" class="button button-primary button-big"><?php esc_attr_e('Select your email tool');?></a>
+                        <p><a href="<?php echo get_admin_url() .'admin.php?page=leadin_settings&activate_esp=false'; ?>">Don't connect an email provider right now</a></p>
+                    </form>
+                </div>
+
+            <?php elseif ( isset($_GET['activate_esp']) ) : ?>
+
+                <?php leadin_update_option('leadin_options', 'onboarding_complete', 1); ?>
+
+                <?php $this->leadin_header('Setup Complete!', 'li_setup_header', 'Onboarding Complete'); ?>
+
+                <ol class="oboarding-steps-names">
+                    <li class="oboarding-step-name completed">Activate Leadin</li>
+                    <li class="oboarding-step-name completed">Get Contact Reports</li>
+                    <li class="oboarding-step-name completed">Grow Your Contacts List</li>
+                    <li class="oboarding-step-name completed">Email your new contacts</li>
+                </ol>
+                <div class="oboarding-step">
+                    <h2 class="oboarding-step-title">Leadin is waiting for your first form submission.</h2>
                     <div class="oboarding-step-content">
                         <p class="oboarding-step-description">Leadin is set up and waiting for a form submission. Once Leadin detects a form submission, a new contact will be added to your contacts list. We recommend filling out a form on your site to test that Leadin is working correctly.</p>
                         <form id="li-onboarding-form" method="post" action="options.php">
@@ -1316,16 +1365,15 @@ class WPLeadInAdmin {
                         </form>
                     </div>
                 </div>
-            </div>
 
-        <?php endif; ?>
+            <?php endif; ?>
+
+        </div><!--/oboarding-steps -->
+
+        </div><!--/wrap -->
 
         <?php
         
-        $this->leadin_footer();
-
-        //end wrap
-        echo '</div>';
     }
 
     /**
@@ -1703,8 +1751,11 @@ class WPLeadInAdmin {
      */
     function leadin_header ( $page_title = '', $css_class = '', $event_name = '' )
     {
-        $options = get_option('li_options');
-        $leadin_user = leadin_get_current_user();
+        $li_options = get_option('leadin_options');
+
+        // if database doesn't exist then don't 
+        if ( $event_name != 'Error - No Database Tables' )
+            $leadin_user = leadin_get_current_user();
         ?>
 
         <?php if ( leadin_check_pro_user() ) : ?>
@@ -1719,10 +1770,8 @@ class WPLeadInAdmin {
                     "wp-version"        : "<?php echo $leadin_user['wp_version']; ?>",
                     "li-version"        : "<?php echo $leadin_user['li_version']; ?>",
                     "li-source"         : "<?php echo LEADIN_SOURCE; ?>",
-                    "createdAt"         : "<?php echo date('Y-m-d H:i:s'); ?>",
                     "website"           : "<?php echo $leadin_user['wp_url']; ?>",
                     "company"           : "<?php echo $leadin_user['wp_url']; ?>",
-                    "contacts"          : <?php echo $leadin_user['total_contacts']; ?>,
                     "utm_source"        : "<?php echo $leadin_user['utm_source']; ?>",
                     "utm_medium"        : "<?php echo $leadin_user['utm_medium']; ?>",
                     "utm_term"          : "<?php echo $leadin_user['utm_term']; ?>",
@@ -1746,55 +1795,69 @@ class WPLeadInAdmin {
               }}();
             </script>
         <?php endif; ?>
-
-        <?php screen_icon('leadin'); ?>
-
-        <h2 class="<?php echo $css_class ?>"><?php echo $page_title; ?></h2>
-
-        <?php if ( $options['onboarding_complete'] ) : ?>
-            <?php if ( $this->has_leads() == FALSE ) : ?>
-                <div id="message" class="updated">
-                    <p>Leadin is set up and waiting for a form submission... Need help? <a href="http://wordpress.org/support/plugin/leadin">Contact Us</a>.</p>
-                </div>
-            <?php endif; ?>
+        
+        <?php if ( $page_title ) : ?>
+            <?php screen_icon('leadin'); ?>
+            <h2 class="<?php echo $css_class ?>"><?php echo $page_title; ?></h2>
         <?php endif; ?>
 
-        <?php $options = get_option('leadin_options'); ?>
-
-        <?php if ( isset($_GET['settings-updated']) && $options['onboarding_complete'] ) : ?>
+        <?php if ( isset($_GET['tables_restored']) && $_GET['tables_restored'] ) : ?>
             <div id="message" class="updated">
-                <p><strong><?php _e('Settings saved.') ?></strong></p>
+                <p>Your Leadin database tables were successfully restored and the product should start working correctly again.</p>
             </div>
         <?php endif; ?>
-        <?php if ( isset($options['onboarding_complete']) && $options['onboarding_complete'] && ! isset($_COOKIE['ignore_social_share']) ) : ?>
-            <?php if ( leadin_check_first_pageview_data() ) : ?>  
-                <div class="dialog-bottom-right">
-                    <h1>Hey, do you like Leadin?</h1>
-                    <a href="javscript:void(0);" id="close-share" class="close">&#10006;</a>
-                    <p>Looks like you've been using Leadin for at least 30 days. Want to help support us by spreading the word?</p>
-                    <p>We'd love it if you could tell your friends about us or leave us a review on WordPress.org.</p>
-                    <a class="big-button--share fb" href="https://www.facebook.com/sharer/sharer.php?u=http://leadin.com/facebook-share" target="_blank"></a>
-                    <a class="big-button--share tw" href="https://twitter.com/home?status=I've%20been%20using%20%40LeadinApp%20to%20track%20visitors%20on%20my%20Wordpress%20site.%20Try%20it%20for%20free!%20http://leadin.com/twitter-share" target="_blank"></a>
-                    <a class="big-button--share wp" href="https://wordpress.org/support/view/plugin-reviews/leadin?rate=5#postform" target="_blank"></a>
-                </div>
-                <script type="text/javascript">
-                jQuery(document).ready(function($){
-                    var BR = $(".dialog-bottom-right");
-                    var close = $(".close");
-                        BR.animate({
-                            "bottom" : 0
-                        }, 
-                        1000);
-                        close.click(function(){
-                        BR.animate({
-                            "bottom" : -400
-                        }, 
-                        1000);
-                        });
-                });
-                  </script>
-              <?php endif; ?>
+
+        <?php if ( $event_name != 'Error - No Database Tables' ) : ?>
+            <?php if ( $li_options['onboarding_complete'] ) : ?>
+
+                <?php if ( isset($_GET['settings-updated']) ) : ?>
+                    <div id="message" class="updated">
+                        <p><strong><?php _e('Settings saved.') ?></strong></p>
+                    </div>
+
+                    <?php
+                        foreach ( $this->esp_power_ups as $power_up_name => $power_up_slug )
+                        {
+                            if ( WPLeadIn::is_power_up_active($power_up_slug) )
+                            {
+                                global ${'leadin_' . $power_up_slug . '_wp'}; // e.g leadin_mailchimp_connect_wp
+                                $esp_name = strtolower(str_replace('_connect', '', $power_up_slug)); // e.g. mailchimp
+
+                                if ( ${'leadin_' . $power_up_slug . '_wp'}->admin->invalid_key )
+                                {
+                                    echo '<div id="message" class="error">';
+                                        echo '<p>' . 'Your ' . $power_up_name . ' key seems to not be correct.' . '</p>';
+                                    echo '</div>';
+                                }
+                            }
+                        }
+                    ?>
+                <?php elseif ( $this->has_leads() == FALSE ) : ?>
+                    <div id="message" class="updated">
+                        <p>Leadin is set up and waiting for a form submission... Need help? <a href="http://wordpress.org/support/plugin/leadin">Contact Us</a>.</p>
+                    </div>
+                <?php elseif ( !leadin_check_pro_user() ) : ?>
+                    <div id="message" class="updated">
+                        <p>Did you know that Leadin Pro is a free upgrade with even more feaures? <a href="<?php echo admin_url(); ?>admin.php?page=leadin_pro_upgrade">Learn more</a>.</p>
+                    </div>
+                <?php endif; ?>
+            <?php endif; ?>
+        <?php else : ?>
+            <div style="border-left: 4px solid #dd3d36; padding: 12px; margin-bottom: 25px; background: #fff;">
+                <h3><b>Your Leadin database tables are missing</b></h3>
+                <p>
+                    The usual cause of this problem is that occasionally backup plugins drop the database tables created by Leadin which breaks your install and deletes your data. 
+
+                    Unfortunately we can't restore the data for you because we don't have access to your WordPress server.<br/><br/>
+
+                    Sorry about the issue... we know this is a big bummer, so we actually built a version of Leadin that stores your data in our <b>securely encrypted, regularly backed-up servers</b> so you're guaranteed to <b>never lose your data again</b>. <br><br>To sweeten the deal for you, Leadin Cloud is 100% free to use.
+
+                    <p><a href="http://leadin.com" target="_blank" class="button button-primary">Sign up for Leadin Cloud for Free</a></p>
+                    <p>You can also recreate the missing tables in your MySQL database if you'd prefer to store your data on your own server - <a href="<?php echo get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_stats&action=restore_tables'; ?>">Click here to restore the default Leadin tables</a></p>
+                </p>
+            </div>
         <?php endif; ?>
+
         <?php
     }
 
@@ -1802,7 +1865,6 @@ class WPLeadInAdmin {
     {
         $li_options = get_option('leadin_options');
         global  $wp_version;
-        
 
         ?>
         <div id="leadin-footer">
@@ -1814,7 +1876,6 @@ class WPLeadInAdmin {
             </p>
 
             <p class="sharing"><a href="https://twitter.com/leadinapp" class="twitter-follow-button" data-show-count="false">Follow @leadinapp</a><p>
-            <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script></p>
         </div>
 
         <?php

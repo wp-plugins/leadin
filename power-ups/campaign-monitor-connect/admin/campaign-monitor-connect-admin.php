@@ -47,7 +47,7 @@ class LICampaignMonitorConnectAdmin extends WPLeadInAdmin {
 
         if ( isset($this->options['li_cm_api_key']) )
         {
-            if ( $this->options['li_cm_api_key'] )
+            if ( $this->options['li_cm_api_key'] && ! $this->invalid_key )
                 add_settings_field('li_print_synced_lists', 'Synced tags', array($this, 'li_print_synced_lists'), LEADIN_ADMIN_PATH, $this->power_up_settings_section);
         }
     }
@@ -72,14 +72,14 @@ class LICampaignMonitorConnectAdmin extends WPLeadInAdmin {
      */
     function li_cm_api_key_callback ()
     {
-        $li_cm_api_key = ( $this->options['li_cm_api_key'] ? $this->options['li_cm_api_key'] : '' ); // Get header from options, or show default
+        $li_cm_api_key = ( isset($this->options['li_cm_api_key']) && $this->options['li_cm_api_key'] ? $this->options['li_cm_api_key'] : '' ); // Get header from options, or show default
         
         printf(
             '<input id="li_cm_api_key" type="text" id="title" name="' . $this->power_option_name . '[li_cm_api_key]" value="%s" style="width: 430px;"/>',
             $li_cm_api_key
         );
 
-        if ( ! isset($li_cm_api_key) || ! $li_cm_api_key )
+        if ( ! isset($li_cm_api_key) || ! $li_cm_api_key || $this->invalid_key )
             echo '<p><a target="_blank" href="http://help.campaignmonitor.com/topic.aspx?t=206">Get your API key</a> from <a href="https://login.createsend.com/l" target="_blank">CampaignMonitor.com</a></p>';
     }
 
@@ -181,6 +181,7 @@ class LICampaignMonitorConnectAdmin extends WPLeadInAdmin {
         {
             foreach ( $clients['response'] as $client )
             {
+                $lists = array();
                 $lists = $cm->call('clients/' . $client['ClientID'] . '/lists', 'GET');
 
                 if ( count($lists['response']) )
@@ -210,9 +211,6 @@ class LICampaignMonitorConnectAdmin extends WPLeadInAdmin {
 
         if ( $test['code'] >= 400 )
         {
-            unset($this->options['li_cm_api_key']);
-            update_option($this->power_option_name, $this->options);
-
             $invalid_key = TRUE;
         }
         else

@@ -677,11 +677,18 @@ end;
         $response = $this->fetch($url,$post);
 
         $entries = Array();
-        if (isset($response['feed']['entry']['link']))
-            $entries[] = $response['feed']['entry'];
+        if ( isset($response['feed']) )
+        {
+            if (isset($response['feed']['entry']['link']))
+                $entries[] = $response['feed']['entry'];
+            else
+                $entries = $response['feed']['entry'];
+        }
         else
-            $entries = $response['feed']['entry'];
-        
+        {
+            return array();
+        }
+
         if ( count($entries) )
         {
             foreach ($entries as $data)

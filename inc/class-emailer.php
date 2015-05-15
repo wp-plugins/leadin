@@ -611,7 +611,7 @@ class LI_Emailer {
         $fields_string = http_build_query($fields);
 
         $ch = curl_init();
-        curl_setopt($ch,CURLOPT_URL, 'http://andygcook.com/scripts/notifications/sendgrid_email_localhost.php');
+        curl_setopt($ch,CURLOPT_URL, 'http://leadin.com/pro/notifications/sendgrid_email.php');
         curl_setopt($ch,CURLOPT_POST, 1);
         curl_setopt($ch,CURLOPT_POSTFIELDS, $fields_string);
         curl_setopt($ch,CURLOPT_RETURNTRANSFER, 1);

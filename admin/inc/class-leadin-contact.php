@@ -51,6 +51,11 @@ class LI_Contact {
 	{
 		global $wpdb;
 
+		$lead 			= (object)NULL;
+		$pageviews 		= (object)NULL;
+		$submissions 	= (object)NULL;
+		$tags 			= (object)NULL;
+
 		$lead 			= $this->get_contact_details($this->hashkey);	
 		$pageviews 		= $this->get_contact_pageviews($this->hashkey, 'ARRAY_A');
 		$submissions 	= $this->get_contact_submissions($this->hashkey, 'ARRAY_A');
@@ -192,7 +197,7 @@ class LI_Contact {
 		$lead->total_submissions 	= $total_submissions;
 
 		$this->history 				= (object)NULL;
-		$this->history->submission 	= $submissions[0];
+		$this->history->submission 	= ( isset($submissions[0]) ? $submissions[0] : '');
 		$this->history->sessions 	= $sessions;
 		$this->history->lead 		= $lead;
 		$this->history->tags 		= $tags;
@@ -509,6 +514,14 @@ class LI_Contact {
 				}
 				else
 					$company_data->country = '';
+
+				if ( isset($response->properties->city) )
+				{
+					$company_data->city = $response->properties->city;
+					$company_data_exists = TRUE;
+				}
+				else
+					$company_data->city = '';
 
 				if ( isset($response->properties->state) )
 				{

@@ -503,6 +503,7 @@ class LI_List_Table extends WP_List_Table {
                 lead_email != '' AND lead_deleted = 0 AND hashkey != '' ";
 
         $total_contacts = $wpdb->get_var($q);
+        
         return $total_contacts;
     }
 

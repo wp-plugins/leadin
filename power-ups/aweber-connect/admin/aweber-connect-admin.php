@@ -31,7 +31,10 @@ class LIAweberConnectAdmin extends WPLeadInAdmin {
             {
                 if ( ! isset($this->options['li_ac_ck']) )
                 {
-                    $this->li_ac_connect_to_api($this->options['li_ac_auth_code']);
+                    $valid = $this->li_ac_connect_to_api($this->options['li_ac_auth_code']);
+
+                    if ( ! $valid )
+                        $this->invalid_key = TRUE;
                 }
                 else
                 {
@@ -56,7 +59,7 @@ class LIAweberConnectAdmin extends WPLeadInAdmin {
 
         if ( isset($this->options['li_ac_auth_code']) )
         {
-            if ( $this->options['li_ac_auth_code'] )
+            if ( $this->options['li_ac_auth_code'] && ! $this->invalid_key )
                 add_settings_field('li_print_synced_lists', 'Synced tags', array($this, 'li_print_synced_lists'), LEADIN_ADMIN_PATH, $this->power_up_settings_section);
         }
     }
@@ -69,10 +72,10 @@ class LIAweberConnectAdmin extends WPLeadInAdmin {
     function print_hidden_settings_fields ()
     {
          // Hacky solution to solve the Settings API overwriting the default values
-        $li_ac_ck = ( $this->options['li_ac_ck'] ? $this->options['li_ac_ck'] : '' );
-        $li_ac_cs = ( $this->options['li_ac_cs'] ? $this->options['li_ac_cs'] : '' );
-        $li_ac_ak = ( $this->options['li_ac_ak'] ? $this->options['li_ac_ak'] : '' );
-        $li_ac_as = ( $this->options['li_ac_as'] ? $this->options['li_ac_as'] : '' );
+        $li_ac_ck = ( isset($this->options['li_ac_ck']) && $this->options['li_ac_ck'] ? $this->options['li_ac_ck'] : '' );
+        $li_ac_cs = ( isset($this->options['li_ac_cs']) && $this->options['li_ac_cs'] ? $this->options['li_ac_cs'] : '' );
+        $li_ac_ak = ( isset($this->options['li_ac_ak']) && $this->options['li_ac_ak'] ? $this->options['li_ac_ak'] : '' );
+        $li_ac_as = ( isset($this->options['li_ac_as']) && $this->options['li_ac_as'] ? $this->options['li_ac_as'] : '' );
 
         if ( $li_ac_ck )
         {
@@ -146,7 +149,7 @@ class LIAweberConnectAdmin extends WPLeadInAdmin {
             $li_ac_auth_code
         );
 
-        if ( ! isset($li_ac_auth_code) || ! $li_ac_auth_code )
+        if ( ! isset($li_ac_auth_code) || ! $li_ac_auth_code || $this->invalid_key )
             echo '<p><a target="_blank" href="https://help.aweber.com/hc/en-us/articles/204031226-How-Do-I-Authorize-an-App-">Get your Authorization Code</a> from <a href="https://auth.aweber.com/1.0/oauth/authorize_app/156b03fb" target="_blank">AWeber.com</a></p>';
     }
 
@@ -268,24 +271,17 @@ class LIAweberConnectAdmin extends WPLeadInAdmin {
         {
             $aweber = new LI_AWeberAPI($consumer_key, $consumer_secret);
             $account = $aweber->getAccount($access_key, $access_secret);
-
-            return FALSE;
         }
         catch ( LI_AWeberAPIException $exc )
         {
             if ( $exc->type == 'UnauthorizedError' )
             {
-                unset($this->options['li_ac_auth_code']);
-                unset($this->options['li_ac_ck']);
-                unset($this->options['li_ac_cs']);
-                unset($this->options['li_ac_ak']);
-                unset($this->options['li_ac_as']);
-
-                update_option($this->power_option_name, $this->options);
                 return TRUE;
             }
             else
+            {
                 return FALSE;
+            }
             
             /*print "<h3>AWeberAPIException:</h3>";
             print " <li> Type: $exc->type              <br>";
@@ -302,10 +298,20 @@ class LIAweberConnectAdmin extends WPLeadInAdmin {
             $auth = LI_AWeberAPI::getDataFromAweberID($auth_code);
             list($consumerKey, $consumerSecret, $accessKey, $accessSecret) = $auth;
             
-            $this->options['li_ac_ck'] = $consumerKey;
-            $this->options['li_ac_cs'] = $consumerSecret;
-            $this->options['li_ac_ak'] = $accessKey;
-            $this->options['li_ac_as'] = $accessSecret;
+            if ( $consumerKey )
+                $this->options['li_ac_ck'] = $consumerKey;
+
+            if ( $consumerSecret )
+                $this->options['li_ac_cs'] = $consumerSecret;
+
+            if ( $accessKey )
+                $this->options['li_ac_ak'] = $accessKey;
+
+            if ( $accessSecret )
+                $this->options['li_ac_as'] = $accessSecret;
+
+            if ( ! $consumerKey && ! $consumerSecret &&! $accessKey &&! $accessSecret )
+                return FALSE;
 
             update_option($this->power_option_name, $this->options);
         }

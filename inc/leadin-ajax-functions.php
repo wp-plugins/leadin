@@ -490,9 +490,11 @@ add_action('wp_ajax_nopriv_leadin_get_form_selectors', 'leadin_get_form_selector
  * Sets the Pro flag for the Leadin Pro upgrade
  *
  */
-function leadin_upgrade_to_pro ( )
+function leadin_upgrade_to_pro_ajax_call ( )
 {
 	global $wpdb;
+
+	leadin_upgrade_to_pro('pro upgrade');
 
 	$options = get_option('leadin_options');
 	if ( isset($options['pro']) && $options['pro'] )
@@ -504,27 +506,12 @@ function leadin_upgrade_to_pro ( )
 		$updated = leadin_update_option('leadin_options', 'pro', 1);
 		echo get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_contacts';
 	}
-
-	WPLeadIn::activate_power_up('lookups', FALSE);
-
-	// Create the user in Segment
-	$traits = leadin_get_segment_traits();
-	$traits["last_activated"] = date("Y-m-d H:i:s");
-    $traits["li-status"]  = "activated";
-	leadin_set_user_properties($traits);
-
-	// Add the UTM tags to the options table to permanently store them
-	$leadin_utm = get_option('leadin_utm');
-	if ( ! $leadin_utm )
-		leadin_update_utm_option();
 	
-	leadin_track_plugin_activity("Upgraded to Pro");
-
     die();
 }
 
-add_action('wp_ajax_leadin_upgrade_to_pro', 'leadin_upgrade_to_pro'); // Call when user logged in
-add_action('wp_ajax_nopriv_leadin_upgrade_to_pro', 'leadin_upgrade_to_pro'); // Call when user is not logged in
+add_action('wp_ajax_leadin_upgrade_to_pro_ajax_call', 'leadin_upgrade_to_pro_ajax_call'); // Call when user logged in
+add_action('wp_ajax_nopriv_leadin_upgrade_to_pro_ajax_call', 'leadin_upgrade_to_pro_ajax_call'); // Call when user is not logged in
 
 /**
  * Checks the first entry in the pageviews table and echos flag to Javascript
@@ -566,8 +553,7 @@ function leadin_print_debug_values ( )
 		$error_string .= "- WordPress version < 3.7. Leadin requires WordPress 3.7+\n";
 	}
 
-	$q = "SELECT table_name FROM information_schema.tables WHERE table_name LIKE '" . ( is_multisite() ? $wpdb->prefix : '' ) . "li_%'";
-	$li_tables = $wpdb->get_results($q);
+	$li_tables = leadin_check_tables_exist();
 	
 	$li_tables_count = count($li_tables);
 

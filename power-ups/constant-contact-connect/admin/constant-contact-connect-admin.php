@@ -12,6 +12,7 @@ class WPConstantContactConnectAdmin extends WPLeadInAdmin {
     var $lists;
     var $options;
     var $authed = FALSE;
+    var $invalid_key = FALSE;
 
     /**
      * Class constructor
@@ -83,8 +84,8 @@ class WPConstantContactConnectAdmin extends WPLeadInAdmin {
     function print_hidden_settings_fields ()
     {
          // Hacky solution to solve the Settings API overwriting the default values
-        $li_cc_email = ( $this->options['li_cc_email'] ? $this->options['li_cc_email'] : '' );
-        $li_cc_password = ( $this->options['li_cc_password'] ? $this->options['li_cc_password'] : '' );
+        $li_cc_email = ( isset($this->options['li_cc_email']) && $this->options['li_cc_email'] ? $this->options['li_cc_email'] : '' );
+        $li_cc_password = ( isset($this->options['li_cc_password']) && $this->options['li_cc_password'] ? $this->options['li_cc_password'] : '' );
 
         if ( $li_cc_email )
         {
@@ -153,9 +154,13 @@ class WPConstantContactConnectAdmin extends WPLeadInAdmin {
         $lists = $this->constant_contact->get_lists();
 
         if ( count($lists) )
+        {
             return $lists;
+        }
         else
-            return FALSE;
+        {
+            return array();
+        }
     }
 
     /**
@@ -210,6 +215,7 @@ class WPConstantContactConnectAdmin extends WPLeadInAdmin {
         $lists = $this->li_cc_get_email_lists(LEADIN_CONSTANT_CONTACT_API_KEY, $this->options['li_cc_email'], $this->options['li_cc_password']);
 
         $sanitized_lists = array();
+
         if ( count($lists) )
         {
             foreach ( $lists as $list )
