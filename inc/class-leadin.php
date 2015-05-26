@@ -74,11 +74,7 @@ class WPLeadIn {
                 return FALSE;
         }
 
-
-        if ( ini_get('allow_url_fopen') )
-            $leadin_icon = '<img style="width: 16px; height: 16px; opacity: 0.6" src="data:image/svg+xml;base64,' . base64_encode(file_get_contents(LEADIN_PATH . '/images/leadin-svg-icon.svg')) . '">';
-        else
-            $leadin_icon = '<img src="' . LEADIN_PATH . '/images/leadin-icon-16x16.png' . '">';
+        $leadin_icon = '<img src="' . LEADIN_PATH . '/images/leadin-icon-16x16.png' . '">';
 
         $args = array(
             'id'     => 'leadin-admin-menu',

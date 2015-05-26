@@ -264,17 +264,11 @@ class WPLeadInAdmin {
 
         self::check_admin_action();
 
-        if ( ini_get('allow_url_fopen') )
-            $leadin_icon = ($wp_version < 3.8 && !is_plugin_active('mp6/mp6.php') ? LEADIN_PATH . '/images/leadin-icon-16x16.png' : 'data:image/svg+xml;base64,' . base64_encode(file_get_contents(LEADIN_PATH . '/images/leadin-svg-icon.svg')));
-        else
-        {
-
-            $leadin_icon = LEADIN_PATH . '/images/leadin-icon-16x16.png';
-        }
+        $leadin_icon = LEADIN_PATH . '/images/leadin-icon-16x16.png';
 
         add_menu_page('Leadin', 'Leadin', $capability, 'leadin_stats', array($this, 'leadin_build_stats_page'), $leadin_icon , '25.100713');
 
-        if ( count(leadin_check_tables_exist()) == 5 )
+        if ( count($this->admin_power_ups) )
         {
             foreach ( $this->admin_power_ups as $power_up )
             {
@@ -400,34 +394,27 @@ class WPLeadInAdmin {
     {
         global $wp_version;
         
-        if ( count(leadin_check_tables_exist()) == 5 )
-        {
-           $this->stats_dashboard = new LI_StatsDashboard();
-        
-            echo '<div id="leadin" class="li-stats wrap '. ( $wp_version < 3.8 && !is_plugin_active('mp6/mp6.php') ? 'pre-mp6' : ''). '">';
-            
-            $this->leadin_header('Leadin Stats: ' . date('F j Y, g:ia', current_time('timestamp')), 'leadin-stats__header', 'Loaded Stats Page');
 
-            echo '<div class="leadin-stats__top-container">';
-                echo $this->leadin_postbox('leadin-stats__chart', leadin_single_plural_label(number_format($this->stats_dashboard->total_contacts_last_30_days), 'new contact', 'new contacts') . ' last 30 days', $this->leadin_build_contacts_chart_stats());
-            echo '</div>';
+        $this->stats_dashboard = new LI_StatsDashboard();
 
-            echo '<div class="leadin-stats__postbox_containter">';
-                echo $this->leadin_postbox('leadin-stats__new-contacts', leadin_single_plural_label(number_format($this->stats_dashboard->total_new_contacts), 'new contact', 'new contacts') . ' today', $this->leadin_build_new_contacts_postbox());
-                echo $this->leadin_postbox('leadin-stats__returning-contacts', leadin_single_plural_label(number_format($this->stats_dashboard->total_returning_contacts), 'returning contact', 'returning contacts') . ' today', $this->leadin_build_returning_contacts_postbox());
-            echo '</div>';
+        echo '<div id="leadin" class="li-stats wrap '. ( $wp_version < 3.8 && !is_plugin_active('mp6/mp6.php') ? 'pre-mp6' : ''). '">';
 
+        $this->leadin_header('Leadin Stats: ' . date('F j Y, g:ia', current_time('timestamp')), 'leadin-stats__header', 'Loaded Stats Page');
+
+        echo '<div class="leadin-stats__top-container">';
+            echo $this->leadin_postbox('leadin-stats__chart', leadin_single_plural_label(number_format($this->stats_dashboard->total_contacts_last_30_days), 'new contact', 'new contacts') . ' last 30 days', $this->leadin_build_contacts_chart_stats());
+        echo '</div>';
+
+        echo '<div class="leadin-stats__postbox_containter">';
+            echo $this->leadin_postbox('leadin-stats__new-contacts', leadin_single_plural_label(number_format($this->stats_dashboard->total_new_contacts), 'new contact', 'new contacts') . ' today', $this->leadin_build_new_contacts_postbox());
+            echo $this->leadin_postbox('leadin-stats__returning-contacts', leadin_single_plural_label(number_format($this->stats_dashboard->total_returning_contacts), 'returning contact', 'returning contacts') . ' today', $this->leadin_build_returning_contacts_postbox());
+        echo '</div>';
 
 
-            echo '<div class="leadin-stats__postbox_containter">';
-                echo $this->leadin_postbox('leadin-stats__sources', 'New contact sources last 30 days', $this->leadin_build_sources_postbox());
-            echo '</div>';
-        }
-        else
-        {
-            $this->leadin_header(' ', 'leadin-stats__header', 'Error - No Database Tables');
 
-        }
+        echo '<div class="leadin-stats__postbox_containter">';
+            echo $this->leadin_postbox('leadin-stats__sources', 'New contact sources last 30 days', $this->leadin_build_sources_postbox());
+        echo '</div>';
 
         $this->leadin_footer();
     }
@@ -1753,9 +1740,7 @@ class WPLeadInAdmin {
     {
         $li_options = get_option('leadin_options');
 
-        // if database doesn't exist then don't 
-        if ( $event_name != 'Error - No Database Tables' )
-            $leadin_user = leadin_get_current_user();
+        $leadin_user = leadin_get_current_user();
         ?>
 
         <?php if ( leadin_check_pro_user() ) : ?>
@@ -1807,57 +1792,41 @@ class WPLeadInAdmin {
             </div>
         <?php endif; ?>
 
-        <?php if ( $event_name != 'Error - No Database Tables' ) : ?>
-            <?php if ( $li_options['onboarding_complete'] ) : ?>
+        
+        <?php if ( $li_options['onboarding_complete'] ) : ?>
 
-                <?php if ( isset($_GET['settings-updated']) ) : ?>
-                    <div id="message" class="updated">
-                        <p><strong><?php _e('Settings saved.') ?></strong></p>
-                    </div>
+            <?php if ( isset($_GET['settings-updated']) ) : ?>
+                <div id="message" class="updated">
+                    <p><strong><?php _e('Settings saved.') ?></strong></p>
+                </div>
 
-                    <?php
-                        foreach ( $this->esp_power_ups as $power_up_name => $power_up_slug )
+                <?php
+                    foreach ( $this->esp_power_ups as $power_up_name => $power_up_slug )
+                    {
+                        if ( WPLeadIn::is_power_up_active($power_up_slug) )
                         {
-                            if ( WPLeadIn::is_power_up_active($power_up_slug) )
-                            {
-                                global ${'leadin_' . $power_up_slug . '_wp'}; // e.g leadin_mailchimp_connect_wp
-                                $esp_name = strtolower(str_replace('_connect', '', $power_up_slug)); // e.g. mailchimp
+                            global ${'leadin_' . $power_up_slug . '_wp'}; // e.g leadin_mailchimp_connect_wp
+                            $esp_name = strtolower(str_replace('_connect', '', $power_up_slug)); // e.g. mailchimp
 
-                                if ( ${'leadin_' . $power_up_slug . '_wp'}->admin->invalid_key )
-                                {
-                                    echo '<div id="message" class="error">';
-                                        echo '<p>' . 'Your ' . $power_up_name . ' key seems to not be correct.' . '</p>';
-                                    echo '</div>';
-                                }
+                            if ( ${'leadin_' . $power_up_slug . '_wp'}->admin->invalid_key )
+                            {
+                                echo '<div id="message" class="error">';
+                                    echo '<p>' . 'Your ' . $power_up_name . ' key seems to not be correct.' . '</p>';
+                                echo '</div>';
                             }
                         }
-                    ?>
-                <?php elseif ( $this->has_leads() == FALSE ) : ?>
-                    <div id="message" class="updated">
-                        <p>Leadin is set up and waiting for a form submission... Need help? <a href="http://wordpress.org/support/plugin/leadin">Contact Us</a>.</p>
-                    </div>
-                <?php elseif ( !leadin_check_pro_user() ) : ?>
-                    <div id="message" class="updated">
-                        <p>Did you know that Leadin Pro is a free upgrade with even more feaures? <a href="<?php echo admin_url(); ?>admin.php?page=leadin_pro_upgrade">Learn more</a>.</p>
-                    </div>
-                <?php endif; ?>
+                    }
+                ?>
+            <?php elseif ( $this->has_leads() == FALSE ) : ?>
+                <div id="message" class="updated">
+                    <p>Leadin is set up and waiting for a form submission... Need help? <a href="http://wordpress.org/support/plugin/leadin">Contact Us</a>.</p>
+                </div>
+            <?php elseif ( !leadin_check_pro_user() ) : ?>
+                <div id="message" class="updated">
+                    <p>Did you know that Leadin Pro is a free upgrade with even more feaures? <a href="<?php echo admin_url(); ?>admin.php?page=leadin_pro_upgrade">Learn more</a>.</p>
+                </div>
             <?php endif; ?>
-        <?php else : ?>
-            <div style="border-left: 4px solid #dd3d36; padding: 12px; margin-bottom: 25px; background: #fff;">
-                <h3><b>Your Leadin database tables are missing</b></h3>
-                <p>
-                    The usual cause of this problem is that occasionally backup plugins drop the database tables created by Leadin which breaks your install and deletes your data. 
-
-                    Unfortunately we can't restore the data for you because we don't have access to your WordPress server.<br/><br/>
-
-                    Sorry about the issue... we know this is a big bummer, so we actually built a version of Leadin that stores your data in our <b>securely encrypted, regularly backed-up servers</b> so you're guaranteed to <b>never lose your data again</b>. <br><br>To sweeten the deal for you, Leadin Cloud is 100% free to use.
-
-                    <p><a href="http://leadin.com" target="_blank" class="button button-primary">Sign up for Leadin Cloud for Free</a></p>
-                    <p>You can also recreate the missing tables in your MySQL database if you'd prefer to store your data on your own server - <a href="<?php echo get_bloginfo('wpurl') . '/wp-admin/admin.php?page=leadin_stats&action=restore_tables'; ?>">Click here to restore the default Leadin tables</a></p>
-                </p>
-            </div>
         <?php endif; ?>
-
         <?php
     }
 
