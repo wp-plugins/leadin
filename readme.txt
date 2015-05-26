@@ -68,8 +68,15 @@ Having trouble? Check out our <a href="http://support.leadin.com/" target="_blan
 
 == Changelog ==
 
-- Current version: 3.1.8
-- Current version release: 2015-05-15
+- Current version: 3.1.9
+- Current version release: 2015-05-26
+
+= 3.1.9 (2015.05.26) =
+
+- Bug fixes
+- Removed the check on the front-end for missing databases - that was a bad idea - fixed now
+- Removed the file_get_contents hack for SVG support and just used an image instead
+- Added in support for "phone number" field name to push phone number to ESPs
 
 = 3.1.8 (2015.05.15) =
 

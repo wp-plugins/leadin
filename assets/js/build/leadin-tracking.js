@@ -379,7 +379,7 @@ function leadin_submit_form ( $form, $ )
 		{
 			if ( $element.attr('id') == 'leadin-subscribe-phone' )
 				lead_phone = $value;
-			else if ( lower_label_text == 'phone' || lower_label_text == 'phone' )
+			else if ( lower_label_text == 'phone' || lower_label_text == 'phone number' )
 				lead_phone = $value;
 		}
 	});

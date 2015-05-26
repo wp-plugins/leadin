@@ -566,7 +566,7 @@ function leadin_print_debug_values ( )
 			$debug_string .= "- " . $table->table_name . "\n";
 		}
 
-		if ( $li_tables_count != 5 )
+		if ( $li_tables_count < 5 )
 			$error_string .= "- Missing database tables\n";
 	}
 	else
