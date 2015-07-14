@@ -1,9 +1,9 @@
 === Leadin ===
-Contributors: andygcook, nelsonjoyce
+Contributors: leadin, sredmond
 Tags:  crm, contacts, lead tracking, click tracking, visitor tracking, analytics, marketing automation, inbound marketing, subscription, marketing, lead generation, mailchimp, constant contact, newsletter, popup, popover, email list, email, contacts database, contact form, forms, form widget, popup form
 Requires at least: 3.7
 Tested up to: 4.2.2
-Stable tag: 3.1.9
+Stable tag: 4.1.0
 
 Leadin is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
 
@@ -68,15 +68,29 @@ Having trouble? Check out our <a href="http://support.leadin.com/" target="_blan
 
 == Changelog ==
 
-- Current version: 3.1.9
-- Current version release: 2015-05-26
+- Current version: 4.1.0
+- Current version release: 2015-07-10
 
-= 3.1.9 (2015.05.26) =
+= 4.1.0 (2015.07.10) =
+- Migration script added to move data from MySQL to Leadin Cloud
+
+= 4.0.2 (2015.07.09) =
 
 - Bug fixes
-- Removed the check on the front-end for missing databases - that was a bad idea - fixed now
-- Removed the file_get_contents hack for SVG support and just used an image instead
-- Added in support for "phone number" field name to push phone number to ESPs
+
+- Current version: 4.0.1
+- Current version release: 2015-06-24
+
+= 4.0.1 (2015.06.24) =
+
+- Bug fixes
+- Added support for custom page types
+- Stopped using SVG icons due to performance problems
+- Fixed signup error in PHP < 5.4 on browsers that don't support CORS
+
+= 4.0.0 (2015.05.20) =
+
+- Leadin Cloud launched
 
 = 3.1.8 (2015.05.15) =
 

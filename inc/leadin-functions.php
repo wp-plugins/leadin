@@ -6,25 +6,33 @@ if ( !defined('LEADIN_PLUGIN_VERSION') )
     die;
 }
 
-/**
- * Looks for a GET/POST value and echos if present. If nothing is set, echos blank
- *
- * @param   string
- * @return  null
- */
-function print_submission_val ( $url_param ) 
+if ( !defined('LEADIN_MIGRATION_OPTION_NAME') )
 {
-    if ( isset($_GET[$url_param]) ) 
-    {
-        return $_GET[$url_param];
-    }
+    DEFINE('LEADIN_MIGRATION_OPTION_NAME', 'leadin_migrationStatus');
+}
 
-    if ( isset($_POST[$url_param]) )
-    {
-        return $_POST[$url_param];
-    }
+if ( !defined('LEADIN_PORTAL_ID') )
+{
+    DEFINE('LEADIN_PORTAL_ID', intval(get_option('leadin_portalId')));
+}
 
-    return '';
+if ( !defined('LEADIN_HAPIKEY') )
+{
+    DEFINE('LEADIN_HAPIKEY', get_option('leadin_hapikey'));
+}
+
+
+function leadin_get_resource_url( $path )
+{
+    $resource_root = constant('LEADIN_ADMIN_ASSETS_BASE_URL');
+
+    return $resource_root.$path;
+}
+
+function leadin_build_api_url_with_auth( $path )
+{
+    $auth_string = '?portalId=' . LEADIN_PORTAL_ID . '&hapikey=' . LEADIN_HAPIKEY;
+    return LEADIN_API_BASE_URL.$path.$auth_string;
 }
 
 /**
@@ -58,22 +66,6 @@ function leadin_update_option ( $option, $option_key, $new_value )
 }
 
 /**
- * Prints a number with a singular or plural label depending on number
- *
- * @param   int
- * @param   string
- * @param   string
- * @return  string 
- */
-function leadin_single_plural_label ( $number, $singular_label, $plural_label ) 
-{
-    //Set number = 0 when the variable is blank
-    $number = ( !is_numeric($number) ? 0 : $number );
-
-    return ( $number != 1 ? $number . " $plural_label" : $number . " $singular_label" );
-}
-
-/**
  * Get Leadin user
  *
  * @return  array
@@ -87,6 +79,7 @@ function leadin_get_current_user ()
     $li_user_id = md5(get_bloginfo('wpurl'));
 
     $li_options = get_option('leadin_options');
+    $leadinPortalId = get_option('leadin_portalId');
     
     if ( isset($li_options['li_email']) ) {
         $li_user_email = $li_options['li_email'];
@@ -102,28 +95,40 @@ function leadin_get_current_user ()
         'wp_url' => get_bloginfo('wpurl'),
         'li_version' => LEADIN_PLUGIN_VERSION,
         'wp_version' => $wp_version,
-        'total_contacts' => get_total_contacts()
     );
 
-    $utms = get_option('leadin_utm');
-
-    if ( count($utms) )
-    {
-        $leadin_user['referral_source'] = ( isset($utms['referral_source'])     ? $utms['referral_source']  : '' );
-        $leadin_user['utm_source']      = ( isset($utms['utm_source'])          ? $utms['utm_source']       : '' );
-        $leadin_user['utm_medium']      = ( isset($utms['utm_medium'])          ? $utms['utm_medium']       : '' );
-        $leadin_user['utm_term']        = ( isset($utms['utm_term'])            ? $utms['utm_term']         : '' );
-        $leadin_user['utm_content']     = ( isset($utms['utm_content'])         ? $utms['utm_content']      : '' );
-        $leadin_user['utm_campaign']    = ( isset($utms['utm_campaign'])        ? $utms['utm_campaign']     : '' );
-    }
+    if ( defined('LEADIN_REFERRAL_SOURCE') )
+        $leadin_user['referral_source'] = LEADIN_REFERRAL_SOURCE;
     else
-    {
-        $leadin_user['referral_source'] = ( defined('LEADIN_REFERRAL_SOURCE')     ? LEADIN_REFERRAL_SOURCE  : '' );
-        $leadin_user['utm_source']      = ( defined('LEADIN_UTM_SOURCE')          ? LEADIN_UTM_SOURCE       : '' );
-        $leadin_user['utm_medium']      = ( defined('LEADIN_UTM_MEDIUM')          ? LEADIN_UTM_MEDIUM       : '' );
-        $leadin_user['utm_term']        = ( defined('LEADIN_UTM_TERM')            ? LEADIN_UTM_TERM         : '' );
-        $leadin_user['utm_content']     = ( defined('LEADIN_UTM_CONTENT')         ? LEADIN_UTM_CONTENT      : '' );
-        $leadin_user['utm_campaign']    = ( defined('LEADIN_UTM_CAMPAIGN')        ? LEADIN_UTM_CAMPAIGN     : '' );
+        $leadin_user['referral_source'] = '';
+
+    if ( defined('LEADIN_UTM_SOURCE') )
+        $leadin_user['utm_source'] = LEADIN_UTM_SOURCE;
+    else
+        $leadin_user['utm_source'] = '';
+
+    if ( defined('LEADIN_UTM_MEDIUM') )
+        $leadin_user['utm_medium'] = LEADIN_UTM_MEDIUM;
+    else
+        $leadin_user['utm_medium'] = '';
+
+    if ( defined('LEADIN_UTM_TERM') )
+        $leadin_user['utm_term'] = LEADIN_UTM_TERM;
+    else
+        $leadin_user['utm_term'] = '';
+
+    if ( defined('LEADIN_UTM_CONTENT') )
+        $leadin_user['utm_content'] = LEADIN_UTM_CONTENT;
+    else
+        $leadin_user['utm_content'] = '';
+
+    if ( defined('LEADIN_UTM_CAMPAIGN') )
+        $leadin_user['utm_campaign'] = LEADIN_UTM_CAMPAIGN;
+    else
+        $leadin_user['utm_campaign'] = '';
+
+    if ( !empty($leadinPortalId) ) {
+        $leadin_user['portal_id'] = $leadinPortalId;
     }
 
     return $leadin_user;
@@ -144,107 +149,19 @@ function leadin_get_segment_traits ()
         "wp-version"    => $leadin_user["wp_version"],
         "li-version"    => $leadin_user["li_version"],
         "li-source"     => LEADIN_SOURCE,
+        "createdAt"     => date("Y-m-d H:i:s"),
         "website"       => $leadin_user["wp_url"],
         "company"       => $leadin_user["wp_url"],
-        "contacts"      => $leadin_user["total_contacts"],
         "utm_source"    => $leadin_user["utm_source"],
         "utm_medium"    => $leadin_user["utm_medium"],
         "utm_term"      => $leadin_user["utm_term"],
         "utm_content"   => $leadin_user["utm_content"],
         "utm_campaign"  => $leadin_user["utm_campaign"],
-        "referral_source"  => $leadin_user["referral_source"]
+        "referral_source"  => $leadin_user["referral_source"],
+        "portal_id" => $leadin_user["portal_id"]
     );
 
    return $traits;
-}
-
-function leadin_update_utm_option ( )
-{
-    $traits = array();
-
-    if ( defined('LEADIN_REFERRAL_SOURCE') )
-        $traits['referral_source'] = LEADIN_REFERRAL_SOURCE;
-
-    if ( defined('LEADIN_UTM_SOURCE') )
-        $traits['utm_source'] = LEADIN_UTM_SOURCE;
-
-    if ( defined('LEADIN_UTM_MEDIUM') )
-        $traits['utm_medium'] = LEADIN_UTM_MEDIUM;
-
-    if ( defined('LEADIN_UTM_TERM') )
-        $traits['utm_term'] = LEADIN_UTM_TERM;
-
-    if ( defined('LEADIN_UTM_CONTENT') )
-        $traits['utm_content'] = LEADIN_UTM_CONTENT;
-
-    if ( defined('LEADIN_UTM_CAMPAIGN') )
-        $traits['utm_campaign'] = LEADIN_UTM_CAMPAIGN;
-
-    update_option('leadin_utm', $traits);
-
-    return $traits;
-}
-
-/**
- * Gets the total number of contacts, comments and subscribers for above the table
- */
-function get_total_contacts ()
-{
-    global $wpdb;
-
-    if ( ! isset($wpdb->li_leads) )
-        return 0;
-
-    $q = "
-        SELECT 
-            COUNT(DISTINCT hashkey) AS total_contacts
-        FROM 
-            $wpdb->li_leads
-        WHERE
-            lead_email != '' AND lead_deleted = 0 AND hashkey != ''";
-
-    $total_contacts = $wpdb->get_var($q);
-    return $total_contacts;
-}
-
-/**
- * Register Leadin user
- *
- * @return  bool
- */
-function leadin_register_user ()
-{
-    if ( ! leadin_check_pro_user() )
-        return FALSE;
-
-    if ( ! function_exists('curl_init') )
-        return FALSE;
-
-    $leadin_user = leadin_get_current_user();
-    $traits = leadin_get_segment_traits();
-    $traits["createdAt"]  = date("Y-m-d H:i:s");
-
-    Segment::init(SEGMENT_WRITE_KEY);
-
-    Segment::identify(array(
-        "userId" => $leadin_user['user_id'],
-        "traits" => $traits
-    ));
-
-    // Sync to email to MailChimp
-    $MailChimp = new LI_MailChimp(MC_KEY);
-    $contact_synced = $MailChimp->call("lists/subscribe", array(
-        "id"                => 'c390aea726',
-        "email"             => array('email' => $leadin_user['email']),
-        "send_welcome"      => FALSE,
-        "email_type"        => 'html',
-        "update_existing"   => TRUE,
-        'replace_interests' => FALSE,
-        'double_optin'      => FALSE,
-        "merge_vars"        => array('EMAIL' => $leadin_user['email'], 'WEBSITE' => get_site_url() )
-    ));
-
-    return TRUE;
 }
 
 /**
@@ -254,15 +171,12 @@ function leadin_register_user ()
  */
 function leadin_set_user_properties ( $properties = array() )
 {
-    if ( ! leadin_check_pro_user() )
-        return FALSE;
-
     if ( ! function_exists('curl_init') )
         return FALSE;
     
     $leadin_user = leadin_get_current_user();
 
-    Segment::init(SEGMENT_WRITE_KEY);
+    Segment::init(LEADIN_SEGMENT_WRITE_KEY);
 
     Segment::identify(array(
         "userId" => $leadin_user['user_id'],
@@ -283,14 +197,21 @@ function leadin_track_plugin_registration_hook ( $activated )
 
     if ( $activated )
     {
-        leadin_register_user();
         leadin_track_plugin_activity("Activated Plugin");
         $properties["last_activated"] = date("Y-m-d H:i:s");
         $properties["li-status"]  = "activated";
     }
     else
     {
-        leadin_track_plugin_activity("Deactivated Plugin");
+        $leadin_user = leadin_get_current_user();
+        $track_props = array();
+        if ( empty($leadin_user["portal_id"]) ) {
+            $track_props["is_signed_up"] = "false";
+        }
+        else {
+            $track_props["is_signed_up"] = "true";
+        }
+        leadin_track_plugin_activity("Deactivated Plugin", $track_props);
         $properties["last_deactivated"] = date("Y-m-d H:i:s");
         $properties["li-status"] = "deactivated";
     }
@@ -309,9 +230,6 @@ function leadin_track_plugin_registration_hook ( $activated )
  */
 function leadin_track_plugin_activity ( $activity_desc, $custom_properties = array() )
 {
-    if ( ! leadin_check_pro_user() )
-        return FALSE;
-
     if ( ! function_exists('curl_init') )
         return FALSE;
 
@@ -319,11 +237,17 @@ function leadin_track_plugin_activity ( $activity_desc, $custom_properties = arr
 
     $default_properties = leadin_get_segment_traits();
     $properties = array_merge((array)$default_properties, (array)$custom_properties);
+    if (!empty($leadin_user['portal_id']) ) {
+        $tracking_user_id = $leadin_user['portal_id'];
+    }
+    else {
+        $tracking_user_id = $leadin_user['user_id'];
+    }
 
-    Segment::init(SEGMENT_WRITE_KEY);
+    Segment::init(LEADIN_SEGMENT_WRITE_KEY);
 
     Segment::track(array(
-        'userId'        => $leadin_user['user_id'],
+        'userId'        => $tracking_user_id,
         'event'         => $activity_desc,
         'properties'    => $properties
     ));
@@ -348,631 +272,6 @@ function leadin_log_debug ( $message )
 }
 
 /**
- * Deletes an element or elements from an array
- *
- * @param   array
- * @param   wildcard
- * @return  array
- */
-function leadin_array_delete ( $array, $element )
-{
-    if ( !is_array($element) )
-        $element = array($element);
-
-    return array_diff($array, $element);
-}
-
-/**
- * Deletes an element or elements from an array
- *
- * @param   array
- * @param   wildcard
- * @return  array
- */
-function leadin_get_value_by_key ( $key_value, $array )
-{
-    foreach ( $array as $key => $value )
-    {
-        if ( is_array($value) && $value['label'] == $key_value )
-            return $value['value'];
-    }
-
-    return null;
-}
-
-/** 
- * Data recovery algorithm for 0.7.2 upgrade
- *
- */
-function leadin_recover_contact_data ()
-{
-    global $wpdb;
-
-    $q = $wpdb->prepare("SELECT * FROM $wpdb->li_submissions AS s LEFT JOIN $wpdb->li_leads AS l ON s.lead_hashkey = l.hashkey WHERE l.hashkey IS NULL AND s.form_fields LIKE '%%%s%%' AND s.form_fields LIKE '%%%s%%' AND form_deleted = 0", '@', '.');
-    $submissions = $wpdb->get_results($q);
-
-    if ( count($submissions) )
-    {
-        foreach ( $submissions as $submission )
-        {
-            $json = json_decode(stripslashes($submission->form_fields), TRUE);
-
-            if ( count($json) )
-            {
-                foreach ( $json as $object )
-                {
-                    if ( strstr($object['value'], '@') && strstr($object['value'], '@') && strlen($object['value']) <= 254 )
-                    {
-                        // check to see if the contact exists and if it does, skip the data recovery
-                        $q = $wpdb->prepare("SELECT lead_email FROM $wpdb->li_leads WHERE lead_email = %s AND lead_deleted = 0", $object['value']); // @HERE
-                        $exists = $wpdb->get_var($q);
-
-                        if ( $exists )
-                            continue;
-
-                        // get the original data
-                        $q = $wpdb->prepare("SELECT pageview_date, pageview_source FROM $wpdb->li_pageviews WHERE lead_hashkey = %s AND pageview_deleted = 0 ORDER BY pageview_date ASC LIMIT 1", $submission->lead_hashkey);
-                        $first_pageview = $wpdb->get_row($q);
-
-                        // recreate the contact
-                        $q = $wpdb->prepare("INSERT INTO $wpdb->li_leads ( lead_date, hashkey, lead_source, lead_email ) VALUES ( %s, %s, %s, %s )",
-                            ( $first_pageview->pageview_date ? $first_pageview->pageview_date : $submission->form_date), 
-                            $submission->lead_hashkey,
-                            ( $first_pageview->pageview_source ? $first_pageview->pageview_source : ''),
-                            $object['value']
-                        );
-
-                        $wpdb->query($q);
-                    }
-                }
-            }
-        }
-    }
-
-    leadin_update_option('leadin_options', 'data_recovered', 1);
-}
-
-/** 
- * Algorithm to set deleted contacts flag for 0.8.3 upgrade
- *
- */
-function leadin_delete_flag_fix ()
-{
-    global $wpdb;
-
-    $q = $wpdb->prepare("SELECT lead_email, COUNT(hashkey) c FROM $wpdb->li_leads WHERE lead_email != '' AND lead_deleted = 0 GROUP BY lead_email HAVING c > 1", '');
-    $duplicates = $wpdb->get_results($q);
-
-    if ( count($duplicates) )
-    {
-        foreach ( $duplicates as $duplicate )
-        {
-            $q = $wpdb->prepare("SELECT lead_email, hashkey, merged_hashkeys FROM $wpdb->li_leads WHERE lead_email = %s AND lead_deleted = 0 ORDER BY lead_date DESC", $duplicate->lead_email);
-            $existing_contacts = $wpdb->get_results($q);
-
-            $newest = $existing_contacts[0];
- 
-            // Setup the string for the existing hashkeys
-            $existing_contact_hashkeys = $newest->merged_hashkeys;
-            if ( $newest->merged_hashkeys && count($existing_contacts) )
-                $existing_contact_hashkeys .= ',';
-
-            // Do some merging if the email exists already in the contact table
-            if ( count($existing_contacts) )
-            {
-                for ( $i = 0; $i < count($existing_contacts); $i++ )
-                {
-                    // Start with the existing contact's hashkeys and create a string containg comma-deliminated hashes
-                    $existing_contact_hashkeys .= "'" . $existing_contacts[$i]->hashkey . "'";
-
-                    // Add any of those existing contact row's merged hashkeys
-                    if ( $existing_contacts[$i]->merged_hashkeys )
-                        $existing_contact_hashkeys .= "," . $existing_contacts[$i]->merged_hashkeys;
-
-                    // Add a comma delimiter 
-                    if ( $i != count($existing_contacts)-1 )
-                        $existing_contact_hashkeys .= ",";
-                }
-            }
-
-            // Remove duplicates from the array and original hashkey just in case
-            $existing_contact_hashkeys = leadin_array_delete(array_unique(explode(',', $existing_contact_hashkeys)), "'" . $newest->hashkey . "'");
-
-            // Safety precaution - trim any trailing commas
-            $existing_contact_hashkey_string = rtrim(implode(',', $existing_contact_hashkeys), ',');
-
-            if ( $existing_contact_hashkey_string )
-            {
-                // Set the merged hashkeys with the fixed merged hashkey values
-                $q = $wpdb->prepare("UPDATE $wpdb->li_leads SET merged_hashkeys = %s WHERE hashkey = %s", $existing_contact_hashkey_string, $newest->hashkey);
-                $wpdb->query($q);
-
-                // "Delete" all the old contacts
-                $q = $wpdb->prepare("UPDATE $wpdb->li_leads SET merged_hashkeys = '', lead_deleted = 1 WHERE hashkey IN ( $existing_contact_hashkey_string )", '');
-                $wpdb->query($q);
-
-                // Set all the pageviews and submissions to the new hashkey just in case
-                $q = $wpdb->prepare("UPDATE $wpdb->li_pageviews SET lead_hashkey = %s WHERE lead_hashkey IN ( $existing_contact_hashkey_string )", $newest->hashkey);
-                $wpdb->query($q);
-
-                // Update all the previous submissions to the new hashkey just in case
-                $q = $wpdb->prepare("UPDATE $wpdb->li_submissions SET lead_hashkey = %s WHERE lead_hashkey IN ( $existing_contact_hashkey_string )", $newest->hashkey);
-                $wpdb->query($q);
-            }
-        }
-    }
-
-    leadin_update_option('leadin_options', 'delete_flags_fixed', 1);
-}
-
-/** 
- * Sets the default lists for V2.0.0 and converts all existing statuses to tag format
- *
- */
-function leadin_convert_statuses_to_tags ( )
-{
-    global $wpdb;
-
-    $blog_ids = array();
-    if ( is_multisite() )
-    {       
-        $blog_id = (Object)Null;
-        $blog_id->blog_id = $wpdb->blogid;
-        array_push($blog_ids, $blog_id);
-    }
-    else
-    {
-        $blog_id = (Object)Null;
-        $blog_id->blog_id = 0;
-        array_push($blog_ids, $blog_id);
-    }
-
-    foreach ( $blog_ids as $blog )
-    {
-        if ( is_multisite() )
-        {
-            $q = $wpdb->prepare("SELECT COUNT(TABLE_NAME) FROM information_schema.tables WHERE TABLE_NAME = $wpdb->li_leads LIMIT 1");
-            $leadin_tables_exist = $wpdb->get_var($q);
-
-            if ( ! $leadin_tables_exist )
-            {
-                leadin_db_install();
-            }
-        }
-
-        // Get all the contacts from li_leads
-        $q = $wpdb->prepare("SELECT lead_id, lead_status, hashkey FROM li_leads WHERE lead_status != 'contact' AND lead_email != '' AND lead_deleted = 0 AND blog_id = %d", $blog->blog_id);
-        $contacts = $wpdb->get_results($q);
-
-        // Check if there are any subscribers in the li_leads table and build the list if any exist
-        $subscriber_exists = FALSE;
-        foreach ( $contacts as $contact )
-        {
-            if ( $contact->lead_status == 'subscribe' )
-            {
-                $subscriber_exists = TRUE;
-                break;
-            }
-        }
-
-        // Check if Leadin Subscribe is activated
-        if ( ! $subscriber_exists )
-        {
-            if ( WPLeadIn::is_power_up_active('subscribe_widget') )
-                $subscriber_exists = TRUE;
-        }
-
-        $existing_synced_lists = array();
-        
-        // Check to see if the mailchimp power-up is active and add the existing synced list for serialization
-        $mailchimp_options = get_option('leadin_mls_options');
-        if ( $mailchimp_options['li_mls_subscribers_to_list'] )
-        {
-            $leadin_mailchimp = new WPMailChimpConnect(TRUE);
-            $leadin_mailchimp->admin_init();
-            $lists = $leadin_mailchimp->admin->li_get_lists();
-
-            if ( count($lists) )
-            {
-                foreach ( $lists as $list )
-                {
-                    if ( $list->id == $mailchimp_options['li_mls_subscribers_to_list'] )
-                    {
-                        array_push($existing_synced_lists,
-                            array(
-                                'esp' => 'mailchimp',
-                                'list_id' => $list->id,
-                                'list_name' => $list->name
-                            )
-                        );
-
-                        break;
-                    }
-                }
-            }
-        }
-
-        // Check to see if the constant contact power-up is active and add the existing synced list for serialization
-        $constant_contact_options = get_option('leadin_cc_options');
-        if ( $constant_contact_options['li_cc_subscribers_to_list'] )
-        {
-            $leadin_constant_contact = new WPConstantContactConnect(TRUE);
-            $leadin_constant_contact->admin_init();
-            $lists = $leadin_constant_contact->admin->li_get_lists();
-
-            if ( count($lists) )
-            {
-                foreach ( $lists as $list )
-                {
-                    if ( $list->id == str_replace('@', '%40', $constant_contact_options['li_cc_subscribers_to_list']) ) 
-                    {
-                        array_push($existing_synced_lists,
-                            array(
-                                'esp' => 'constant_contact',
-                                'list_id' => end(explode('/', $list->id)), // Changed the list_id for constant contact to just store the list integer in 2.0
-                                'list_name' => $list->name
-                            )
-                        );
-
-                        break;
-                    }
-                }
-            }
-        }
-
-        unset($leadin_constant_contact);
-        unset($leadin_mailchimp);
-
-        // Create all the default comment lists (Commenters, Leads, Contacted, Customers). Figures out if it should add the subscriber list and puts the lists in the correct order
-        $q = "
-            INSERT INTO $wpdb->li_tags 
-                ( tag_text, tag_slug, tag_form_selectors, tag_synced_lists, tag_order ) 
-            VALUES " .
-                ( $subscriber_exists ? "('Subscribers', 'subscribers', '.vex-dialog-form', " . ( count($existing_synced_lists) ? $wpdb->prepare('%s', serialize($existing_synced_lists)) : "''" ) . ", 1 ), " : "" ) .
-                " ('Commenters', 'commenters', '#commentform', '', " . ( $subscriber_exists ? "2" : "1" ) . "),
-                ('Leads', 'leads', '', '', " . ( $subscriber_exists ? "3" : "2" ) . "),
-                ('Contacted', 'contacted', '', '', " . ( $subscriber_exists ? "4" : "3" ) . "),
-                ('Customers', 'customers', '', '', " . ( $subscriber_exists ? "5" : "4" ) . ")";
-
-        $wpdb->query($q);
-
-        $tags = $wpdb->get_results("SELECT tag_id, tag_slug FROM $wpdb->li_tags WHERE tag_slug IN ( 'commenters', 'leads', 'contacted', 'customers', 'subscribers' )");
-        foreach ( $tags as $tag )
-            ${$tag->tag_slug . '_tag_id'} = $tag->tag_id;
-
-        $insert_values = '';
-        foreach ( $contacts as $contact )
-        {
-            switch ( $contact->lead_status )
-            {
-                case 'comment' :
-                    $tag_id = $commenters_tag_id;
-                break;
-
-                case 'lead' :
-                    $tag_id = $leads_tag_id;
-                break;
-
-                case 'contacted' :
-                    $tag_id = $contacted_tag_id;
-                break;
-
-                case 'customer' :
-                    $tag_id = $customers_tag_id;
-                break;
-
-                case 'subscribe' :
-                    $tag_id = $subscribers_tag_id;
-                break;
-            }
-
-            $insert_values .= '(' . $tag_id . ', "' . $contact->hashkey . '" ),';
-        }
-
-        $q = "INSERT INTO $wpdb->li_tag_relationships ( tag_id, contact_hashkey ) VALUES " . rtrim($insert_values, ',');
-        $wpdb->query($q);
-
-        if ( is_multisite() )
-        {
-           $q = $wpdb->prepare("INSERT $wpdb->li_leads SELECT * FROM li_leads WHERE li_leads.blog_id = %d", $blog->blog_id);
-           $wpdb->query($q);
-
-           $q = $wpdb->prepare("INSERT $wpdb->li_pageviews SELECT * FROM li_pageviews WHERE li_pageviews.blog_id = %d", $blog->blog_id);
-           $wpdb->query($q);
-
-           $q = $wpdb->prepare("INSERT $wpdb->li_submissions SELECT * FROM li_submissions WHERE li_submissions.blog_id = %d", $blog->blog_id);
-           $wpdb->query($q);
-        }
-    }
-
-    leadin_update_option('leadin_options', 'converted_to_tags', 1);
-}
-
-
-/** 
- * Retroactively add the names to contacts based on past form submissions for 2.2.3 upgrade
- *
- */
-function leadin_set_names_retroactively ( )
-{
-    global $wpdb;
-
-    $q = "
-        SELECT 
-            ls_1.* 
-        FROM 
-            li_submissions ls_1
-        INNER JOIN
-        (
-            SELECT 
-                MAX(form_date) max_form_date, lead_hashkey
-            FROM 
-                li_submissions
-            WHERE 
-                LOWER(form_fields) LIKE '%name%'
-                AND form_deleted = 0
-            GROUP BY lead_hashkey
-        ) ls_2
-        ON 
-            ls_1.lead_hashkey = ls_2.lead_hashkey AND 
-            ls_1.form_date = ls_2.max_form_date
-        ORDER BY
-            ls_1.form_date DESC";
-
-    $submissions = $wpdb->get_results($q);
-
-    if ( count($submissions) )
-    {
-        foreach ( $submissions as $submission )
-        {
-            $contact_first_name = '';
-            $contact_last_name  = '';
-            $fields = json_decode(stripslashes($submission->form_fields), TRUE);
-            if ( count($fields) )
-            {
-                foreach ( $fields as $key => $field )
-                {
-                    $lower_label_text = strtolower($field['label']);
-                    if ( $lower_label_text == 'first' || $lower_label_text == 'first name' || $lower_label_text == 'name' || $lower_label_text == 'your name' || $lower_label_text == 'your first name' )
-                        $contact_first_name = $field['value'];
-
-                    if ( $lower_label_text == 'last' || $lower_label_text == 'last name' || $lower_label_text == 'your last name' || $lower_label_text == 'surname' )
-                        $contact_last_name = $field['value'];
-                }
-            }
-
-            if ( $contact_first_name || $contact_last_name )
-            {
-                $q = $wpdb->prepare("UPDATE $wpdb->li_leads SET lead_first_name = %s, lead_last_name = %s WHERE hashkey = %s", $contact_first_name, $contact_last_name, $submission->lead_hashkey);
-                $wpdb->query($q);
-            }
-        }
-    }
-
-    leadin_update_option('leadin_options', 'names_added_to_contacts', 1);
-}
-
-/**
- * Sorts the powerups into a predefined order in leadin.php line 416
- *
- * @param   array
- * @param   array
- * @return  array
- */
-function leadin_sort_power_ups ( $power_ups, $ordered_power_ups ) 
-{ 
-    $ordered = array();
-    $i = 0;
-    foreach ( $ordered_power_ups as $key )
-    {
-        if ( in_array($key, $power_ups) )
-        {
-            array_push($ordered, $key);
-            $i++;
-        }
-    }
-
-    return $ordered;
-}
-
-/**
- * Encodes special HTML quote characters into utf-8 safe entities
- *
- * @param   string
- * @return  string
- */
-function leadin_encode_quotes ( $string ) 
-{ 
-    $string = str_replace(array("’", "‘", '&#039;', '“', '”'), array("'", "'", "'", '"', '"'), $string);
-    return $string;
-}
-
-/**
- * Converts all carriage returns into HTML line breaks 
- *
- * @param   string
- * @return  string
- */
-function leadin_html_line_breaks ( $string ) 
-{
-    return stripslashes(str_replace('\n', '<br>', $string));
-}
-
-/**
- * Strip url get parameters off a url and return the base url
- *
- * @param   string
- * @return  string
- */
-function leadin_strip_params_from_url ( $url ) 
-{ 
-    $url_parts = parse_url($url);
-    $base_url = ( isset($url_parts['host']) ? 'http://' . rtrim($url_parts['host'], '/') : '' ); 
-    $base_url .= ( isset($url_parts['path']) ? '/' . ltrim($url_parts['path'], '/') : '' ); 
-    
-    if ( isset($url_parts['path'] ) )
-        ltrim($url_parts['path'], '/');
-
-    $base_url = urldecode(ltrim($base_url, '/'));
-
-    return strtolower($base_url);
-}
-
-/**
- * Search an object by for a value and return the associated index key
- *
- * @param   object 
- * @param   string
- * @param   string
- * @return  key for array index if present, false otherwise
- */
-function leadin_search_object_by_value ( $haystack, $needle, $search_key )
-{
-   foreach ( $haystack as $key => $value )
-   {
-      if ( $value->$search_key === $needle )
-         return $key;
-   }
-
-   return FALSE;
-}
-
-/**
- * Check if date is a weekend day
- *
- * @param   string
- * @return  bool
- */
-function leadin_is_weekend ( $date )
-{
-    return (date('N', strtotime($date)) >= 6);
-}
-
-/**
- * Tie a tag to a contact in li_tag_relationships
- *
- * @param   int 
- * @param   int
- * @param   int
- * @return  bool    successful insert
- */
-function leadin_apply_tag_to_contact ( $tag_id, $contact_hashkey, $form_hashkey )
-{
-    global $wpdb;
-
-    $q = $wpdb->prepare("SELECT tag_id FROM $wpdb->li_tag_relationships WHERE tag_id = %d AND contact_hashkey = %s", $tag_id, $contact_hashkey);
-    $exists = $wpdb->get_var($q);
-
-    if ( ! $exists )
-    {
-        $q = $wpdb->prepare("INSERT INTO $wpdb->li_tag_relationships ( tag_id, contact_hashkey, form_hashkey ) VALUES ( %d, %s, %s )", $tag_id, $contact_hashkey, $form_hashkey);
-        return $wpdb->query($q);
-    }
-}
-
-
-/**
- * Check multidimensional arrray for an existing value
- *
- * @param   string 
- * @param   array
- * @return  bool
- */
-function leadin_in_array_deep ( $needle, $haystack ) 
-{
-    if ( in_array($needle, $haystack) )
-        return TRUE;
-
-    foreach ( $haystack as $element ) 
-    {
-        if ( is_array($element) && leadin_in_array_deep($needle, $element) )
-            return TRUE;
-    }
-
-    return FALSE;
-}
-
-/**
- * Check multidimensional arrray for an existing value
- *
- * @param   string      needle 
- * @param   array       haystack
- * @return  string      key if found, null if not
- */
-function leadin_array_search_deep ( $needle, $array, $index ) 
-{
-    foreach ( $array as $key => $val ) 
-    {
-        if ( $val[$index] == $needle )
-            return $key;
-    }
-
-   return NULL;
-}
-
-/**
- * Creates a list of filtered contacts into a comma separated string of hashkeys
- * 
- * @param object
- * @return string    sorted array
- */
-function leadin_merge_filtered_contacts ( $filtered_contacts, $all_contacts = array() )
-{
-    if ( ! count($all_contacts) )
-        return $filtered_contacts;
-
-    if ( count($filtered_contacts) )
-    {
-        foreach ( $all_contacts as $key => $contact )
-        {
-            if ( ! leadin_in_array_deep($contact['lead_hashkey'], $filtered_contacts) )
-                unset($all_contacts[$key]);
-        }
-
-        return $all_contacts;
-    }
-    else
-        return FALSE;
-}
-
-/**
- * Creates a list of filtered contacts into a comma separated string of hashkeys
- * 
- * @param object
- * @return string    sorted array
- */
-function leadin_explode_filtered_contacts ( $contacts )
-{
-    if ( count($contacts) )
-    {
-        $contacts = array_values($contacts);
-
-        $hashkeys = '';
-        for ( $i = 0; $i < count($contacts); $i++ )
-            $hashkeys .= "'" . $contacts[$i]['lead_hashkey'] . "'" . ( $i != (count($contacts) - 1) ? ', ' : '' );
-
-        return $hashkeys;
-    }
-    else
-        return FALSE;
-}
-
-/**
- * Sets the wpdb tables to the current blog
- * 
- */
-function leadin_set_wpdb_tables ()
-{
-    global $wpdb;
-
-    $wpdb->li_submissions       = ( is_multisite() ? $wpdb->prefix . 'li_submissions' : 'li_submissions' );
-    $wpdb->li_pageviews         = ( is_multisite() ? $wpdb->prefix . 'li_pageviews' : 'li_pageviews' );
-    $wpdb->li_leads             = ( is_multisite() ? $wpdb->prefix . 'li_leads' : 'li_leads' );
-    $wpdb->li_tags              = ( is_multisite() ? $wpdb->prefix . 'li_tags' : 'li_tags' );
-    $wpdb->li_tag_relationships = ( is_multisite() ? $wpdb->prefix . 'li_tag_relationships' : 'li_tag_relationships' );
-}
-
-/**
  * Calculates the hour difference between MySQL timestamps and the current local WordPress time
  * 
  */
@@ -986,17 +285,6 @@ function leadin_set_mysql_timezone_offset ()
 
     $wpdb->db_hour_offset = $hours;
 }
-
-
-/**
- * Gets current URL with parameters
- * 
- */
-function leadin_get_current_url ( )
-{
-    return ( is_ssl() ? 'https://' : 'http://' ) . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
-}
-
 
 /**
  * Returns the user role for the current user
@@ -1012,148 +300,792 @@ function leadin_get_user_role ()
     return $user_role;
 }
 
-/**
- * Checks whether or not to ignore the logged in user in the Leadin tracking scripts
- * 
- */
-function leadin_ignore_logged_in_user ()
+function leadin_check_tables_exist ()
 {
-    // ignore logged in users if defined in settings
-    if ( is_user_logged_in() )
+    global $wpdb;
+    $check_tables_exist_query = "SELECT table_name FROM information_schema.tables WHERE table_name = '" . li_leads . "' OR table_name = '" . li_submissions . "' OR table_name = '" . li_pageviews . "' OR table_name = '" . $wpdb->li_tags . "' OR table_name = '" . $wpdb->li_tag_relationships . "'";
+    $li_tables = $wpdb->get_results($check_tables_exist_query);
+    return $li_tables;
+}
+
+function leadin_get_contacts_for_migration ()
+{
+    global $wpdb;
+
+    $wpdb->li_submissions      = ( is_multisite() ? $wpdb->prefix . 'li_submissions'    : 'li_submissions' );
+    $wpdb->li_pageviews        = ( is_multisite() ? $wpdb->prefix . 'li_pageviews'      : 'li_pageviews' );
+    $wpdb->li_leads            = ( is_multisite() ? $wpdb->prefix . 'li_leads'          : 'li_leads' );
+
+    if ( ! isset($wpdb->li_leads) )
+        return 0;
+
+    $get_contacts_for_migration_query = "
+        SELECT 
+            DISTINCT hashkey AS hashkey,
+            lead_email
+        FROM 
+            $wpdb->li_leads
+        WHERE
+            lead_migrated = 0 AND 
+            lead_email != '' AND 
+            lead_deleted = 0 AND
+            hashkey != '' 
+            ORDER BY lead_email";
+
+    $contacts = $wpdb->get_results($get_contacts_for_migration_query);
+
+    if ( count($contacts) )
     {
-        if ( array_key_exists('li_do_not_track_' . leadin_get_user_role(), get_option('leadin_options')) )
-            return TRUE;
-        else
-            return FALSE;
+        return $contacts;
     }
     else
-        return FALSE;
-}
-
-function leadin_safe_social_profile_url ( $url )
-{
-    $url = str_replace('∖', '/', $url);
-    return $url;
-}
-
-function leadin_check_missing_options ( $options )
-{
-    $default_options = array(
-        'li_installed'              => 1,
-        'leadin_version'            => LEADIN_PLUGIN_VERSION,
-        'li_db_version'             => LEADIN_DB_VERSION,
-        'li_email'                  => get_bloginfo('admin_email'),
-        'li_updates_subscription'   => 1,
-        'onboarding_step'           => 1,
-        'onboarding_complete'       => 0,
-        'ignore_settings_popup'     => 0,
-        'data_recovered'            => 1,
-        'delete_flags_fixed'        => 1,
-        'beta_tester'               => 0,
-        'converted_to_tags'         => 1,
-        'names_added_to_contacts'   => 1
-    );
-
-    // Add the Pro flag if this is a pro installation
-    if ( ( defined('LEADIN_UTM_SOURCE') && LEADIN_UTM_SOURCE != 'leadin%20repo%20plugin') || ! defined('LEADIN_UTM_SOURCE') )
-        $default_options['pro'] = 1;
-
-    $update_option = FALSE;
-    if ( count($options) && is_array($options) )
     {
-        foreach ( $default_options as $key => $value )
+        $q = "
+            SELECT 
+                DISTINCT hashkey AS hashkey
+            FROM 
+                $wpdb->li_leads
+            WHERE
+                lead_migrated = 1 AND 
+                lead_email != '' AND 
+                lead_deleted = 0 
+                AND hashkey != ''";
+
+        $migrated_contacts = $wpdb->get_results($q);
+
+        if ( count($migrated_contacts) )
         {
-            if ( ! array_key_exists($key, $options) )
+            return 'migration complete';
+        }
+        else
+        {
+            return 'no contacts';
+        }
+    }
+
+    return FALSE;
+}
+
+function leadin_echo_contacts_for_migration ()
+{
+    $results = leadin_get_contacts_for_migration();
+
+    if ( $results == 'migration complete' || $results == 'no contacts' || ! $results )
+        echo $results;
+    else
+        echo json_encode($results);
+
+    die();
+}
+
+add_action('wp_ajax_leadin_echo_contacts_for_migration', 'leadin_echo_contacts_for_migration'); // Call when user logged in
+add_action('wp_ajax_nopriv_leadin_echo_contacts_for_migration', 'leadin_echo_contacts_for_migration'); // Call when user is not logged in
+
+function leadin_migrate_contact ()
+{
+    global $wpdb;
+    
+    $wpdb->li_submissions      = ( is_multisite() ? $wpdb->prefix . 'li_submissions' : 'li_submissions' );
+    $wpdb->li_leads            = ( is_multisite() ? $wpdb->prefix . 'li_leads' : 'li_leads' );
+    $wpdb->li_pageviews        = ( is_multisite() ? $wpdb->prefix . 'li_pageviews' : 'li_pageviews' );
+
+    $hashkey = $_POST['hashkey'];
+
+    // debug code
+    $debug_query = $wpdb->prepare("
+        SELECT
+            lead_email
+        FROM 
+            $wpdb->li_leads
+        WHERE 
+            hashkey = %s
+        LIMIT
+            1", $hashkey);
+
+    $contact = $wpdb->get_row($debug_query);
+
+    $utk = md5($hashkey);
+
+    // using this variable to convert the mysql datetime to GMT
+    $gmt_offset = $wpdb->get_var("SELECT TIMESTAMPDIFF(HOUR, NOW(), UTC_TIMESTAMP())");
+
+    // Get the contact page views
+    $analytics_query = $wpdb->prepare("
+        SELECT 
+            pageview_id,
+            pageview_date, 
+            DATE_FORMAT(DATE_ADD(pageview_date, INTERVAL %d HOUR), %s) AS pageview_date_formatted, 
+            lead_hashkey, pageview_title, pageview_url, pageview_source, pageview_session_start 
+        FROM 
+            $wpdb->li_pageviews 
+        WHERE 
+            pageview_migrated = 0 AND 
+            pageview_deleted = 0 AND
+            lead_hashkey = %s",  $gmt_offset, '%Y-%m-%d %k:%i:%s', $hashkey);
+    
+    $pageviews = $wpdb->get_results($analytics_query);
+
+    // let's batch analytics events
+    if ( count($pageviews) )
+    {
+        $batchedPageviews = array();
+        foreach ($pageviews as $pageview) {
+            $timestamp = strtotime($pageview->pageview_date_formatted) * 1000;
+            
+            $this_query_string =  'k=1' // Activity Type
+                                . '&w=' . number_format($timestamp, 0, '', '')
+                                . '&a=' . LEADIN_PORTAL_ID
+                                . '&vi=' . $utk
+                                . '&t=' . urlencode($pageview->pageview_title)
+                                . '&r=' . urlencode($pageview->pageview_source); // Referer to the page
+            $thisPageView = array(
+                'query'         => $this_query_string,
+                'pageUrl'      => $pageview->pageview_url
+            );
+            $batchedPageviews[] = $thisPageView;
+        }
+
+        leadin_migrate_analytics_events( LEADIN_PORTAL_ID, LEADIN_HAPIKEY, $batchedPageviews );
+        $mark_analytics_event_migration_complete_query = $wpdb->prepare("UPDATE $wpdb->li_pageviews SET pageview_migrated = 1 where lead_hashkey = %s", $hashkey);
+        $updated = $wpdb->query($mark_analytics_event_migration_complete_query);
+    }
+
+
+    // get all the form submissions for the contact
+    $form_submission_query = $wpdb->prepare("
+        SELECT
+            form_id,
+            form_date, 
+            DATE_FORMAT(DATE_ADD(form_date, INTERVAL %d HOUR), %s) AS form_date_formatted, 
+            form_page_title, 
+            form_hashkey,
+            form_page_url, 
+            form_fields,
+            form_selector_id,
+            form_selector_classes
+        FROM 
+            $wpdb->li_submissions 
+        WHERE 
+            form_migrated = 0 AND 
+            form_deleted = 0 AND 
+            lead_hashkey = %s ORDER BY form_date", $gmt_offset, '%Y-%m-%d %k:%i:%s', $hashkey);
+
+    $submissions = $wpdb->get_results($form_submission_query);
+    $form_submissions = array();
+    if ( count($submissions) )
+    {
+        foreach ( $submissions as $submission )
+        {
+            $form_fields = json_decode(stripslashes($submission->form_fields), TRUE);
+            $form_fields_formatted = array();
+            $contact_fields = array();
+            if ( count($form_fields) )
             {
-                $options[$key] = $value;
-                $update_option = TRUE;
+                foreach ( $form_fields as $form_field )
+                {
+                    $key    = strtolower($form_field['label']);
+                    $value  = $form_field['value'];
+                    if ( strstr($value, '@') && strstr($value, '.') )
+                    {
+                        $key = 'email';
+                    }
+                    if ( $key == 'first' || $key == 'name' || $key == 'your name' )
+                    {
+                        $key = 'firstName';
+                    }
+                    if ( $key == 'last' || $key == 'your last name' || $key == 'surname' )
+                    {
+                        $key = 'lastName';
+                    }
+                    if ( $key == 'phone' )
+                    {
+                        $key = 'phone';
+                    }
+
+                    if ( $key == 'email' || $key == 'firstName' || $key == 'lastName' || $key == 'phone' )
+                    {
+                        $contact_fields[$key] = $form_field['value'];
+                    }
+                    else 
+                    {
+                        $form_fields_formatted[$key] = $form_field['value'];    
+                    }      
+                }
+            }
+            $form_submission = leadin_create_form_submission_array(LEADIN_PORTAL_ID, $utk, $submission->form_selector_id, $submission->form_selector_classes, $submission->form_page_url, $submission->form_page_title, (strtotime($submission->form_date_formatted) * 1000), $form_fields_formatted, $contact_fields);
+            $form_submissions[] = $form_submission;
+
+        }
+    }
+
+    if (count($form_submissions) > 0 )
+    {
+        $resp = leadin_migrate_form_submissions(LEADIN_PORTAL_ID, LEADIN_HAPIKEY, $form_submissions);
+        $mark_form_as_migrated_query = $wpdb->prepare("UPDATE $wpdb->li_submissions SET form_migrated = 1 WHERE lead_hashkey = %s", $hashkey);
+        $wpdb->query($mark_form_as_migrated_query);
+    }
+
+    // Afterwards, update the contact as migrated
+    $mark_contact_as_migrated_query = $wpdb->prepare("UPDATE $wpdb->li_leads SET lead_migrated = 1 WHERE hashkey = %s", $hashkey);
+    $updated = $wpdb->query($mark_contact_as_migrated_query);
+
+    // update the most recent migration
+    update_option('leadin_most_recent_migration_timestamp', time());
+
+    die();
+}
+
+add_action('wp_ajax_leadin_migrate_contact', 'leadin_migrate_contact'); // Call when user logged in
+add_action('wp_ajax_nopriv_leadin_migrate_contact', 'leadin_migrate_contact'); // Call when user is not logged in
+
+function leadin_migrate_esp_syncs ()
+{
+    global $wpdb;
+    
+    $wpdb->li_tags = ( is_multisite() ? $wpdb->prefix . 'li_tags' : 'li_tags' );
+
+    $active_power_ups   = unserialize(get_option('leadin_active_power_ups'));
+    $activated_esps     = array();
+
+    if ( in_array('mailchimp_connect', $active_power_ups) )
+    {
+        $activated_esps['mailchimp'] = 0;
+    }
+    
+    if ( in_array('aweber_connect', $active_power_ups) )
+    {
+        $activated_esps['aweber'] = 0;
+    }
+    
+    if ( in_array('campaign_monitor_connect', $active_power_ups) )
+    {
+        $activated_esps['campaign_monitor'] = 0;
+    }
+    
+    if ( in_array('getresponse_connect', $active_power_ups) )
+    {
+        $activated_esps['get_response'] = 0;
+    }
+    
+    if ( in_array('constant_contact_connect', $active_power_ups) )
+    {
+        $activated_esps['constant_contact'] = 0;
+    }
+
+    $esp_syncs = array();
+
+    if ( count($activated_esps) )
+    {
+        foreach ( $activated_esps as $esp => $esp_count )
+        {
+            $activated_esp_query = $wpdb->prepare("SELECT * FROM $wpdb->li_tags WHERE tag_synced_lists LIKE '%%%s%%' AND tag_form_selectors != '' AND tag_synced_lists != '' AND tag_deleted = 0 GROUP BY tag_form_selectors, tag_synced_lists", $esp);
+            $tags = $wpdb->get_results($activated_esp_query);
+
+            if ( count($tags) )
+            {
+                foreach ( $tags as $tag )
+                {
+                    $tag_form_selectors = explode(',', $tag->tag_form_selectors);
+                    $tag_synced_lists   = unserialize($tag->tag_synced_lists);
+
+                    if ( count($tag_form_selectors) )
+                    {
+                        foreach ( $tag_form_selectors as $key => $selector )
+                        {
+                            $selector = trim($selector);
+                            if ( strstr($selector, '#') )
+                            {
+                                if ( count($tag_synced_lists) )
+                                {
+                                    foreach ( $tag_synced_lists as $list )
+                                    {
+                                        if ( ! leadin_selector_in_array($selector, $esp_syncs, $list['list_id']) )
+                                        {
+                                            // get all the lists that this tag is synced too and add them all into the array
+                                            $esp_sync = leadin_create_esp_sync($selector, '', $list['list_id']);
+                                            $esp_syncs[] = $esp_sync;
+                                            $activated_esps[$esp]++;
+                                        }
+                                    }
+                                }
+
+                                unset($tag_form_selectors[$key]);
+                            }
+                        }
+
+                        if ( count($tag_form_selectors) && count($tag_synced_lists) )
+                        {
+                            foreach ( $tag_synced_lists as $list )
+                            {
+                                // sort all the classes alphabetically so they much up if duplicates
+                                sort($tag_form_selectors, SORT_STRING);
+                                $classes = trim(implode(',', $tag_form_selectors));
+
+                                if ( ! leadin_selector_in_array($classes, $esp_syncs, $list['list_id']) )
+                                {
+                                    $esp_sync = leadin_create_esp_sync('', $classes, $list['list_id']);
+                                    $esp_syncs[] = $esp_sync;
+                                    $activated_esps[$esp]++;
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 
-    if ( $update_option )
-        update_option('leadin_options', $options);
-
-    return $options;
-}
-
-/**
- * Checks to see if an installation is Leadin Pro enabled
- * 
- * @return bool
- */
-function leadin_check_pro_user ( )
-{
-    $options = get_option('leadin_options');
-    if ( isset($options['pro']) && $options['pro'])
-        return TRUE;
-    else
-        return FALSE;
-}
-
-/**
- * Checks the first entry in the pageviews table 
- *
- */
-function leadin_check_first_pageview_data ( )
-{
-    global $wpdb;
-
-    $q = "SELECT pageview_date FROM $wpdb->li_pageviews ORDER BY pageview_date ASC LIMIT 1";
-    $date = $wpdb->get_var($q);
-
-    if ( $date )
+    if ( count($activated_esps) >= 1 )
     {
-        if ( strtotime($date) < strtotime('-30 days') )
-            return TRUE;
-        else
-            return FALSE;
-    }
-    else
-    {
-       return FALSE;
-    }
-}
+        $esp_api_key = '';
+        $esp         = '';
 
-/**
- * Sets the Pro flag for the Leadin Pro upgrade in the database + register user in Segment
- *
- */
-function leadin_upgrade_to_pro ( $location = '' )
-{
-    global $wpdb;
+        reset(sort($activated_esps));
 
-    $options = get_option('leadin_options');
-    if ( ( isset($options['pro']) && ! $options['pro']) || ! isset($options['pro']) )
-    {
-        $updated = leadin_update_option('leadin_options', 'pro', 1);
+        if ( key($activated_esps) == 'mailchimp' )
+        {
+            $esp_mc_options     = get_option('leadin_mls_options');
+            $esp_api_key = ( isset($esp_mc_options['li_mls_api_key']) ? $esp_mc_options['li_mls_api_key'] : '' );
+            $esp = 'MAILCHIMP';
+        }
+        else if ( key($activated_esps) == 'campaign_monitor' )
+        {
+            $esp_cm_options = get_option('leadin_campaign_monitor_connect_options');
+            $esp_api_key = ( isset($esp_cm_options['li_cm_api_key']) ? $esp_cm_options['li_cm_api_key'] : '' );
+            $esp = 'CAMPAIGN_MONITOR';
+        }
+        else if ( key($activated_esps) == 'constant_contact' )
+        {
+            $esp = 'CONSTANT_CONTACT';
+        }
+        else if ( key($activated_esps) == 'get_response' )
+        {
+            $esp_gr_options = get_option('leadin_getresponse_connect_options');
+            $esp_api_key = ( isset($esp_cm_options['li_gr_api_key']) ? $esp_cm_options['li_gr_api_key'] : '' );
+            $esp = 'GET_RESPONSE';
+        }
+        else if ( key($activated_esps) == 'aweber' )
+        {
+            $esp = 'AWEBER';
+        }
+
+        // push up a settings request
+        $request = leadin_build_api_url_with_auth('/leadin/v1/settings');
+        $params = array(
+            'espApiKey'                     => $esp_api_key,
+            'emailServiceProvider'          => $esp
+        );
+
+        $response = leadin_make_curl_request($request, $params, 'PATCH');
     }
 
-    WPLeadIn::activate_power_up('lookups', FALSE);
+    if ( $esp_syncs )
+    {
+        $request = leadin_build_api_url_with_auth('/leadin/v1/migrate/espSync');
+        
+        $params = array('espSyncs' => $esp_syncs);
+        
+        $response = leadin_make_curl_request($request, $params);
+    }
 
-    // Create the user in Segment
-    $traits = leadin_get_segment_traits();
-    $traits["last_activated"] = date("Y-m-d H:i:s");
-    $traits["li-status"]  = "activated";
-    $traits["createdAt"]  = date("Y-m-d H:i:s");
-    leadin_set_user_properties($traits);
+}
 
-    // Add the UTM tags to the options table to permanently store them
-    $leadin_utm = get_option('leadin_utm');
-    if ( ! $leadin_utm )
-        leadin_update_utm_option();
+add_action('wp_ajax_leadin_migrate_esp_syncs', 'leadin_migrate_esp_syncs'); // Call when user logged in
+add_action('wp_ajax_nopriv_leadin_migrate_esp_syncs', 'leadin_migrate_esp_syncs'); // Call when user is not logged in
+
+function leadin_selector_in_array ( $needle, $esps, $esp_list_id )
+{
+    $in_array = FALSE;
+
+    if ( count($esps) ) 
+    {  
+        $keys_found = array_keys($esps, $needle);
+
+        if ( $keys_found )
+        {
+            foreach ( $keys_found as $key )
+            {
+                if ( $esps[$key]['espListId'] == $esp_list_id )
+                {
+                    return TRUE;
+                }
+                else
+                {
+                    return FALSE;
+                }
+            }
+        }
+    }
     
-    leadin_track_plugin_activity("Upgraded to Pro", array('location' => $location));
 }
 
-function leadin_check_tables_exist ()
+
+function leadin_create_form_submission_array ( $portal_id, $utk, $form_selector_id, $form_selector_classes, $page_url, $page_title, $timestamp, $form_values, $contact_fields )
 {
+    # Of the form_selector_class is 'vex-dialog-form' (the leadin form pre-glob) we need to migrate that over to the Leadin Popup Form post glob.
+    $final_form_selector_id = $form_selector_classes == '.vex-dialog-form' ? '#LeadinPopupForm' : $form_selector_id;
+    $form_submission = array();
+    $form_submission['portalId']            = $portal_id;
+    $form_submission['utk']                 = $utk;
+    $form_submission['formSelectorId']      = $final_form_selector_id; // this is a hack until we get the endpoint to accept form submissions with blank IDs + classes
+    $form_submission['formSelectorClasses'] = $form_selector_classes;
+    $form_submission['pageUrl']             = $page_url;
+    $form_submission['pageTitle']           = $page_title;
+    $form_submission['timestamp']           = number_format($timestamp, 0, '', '');
+    $form_submission['contactFields']       = $contact_fields;
+
+    if (count((array)$form_values) > 0)
+        $form_submission['formValues']      = $form_values;
+
+    return $form_submission;
+}
+
+function leadin_migrate_form_submissions ( $portal_id, $hapikey, $form_submissions )
+{
+    $request = leadin_build_api_url_with_auth('/leadin/v1/migrate/forms');
+    
+    $params = array('formSubmissions' => $form_submissions);
+    
+    $response = leadin_make_curl_request($request, $params);
+    return $response;
+}
+
+function leadin_migrate_analytics_events ( $portal_id, $hapikey, $analytics_events)
+{
+    $request = leadin_build_api_url_with_auth('/leadin/v1/migrate/analytics');
+
+    $response = leadin_make_curl_request( $request, $analytics_events );
+    return $response;
+}
+
+function leadin_create_esp_sync ( $form_selector_id, $form_selector_classes, $esp_list_id )
+{
+    $esp_sync = array();
+    $esp_sync['formSelectorId']         = substr($form_selector_id, 0, 1) == '#' ? substr($form_selector_id, 1) : $form_selector_id;
+    $esp_sync['formSelectorClasses']    = substr($form_selector_classes, 0, 1) == '.' ? substr($form_selector_classes, 1) : $form_selector_classes;
+    $esp_sync['espListId']              = $esp_list_id;
+    return $esp_sync;
+}
+
+
+
+function leadin_migrate_settings ()
+{
+    $leadin_options     = get_option('leadin_options');
+    $active_power_ups   = unserialize(get_option('leadin_active_power_ups'));
+    $subscribe_options  = get_option('leadin_subscribe_options');
+    $params = array();
+    $popup_enabled = FALSE;
+
+    update_option( LEADIN_MIGRATION_OPTION_NAME, 'started');
+    
+    if ( in_array('subscribe_widget', $active_power_ups) && $subscribe_options )
+    {
+        $popup_enabled      = TRUE;
+        $popup_heading      = ( isset($subscribe_options['li_subscribe_heading']) ? $subscribe_options['li_subscribe_heading'] : '' );
+        $popup_desc         = ( isset($subscribe_options['li_subscribe_text']) ? $subscribe_options['li_subscribe_text'] : '' );
+        $popup_button_text  = ( isset($subscribe_options['li_subscribe_btn_label']) ? $subscribe_options['li_subscribe_btn_label'] : '' );
+        $popup_show_names   = ( isset($subscribe_options['li_subscribe_name_fields']) ? $subscribe_options['li_subscribe_name_fields'] : '' );
+        $popup_show_phone   = ( isset($subscribe_options['li_subscribe_phone_field']) ? $subscribe_options['li_subscribe_phone_field'] : '' );
+        
+        if ( isset($subscribe_options['li_subscribe_vex_class']) )
+        {
+            switch ( $subscribe_options['li_subscribe_vex_class'] )
+            {
+                case 'vex-theme-bottom-right-corner' :
+                    $popup_position = 'BOTTOM_RIGHT';
+                break;
+
+                case 'vex-theme-bottom-left-corner' :
+                    $popup_position = 'BOTTOM_LEFT';
+                break;
+
+                case 'vex-theme-top' :
+                    $popup_position = 'TOP';
+                break;
+
+                case 'vex-theme-default' :
+                    $popup_position = 'POP_OVER';
+                break;
+            }  
+        }
+
+        if ( isset($subscribe_options['li_subscribe_btn_color']) )
+        {
+            switch ( $subscribe_options['li_subscribe_btn_color'] )
+            {
+                case 'leadin-popup-color-blue' :
+                    $popup_color = 'BLUE';
+                break;
+
+                case 'leadin-popup-color-red' :
+                    $popup_color = 'RED';
+                break;
+
+                case 'leadin-popup-color-green' :
+                    $popup_color = 'GREEN';
+                break;
+
+                case 'leadin-popup-color-yellow' :
+                    $popup_color = 'YELLOW';
+                break;
+
+                case 'leadin-popup-color-purple' :
+                    $popup_color = 'PURPLE';
+                break;
+
+                case 'leadin-popup-color-orange' :
+                    $popup_color = 'ORANGE';
+                break;
+            }  
+        }
+
+        $popup_page_types = array();
+
+        if ( isset($subscribe_options['li_subscribe_template_pages']) )
+            array_push($popup_page_types, 'page');
+        
+        if ( isset($subscribe_options['li_subscribe_template_posts']) )
+            array_push($popup_page_types, 'post');
+        
+        if ( isset($subscribe_options['li_subscribe_template_home']) )
+            array_push($popup_page_types, 'home');
+        
+        if ( isset($subscribe_options['li_subscribe_template_archives']) )
+            array_push($popup_page_types, 'archive');
+        
+        $popup_show_mobile = FALSE;
+        
+        if ( isset($subscribe_options['li_subscribe_mobile_popup']) )
+            $popup_show_mobile = TRUE;
+
+        $params['popupHeading']         = $popup_heading;
+        $params['popupDescription']     = $popup_desc;
+        $params['popupButtonText']      = $popup_button_text;
+        $params['popupShowNames']       = ( $popup_show_names ? TRUE : FALSE );
+        $params['popupShowPhone']       = ( $popup_show_phone ? TRUE : FALSE );
+        $params['popupPosition']        = $popup_position;
+        $params['popupColor']           = $popup_color;
+        $params['popupPageTypes']       = implode(",", $popup_page_types);
+        $params['popupShowOnMobile']    = $popup_show_mobile;
+    }
+
+    $user_roles = get_editable_roles();
+    $ignored_user_roles = array();
+    
+    if ( count($user_roles) )
+    {
+        foreach ( $user_roles as $key => $role )
+        {
+            $role_id_tracking = 'li_do_not_track_' . $key;
+            if ( isset($leadin_options[$role_id_tracking]) )
+                array_push($ignored_user_roles, $key);
+        }
+    }
+    // @TODO (need to discuss more...) - we never built the grant access to Leadin for specific user roles features - shoudld probably put that into the migrator once it's done if we do it
+        // https://git.hubteam.com/HubSpot/Leadin/issues/387
+    $notification_email = ( isset($leadin_options['li_email']) ? $leadin_options['li_email'] : '' );
+    $site_name = get_bloginfo('name');
+    $domain = get_bloginfo('wpurl');
+
+    $request = leadin_build_api_url_with_auth('/leadin/v1/settings');
+
+    $params['popupEnabled']                 = $popup_enabled;
+    $params['ignoredUserRoles']             = implode(",", $ignored_user_roles);
+    $params['notificationEmailAddresses']   = $notification_email;
+    $params['siteName']                     = $site_name;
+    $params['domain']                       = $domain;
+
+    $response = leadin_make_curl_request($request, $params, 'PATCH');
+    return $response;
+}
+
+add_action('wp_ajax_leadin_migrate_settings', 'leadin_migrate_settings'); // Call when user logged in
+add_action('wp_ajax_nopriv_leadin_migrate_settings', 'leadin_migrate_settings'); // Call when user is not logged in
+
+function leadin_punt_migration ()
+{
+    $option_updated = update_option('leadin_puntMigration', 'true');
+    return $option_updated;
+}
+
+add_action('wp_ajax_leadin_punt_migration', 'leadin_punt_migration'); // Call when user logged in
+add_action('wp_ajax_nopriv_leadin_punt_migration', 'leadin_punt_migration'); // Call when user is not logged in
+
+function leadin_set_migration_complete_flag ( )
+{
+    if (get_option(LEADIN_MIGRATION_OPTION_NAME) != 'completed')
+    {
+        $request = leadin_build_api_url_with_auth('/leadin/v1/migrate/complete');
+        
+        $response = leadin_make_curl_request($request);
+        update_option(LEADIN_MIGRATION_OPTION_NAME, 'completed');
+    }
+}
+
+add_action('wp_ajax_leadin_set_migration_complete_flag', 'leadin_set_migration_complete_flag'); // Call when user logged in
+add_action('wp_ajax_nopriv_leadin_set_migration_complete_flag', 'leadin_set_migration_complete_flag'); // Call when user is not logged in
+
+function leadin_make_curl_request ( $request, $params = array(), $request_type = 'POST' )
+{
+    // remove NULL values from params
+    $notNullParams = array_filter($params);
+
+    if ( $request_type == 'GET' )
+    {
+        $request = $request . "?" . http_build_query($notNullParams);
+    }
+
+    $ch = curl_init($request);
+    
+    if ( $request_type == 'POST' )
+    {
+        curl_setopt($ch, CURLOPT_POST, TRUE);
+    }
+    else if ( $request_type == 'PATCH' )
+    {
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PATCH');
+    }
+
+    if ( $request_type != 'GET' )
+    {
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($notNullParams)); 
+    }
+
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array("Content-Type: application/json"));
+    curl_setopt($ch, CURLOPT_HEADER, FALSE);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+
+    $response = curl_exec($ch);
+
+    $info = curl_getinfo($ch);
+
+    curl_close($ch);
+    return $response;
+}
+
+//=============================================
+// Unpunt Migration
+//=============================================
+function leadin_unpunt_migration ()
+{
+    update_option('leadin_puntMigration', 'false');
+}
+
+add_action('wp_ajax_leadin_unpunt_migration', 'leadin_unpunt_migration'); // Call when user logged in
+
+
+function leadin_check_migration_status()
+{
+
+    global $wpdb; 
+    $wpdb->li_leads = ( is_multisite() ? $wpdb->prefix . 'li_leads' : 'li_leads' );
+
+    $curentMigrationStatus = get_option(LEADIN_MIGRATION_OPTION_NAME);
+    if (!$curentMigrationStatus)
+    {
+        # we don't know where we are on migration - we need to perform our first check
+        # If we don't have a portalID but have leadin tables, then we set migration to 'register'
+        $leads_table_exists = $wpdb->get_var("SHOW TABLES LIKE '$wpdb->li_leads'") == 'li_leads';
+        if (!LEADIN_PORTAL_ID && $leads_table_exists)
+        {
+            return "register";
+        }
+        else if (! function_exists('curl_init') )
+        {
+            return 'noCurl';
+        }
+        else if (LEADIN_PORTAL_ID && $leads_table_exists && is_array(leadin_get_contacts_for_migration()))
+        {
+            $newValue = 'migrateContacts';
+            update_option(LEADIN_MIGRATION_OPTION_NAME, $newValue);
+            return $newValue;
+        }
+        else if (!$leads_table_exists)
+        {
+            $newValue = 'false';
+            update_option(LEADIN_MIGRATION_OPTION_NAME, $newValue);
+            return $newValue;
+        }
+    }
+    else
+    {
+        return $curentMigrationStatus;
+    }
+
+}
+
+/**
+ * Adds the migration columns to a pre-existing leadin database
+ *
+ */
+
+function leadin_maybe_add_migration_db_columns ()
+{
+
     global $wpdb;
 
-    $q = "SELECT table_name FROM information_schema.tables WHERE table_name = '" . $wpdb->li_leads . "' OR table_name = '" . $wpdb->li_submissions . "' OR table_name = '" . $wpdb->li_pageviews . "' OR table_name = '" . $wpdb->li_tags . "' OR table_name = '" . $wpdb->li_tag_relationships . "'";
-    $li_tables = $wpdb->get_results($q);
+    $wpdb->li_submissions      = ( is_multisite() ? $wpdb->prefix . 'li_submissions' : 'li_submissions' );
+    $wpdb->li_pageviews        = ( is_multisite() ? $wpdb->prefix . 'li_pageviews' : 'li_pageviews' );
+    $wpdb->li_leads            = ( is_multisite() ? $wpdb->prefix . 'li_leads' : 'li_leads' );
 
-    return $li_tables;
+    $leads_table_exists = $wpdb->get_var("SHOW TABLES LIKE '$wpdb->li_leads'");
+
+    if ($leads_table_exists)
+    {
+
+        $leads_migrated_flag_exists = $wpdb->get_row("
+            SELECT * 
+            FROM information_schema.COLUMNS 
+            WHERE 
+            TABLE_SCHEMA = '$wpdb->dbname' AND
+            TABLE_NAME = '$wpdb->li_leads' 
+            AND COLUMN_NAME = 'lead_migrated';");
+
+        if ( ! count($leads_migrated_flag_exists) )
+        {
+            $q = "ALTER TABLE $wpdb->li_leads ADD lead_migrated INT(1) NOT NULL";
+            $wpdb->query($q);
+        }
+
+        $analytics_migrated_flag_exists = $wpdb->get_row("
+            SELECT * 
+            FROM information_schema.COLUMNS 
+            WHERE 
+            TABLE_SCHEMA = '$wpdb->dbname' AND
+            TABLE_NAME = '$wpdb->li_pageviews' 
+            AND COLUMN_NAME = 'pageview_migrated';");
+
+        if ( ! count($analytics_migrated_flag_exists) )
+        {
+            $q = "ALTER TABLE $wpdb->li_pageviews ADD pageview_migrated INT(1) NOT NULL";
+            $wpdb->query($q);
+        }
+
+        $submissions_migrated_flag_exists = $wpdb->get_row("
+            SELECT * 
+            FROM information_schema.COLUMNS 
+            WHERE 
+            TABLE_SCHEMA = '$wpdb->dbname' AND
+            TABLE_NAME = '$wpdb->li_submissions' 
+            AND COLUMN_NAME = 'form_migrated';");
+
+        if ( ! count($submissions_migrated_flag_exists) )
+        {
+            $q = "ALTER TABLE $wpdb->li_submissions ADD form_migrated INT(1) NOT NULL";
+            $wpdb->query($q);
+        }
+
+    }
+}
+
+function log_error ( $message )
+{
+    if ( is_array($message) || is_object($message) )
+        error_log(print_r($message, TRUE));
+    else 
+        error_log($message);
 }
 
 ?>
