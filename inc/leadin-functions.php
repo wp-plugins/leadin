@@ -1023,7 +1023,6 @@ function leadin_check_migration_status()
 
 function leadin_maybe_add_migration_db_columns ()
 {
-
     global $wpdb;
 
     $wpdb->li_submissions      = ( is_multisite() ? $wpdb->prefix . 'li_submissions' : 'li_submissions' );
