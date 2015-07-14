@@ -40,14 +40,25 @@ class WPLeadInAdmin {
         // Hooks & Filters
         //=============================================
 
-        $options = get_option('leadin_options');
+        $plugin_version = get_option('leadin_pluginVersion');
 
         $this->action = $this->leadin_current_action();
+
+        // If the plugin version matches the latest version escape the update function
+        if ( $plugin_version != LEADIN_PLUGIN_VERSION )
+            self::leadin_update_check();
         
         add_action('admin_menu', array(&$this, 'leadin_add_menu_items'));
         add_action('admin_print_scripts', array(&$this, 'add_leadin_admin_scripts'));
         add_filter('plugin_action_links_' . 'leadin/leadin.php', array($this, 'leadin_plugin_settings_link'));
 
+    }
+
+    function leadin_update_check ()
+    {
+        leadin_maybe_add_migration_db_columns();
+
+        update_option('leadin_pluginVersion', LEADIN_PLUGIN_VERSION);
     }
 
     //=============================================
