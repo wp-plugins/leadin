@@ -69,7 +69,7 @@ function leadinStartContactsMigration() {
 
         $('#leadin-migration-progress-bar').css('width', '100%');
         $('#progress-text').text("All your contacts have been uploaded to our servers.");
-
+        leadinSetMigrationCompleteOption();
         window.removeEventListener("beforeunload", closePageDialogue);
 
       } else {
@@ -158,6 +158,23 @@ function leadinFireCompleteMigrationEvent() {
       console.error("Unable to set migration complete flag: " + data);
     }
   })
+}
+
+function leadinSetMigrationCompleteOption() {
+  jQuery.ajax({
+    type: 'POST',
+    url: li_ajax.ajax_url,
+    data: {
+      "action": "leadin_set_migration_complete_option"
+    },
+    success: function (data) {
+      // Hurray!
+    },
+    error: function (data) {
+      console.error("Unable to set migration complete option: " + data);
+    }
+  })
+
 }
 
 var closePageDialogue = function (e) {

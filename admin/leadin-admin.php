@@ -228,7 +228,6 @@ class WPLeadInAdmin {
             'wp-url' => $leadin_user['wp_url'],
             'wp-version' => $leadin_user['wp_version'],
             'li-source' => LEADIN_SOURCE,
-            'createdAt' => date('Y-m-d H:i:s'),
             'website' => $leadin_user['wp_url'],
             'company' => $leadin_user['wp_url'],
             'utm_source' => $leadin_user['utm_source'],
