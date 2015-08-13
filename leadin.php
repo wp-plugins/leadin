@@ -31,9 +31,6 @@ if ( !defined('LEADIN_DB_VERSION') )
 if ( !defined('LEADIN_PLUGIN_VERSION') )
 	define('LEADIN_PLUGIN_VERSION', '4.1.1');
 
-if ( !defined('LEADIN_SEGMENT_WRITE_KEY') )
-    define('LEADIN_SEGMENT_WRITE_KEY', '1jPKDqXIRKMzEX7zv4eqlqELGXcDq6NT');
-
 if ( !defined('LEADIN_SOURCE') )
     define('LEADIN_SOURCE', 'leadin.com');
 
@@ -94,7 +91,6 @@ function activate_leadin ( $network_wide )
 			switch_to_blog($blog_id);
 			add_leadin_defaults();
 			$activated[] = $blog_id;
-			leadin_track_plugin_registration_hook(TRUE);
 		}
  
 		// Switch back to the current blog
@@ -106,7 +102,6 @@ function activate_leadin ( $network_wide )
 	else
 	{
 		add_leadin_defaults();
-		leadin_track_plugin_registration_hook(TRUE);
 	}
 }
 
@@ -158,28 +153,6 @@ function add_leadin_defaults ( )
 	}
 
 	setcookie ( "ignore_social_share" , "1",  2592000, "/" );
-
-	$traits = array();
-
-	if ( defined('LEADIN_REFERRAL_SOURCE') )
-		$traits['referral_source'] = LEADIN_REFERRAL_SOURCE;
-
-	if ( defined('LEADIN_UTM_SOURCE') )
-		$traits['utm_source'] = LEADIN_UTM_SOURCE;
-
-	if ( defined('LEADIN_UTM_MEDIUM') )
-		$traits['utm_medium'] = LEADIN_UTM_MEDIUM;
-
-	if ( defined('LEADIN_UTM_TERM') )
-		$traits['utm_term'] = LEADIN_UTM_TERM;
-
-	if ( defined('LEADIN_UTM_CONTENT') )
-		$traits['utm_content'] = LEADIN_UTM_CONTENT;
-
-	if ( defined('LEADIN_UTM_CAMPAIGN') )
-		$traits['utm_campaign'] = LEADIN_UTM_CAMPAIGN;
-
-    leadin_set_user_properties($traits);
 }
 
 /**
@@ -206,8 +179,6 @@ function deactivate_leadin ( $network_wide )
 		// Switch back to the current blog
 		switch_to_blog($current_blog);
 	}
-	else
-		leadin_track_plugin_registration_hook(FALSE);
 }
 
 function activate_leadin_on_new_blog ( $blog_id, $user_id, $domain, $path, $site_id, $meta )

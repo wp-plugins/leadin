@@ -24,7 +24,7 @@ class LI_Pointers {
 
 		if ( $new_install )
 		{
-			add_action('admin_enqueue_scripts', array($this, 'enqueu_new_install_pointer'));
+			add_action('admin_enqueue_scripts', array($this, 'enqueue_new_install_pointer'));
 		}
 		else
 		{
@@ -35,7 +35,7 @@ class LI_Pointers {
 	/**
 	 * Enqueue styles and scripts needed for the pointers.
 	 */
-	function enqueu_new_install_pointer () 
+	function enqueue_new_install_pointer () 
 	{
 		if ( ! current_user_can('manage_options') )
 			return;
