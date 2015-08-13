@@ -1,0 +1,28 @@
+{
+  "name": "leadin",
+  "version": "1.0.0",
+  "devDependencies": {
+    "grunt": "^0.4.5",
+    "grunt-contrib-compass": "^1.0.1",
+    "grunt-contrib-clean": "^0.6.0",
+    "grunt-contrib-concat": "~0.4.0",
+    "grunt-contrib-uglify": "~0.4.0",
+    "grunt-contrib-watch": "~0.6.1"
+  },
+  "description": "=== LeadIn === Contributors: andygcook, nelsonjoyce Tags:  lead tracking, visitor tracking, analytics, crm, marketing automation, inbound marketing, subscription, marketing, lead generation, mailchimp Requires at least: 3.7 Tested up to: 3.9.1 Stable tag: 1.0.0",
+  "main": "gruntfile.js",
+  "dependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LeadIn/leadin.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/LeadIn/leadin/issues"
+  },
+  "homepage": "https://github.com/LeadIn/leadin"
+}
