@@ -926,6 +926,15 @@ function leadin_set_migration_complete_flag ( )
 add_action('wp_ajax_leadin_set_migration_complete_flag', 'leadin_set_migration_complete_flag'); // Call when user logged in
 add_action('wp_ajax_nopriv_leadin_set_migration_complete_flag', 'leadin_set_migration_complete_flag'); // Call when user is not logged in
 
+function leadin_set_migration_complete_option ()
+{
+    update_option(LEADIN_MIGRATION_OPTION_NAME, 'completed');
+}
+
+add_action('wp_ajax_leadin_set_migration_complete_option', 'leadin_set_migration_complete_option'); // Call when user logged in
+add_action('wp_ajax_nopriv_leadin_set_migration_complete_option', 'leadin_set_migration_complete_option'); // Call when user is not logged in
+
+
 function leadin_make_curl_request ( $request, $params = array(), $request_type = 'POST' )
 {
     // remove NULL values from params
