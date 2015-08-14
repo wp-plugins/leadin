@@ -3,7 +3,7 @@
 Plugin Name: Leadin
 Plugin URI: http://leadin.com
 Description: Leadin is an easy-to-use marketing automation and lead tracking plugin for WordPress that helps you better understand your web site visitors.
-Version: 4.1.1
+Version: 4.2.2
 Author: Leadin
 Author URI: http://leadin.com
 License: GPL2
@@ -29,7 +29,7 @@ if ( !defined('LEADIN_DB_VERSION') )
 	define('LEADIN_DB_VERSION', '2.2.5');
 
 if ( !defined('LEADIN_PLUGIN_VERSION') )
-	define('LEADIN_PLUGIN_VERSION', '4.1.1');
+	define('LEADIN_PLUGIN_VERSION', '4.2.2');
 
 if ( !defined('LEADIN_SOURCE') )
     define('LEADIN_SOURCE', 'leadin.com');
