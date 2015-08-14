@@ -111,7 +111,7 @@ class WPLeadInAdmin {
 
         $submenu['leadin'][0][0] = 'Stats';
 
-        if ( ! isset($_GET['page']) || $_GET['page'] != 'leadin_settings' )
+        if ( ! isset($_GET['page']) || $_GET['page'] != ('leadin' || 'leadin_settings' || 'leadin_contacts') )
         {
             if ( ! get_option('leadin_portalId') )
                 $li_pointers = new LI_Pointers(TRUE);
@@ -175,7 +175,6 @@ class WPLeadInAdmin {
             'portalId' => get_option('leadin_portalId'),
             'hapikey' => get_option('leadin_hapikey'),
             'env' => constant('LEADIN_ENV'),
-            'segmentKey' => constant('LEADIN_SEGMENT_WRITE_KEY'),
             'user' => $this->leadin_get_user_for_tracking(),
             'allRoles' => $wp_roles->get_names(),
             'leadinPluginVersion' => constant('LEADIN_PLUGIN_VERSION'),
@@ -192,7 +191,8 @@ class WPLeadInAdmin {
             'leadinPluginDirectory' => LEADIN_PLUGIN_SLUG,
             'ajaxUrl' => is_ssl() ? str_replace('http:', 'https:', $ajaxUrl) : str_replace('https:', 'http:', $ajaxUrl),
             'locale' => get_locale(),
-            'timezone' => get_option('gmt_offset')
+            'timezone' => get_option('gmt_offset'),
+            'timezoneString' => get_option('timezone_string') // If not set by the user manually it will be an empty string
         );
 
         // remove after migration is complete

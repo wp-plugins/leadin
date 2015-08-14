@@ -59,14 +59,14 @@ class WPLeadIn {
 
         if ( is_single() )
             $page_type = 'post';
-        else if ( is_page() )
-            $page_type = 'page';
+        else if ( is_front_page() )
+            $page_type = 'home';
         else if ( is_archive() )
             $page_type = 'archive';
         else if ( $this->leadin_is_login_or_register_page() )
             $page_type = 'login';
-        else if ( is_home() )
-            $page_type = 'home';
+        else if ( is_page() )
+            $page_type = 'page';
         else
             $page_type = 'other';
 
