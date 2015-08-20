@@ -95,6 +95,7 @@ function leadin_get_current_user ()
         'wp_url' => get_bloginfo('wpurl'),
         'li_version' => LEADIN_PLUGIN_VERSION,
         'wp_version' => $wp_version,
+        'user_email' => $current_user->user_email
     );
 
     if ( defined('LEADIN_REFERRAL_SOURCE') )
