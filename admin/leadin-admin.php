@@ -235,7 +235,8 @@ class WPLeadInAdmin {
             'utm_term' => $leadin_user['utm_term'],
             'utm_content' => $leadin_user['utm_term'],
             'utm_campaign' => $leadin_user['utm_campaign'],
-            'referral_source' => $leadin_user['referral_source']
+            'referral_source' => $leadin_user['referral_source'],
+            'user_email' => $leadin_user['user_email']
         );
         return $tracking_leadin_user;
     }
