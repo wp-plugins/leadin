@@ -29,7 +29,7 @@ if ( !defined('LEADIN_DB_VERSION') )
 	define('LEADIN_DB_VERSION', '2.2.5');
 
 if ( !defined('LEADIN_PLUGIN_VERSION') )
-	define('LEADIN_PLUGIN_VERSION', '4.2.3');
+	define('LEADIN_PLUGIN_VERSION', '4.3.0');
 
 if ( !defined('LEADIN_SOURCE') )
     define('LEADIN_SOURCE', 'leadin.com');

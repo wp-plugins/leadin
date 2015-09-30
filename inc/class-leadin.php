@@ -44,7 +44,7 @@ class WPLeadIn {
     function add_leadin_frontend_scripts ()
     {
 
-        add_filter('script_loader_tag', array($this, 'leadin_add_crossorigin_attribute'), 10, 2);
+        add_filter('script_loader_tag', array($this, 'leadin_add_embed_script_attributes'), 10, 2);
 
         $embedDomain = constant('LEADIN_EMBED_DOMAIN');
         $portalId = get_option('leadin_portalId');
@@ -81,11 +81,11 @@ class WPLeadIn {
         wp_enqueue_script('leadin-embed-js');
     }
 
-    function leadin_add_crossorigin_attribute ( $tag, $handle ) {
+    function leadin_add_embed_script_attributes ( $tag, $handle ) {
         if ('leadin-embed-js' !== $handle)
             return $tag;
         else
-            return str_replace(' src', 'crossorigin="use-credentials" src', $tag);
+            return str_replace(' src', ' async defer crossorigin="use-credentials" src', $tag);
     }
 
     /**
