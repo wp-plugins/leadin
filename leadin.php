@@ -6,6 +6,7 @@ Description: Leadin is an easy-to-use marketing automation and lead tracking plu
 Version: 4.3.0
 Author: Leadin
 Author URI: http://leadin.com
+Text Domain: leadin
 License: GPL2
 */
 
